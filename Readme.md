@@ -1,0 +1,2 @@
+# Quizzy
+First release
