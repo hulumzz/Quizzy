@@ -1,0 +1,2359 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- PWA META TAGS -->
+    <title>Quizzy Studio</title>
+    <meta name="theme-color" content="#0f0c29">
+    <meta name="description" content="Aplikasi Kuis Interaktif untuk Guru dan Siswa">
+    
+    <!-- Link ke Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+     <style>
+        /* --- 1. GLOBAL THEME --- */
+        :root { --primary: #6a11cb; --secondary: #2575fc; --accent: #ff0080; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f0c29;
+            color: #ffffff;
+            min-height: 100vh;
+            overflow: hidden;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* ANIMATIONS */
+        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .bg-wave {
+            background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #1a0b2e);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+        .page-section { 
+            display: none; height: 100vh; width: 100vw; overflow-y: auto; 
+            position: absolute; top:0; left:0; padding-bottom: 80px; 
+            opacity: 0; transition: opacity 0.4s ease-in-out; pointer-events: none;
+        }
+        .page-section.active { display: flex; flex-direction: column; z-index: 10; opacity: 1; pointer-events: auto; }
+        
+        /* CUSTOM LOADER */
+        .q-loader-container { position: relative; width: 80px; height: 80px; display: flex; justify-content: center; align-items: center; }
+        .q-loader-ring {
+            position: absolute; width: 100%; height: 100%; border-radius: 50%;
+            border: 4px solid transparent; border-top-color: var(--secondary); border-right-color: var(--accent);
+            animation: spin 1s linear infinite; box-shadow: 0 0 15px var(--secondary);
+        }
+        .q-loader-text { font-weight: 900; font-size: 3rem; background: linear-gradient(to bottom, #fff, #aaa); -webkit-background-clip: text; color: transparent; animation: pulse 1.5s ease-in-out infinite; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(0.9); } }
+
+        /* UI COMPONENTS */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1.5rem; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .glass-input {
+            background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white; padding: 0.8rem 1rem; border-radius: 0.75rem; width: 100%; transition: all 0.3s ease;
+        }
+        .glass-input:focus { background: rgba(0, 0, 0, 0.5); border-color: var(--secondary); outline: none; box-shadow: 0 0 15px rgba(37, 117, 252, 0.3); }
+
+        .btn-primary {
+            background: linear-gradient(45deg, var(--primary) 0%, var(--secondary) 100%);
+            border: none; color: white; padding: 0.75rem 1.5rem; border-radius: 0.75rem;
+            font-weight: 800; cursor: pointer; transition: 0.3s; width: 100%;
+            text-transform: uppercase; letter-spacing: 1px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); position: relative; overflow: hidden;
+        }
+        .btn-primary:active { transform: scale(0.95); }
+        .btn-primary:disabled { filter: grayscale(1); opacity: 0.5; cursor: not-allowed; }
+        .btn-primary.text-purple-600 {color:#fff}
+        /* TAB BUTTONS (STUDIO) */
+        .tab-btn { padding: 10px 20px; color: #aaa; border-bottom: 2px solid transparent; transition: all 0.3s; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .tab-btn.active { color: white; border-color: var(--secondary); background: rgba(255,255,255,0.05); border-radius: 10px 10px 0 0; }
+        
+        /* TOOLTIPS */
+        .tooltip-trigger { position: relative; cursor: help; display: inline-flex; justify-content: center; align-items: center; width: 18px; height: 18px; border: 1px solid #aaa; border-radius: 50%; font-size: 10px; color: #aaa; margin-left: 5px; }
+        .tooltip-content { 
+            visibility: hidden; width: 200px; background-color: rgba(0,0,0,0.9); color: #fff; text-align: left; 
+            border-radius: 6px; padding: 10px; position: absolute; z-index: 1; bottom: 125%; left: 50%; margin-left: -100px; 
+            opacity: 0; transition: opacity 0.3s; border: 1px solid #444; font-size: 12px; font-weight: normal;
+        }
+        .tooltip-trigger:hover .tooltip-content { visibility: visible; opacity: 1; }
+  
+        .no-scrollbar::-webkit-scrollbar {
+            width: 6px; /* Lebar scrollbar sangat tipis */
+        }
+        .no-scrollbar::-webkit-scrollbar-track {
+            background: transparent; /* Track transparan */
+        }
+        .no-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1); /* Warna thumb transparan samar */
+            border-radius: 10px;
+        }
+        .no-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3); /* Sedikit lebih terang saat di-hover */
+        }
+ /* --- TAMBAHAN CSS UNTUK PROFILE BADGE (Letakkan di dalam tag <style>) --- */
+        .profile-badge-dot {
+            position: absolute; top: -2px; right: -2px; width: 12px; height: 12px;
+            background-color: #ef4444; border: 2px solid #1a1a2e; border-radius: 50%;
+            box-shadow: 0 0 5px #ef4444; z-index: 50;
+        }
+        /* Hapus scrollbar ganda dan atur modal content */
+        .modal-content {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 1rem;
+            padding: 2rem;
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh; /* Maksimal tinggi 85% layar */
+            overflow-y: auto; /* Scroll vertikal aktif */
+            transform: scale(0.9);
+            transition: transform 0.3s;
+            /* Terapkan style scrollbar di sini secara native jika class tidak terbaca */
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255,255,255,0.1) transparent;
+        }
+        /* GAME ELEMENTS */
+        .opt-btn { 
+            position: relative; overflow: hidden; border-radius: 1rem; 
+            font-size: 3rem; font-weight: 900; text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            transition: all 0.2s; cursor: pointer; border: none;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.2); height: 100%; min-height: 120px; color: white;
+        }
+        .opt-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+        .bg-red { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+        .bg-blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        .bg-yellow { background: linear-gradient(135deg, #eab308, #a16207); text-shadow: none; }
+        .bg-green { background: linear-gradient(135deg, #22c55e, #15803d); }
+
+        /* SHAPES */
+        .s-triangle { width: 0; height: 0; border-left: 20px solid transparent; border-right: 20px solid transparent; border-bottom: 35px solid currentColor; }
+        .s-circle { width: 35px; height: 35px; border-radius: 50%; background: currentColor; }
+        .s-square { width: 35px; height: 35px; background: currentColor; }
+        .s-star { clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); width: 40px; height: 40px; background: currentColor; }
+
+        /* MASCOT */
+        .mascot-container { position: absolute; bottom: 0; right: 20px; z-index: 50; pointer-events: none; display: flex; flex-direction: column; align-items: flex-end; }
+        .mascot-svg { width: 150px; height: 150px; transition: all 0.3s; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5)); }
+        .mascot-bubble {
+            background: white; color: black; padding: 10px 15px; border-radius: 15px; border-bottom-right-radius: 0;
+            margin-bottom: 10px; font-weight: bold; font-size: 0.9rem; position: relative;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); max-width: 200px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); margin-right: 20px; opacity: 0; transition: opacity 0.3s;
+        }
+        .mascot-bubble.show { opacity: 1; }
+        @keyframes popIn { from { transform: scale(0) translateY(20px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+
+        /* MONSTER RAID VISUALS */
+        .monster-stage { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; }
+        .monster-asset-container {
+            width: 400px; height: 400px; display: flex; justify-content: center; align-items: center;
+            filter: drop-shadow(0 0 30px rgba(255,0,0,0.4)); 
+            animation: float 3s ease-in-out infinite; transition: transform 0.1s;
+        }
+        .monster-asset-container img { width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+        .monster-asset-container video { width: 100%; height: 100%; object-fit: contain; pointer-events: none; mix-blend-mode: screen; }
+        .monster-asset-container.hit { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; filter: brightness(2) sepia(1) hue-rotate(-50deg) saturate(5); }
+        
+        .projectile {
+            position: absolute; width: auto; height: 30px; background: white; color: black;
+            border-radius: 15px; padding: 0 10px; font-weight: bold; font-size: 0.8rem;
+            box-shadow: 0 0 20px #fbbf24; z-index: 40; pointer-events: none; display: flex; align-items: center;
+        }
+        .dmg-float {
+            position: absolute; color: #fbbf24; font-weight: 900; font-size: 2rem; pointer-events: none;
+            animation: floatUp 1s ease-out forwards; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+        @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-6px, 0, 0); } 40%, 60% { transform: translate3d(6px, 0, 0); } }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-50px) scale(1.5); } }
+        @keyframes heartBeat { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .animate-heartbeat { animation: heartBeat 0.5s infinite; }
+
+        /* UI UTILS */
+        .seq-item { background: #333; padding: 1rem; margin-bottom: 0.5rem; border-radius: 0.8rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; border: 2px solid transparent; transition: all 0.2s; user-select: none; }
+        .seq-item.selected { border-color: var(--secondary); background: #2a2a40; box-shadow: 0 0 15px rgba(37, 117, 252, 0.4); }
+        .grid-options { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; height: 100%; width: 100%; padding: 1rem; }
+        .hotspot-editor-area { position: relative; display: inline-block; cursor: crosshair; overflow: hidden; border-radius: 8px; border: 2px solid #555; }
+        .hotspot-target { position: absolute; width: 20px; height: 20px; border: 2px solid white; background: #ef4444; /* Merah menyala */ border-radius: 50%; transform: translate(-50%, -50%);  pointer-events: none; z-index: 10; box-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+        .hotspot-radius-visual {
+            position: absolute; 
+            border: 2px dashed rgba(239, 68, 68, 0.8); /* Garis putus-putus merah */
+            background: rgba(239, 68, 68, 0.2); /* Merah transparan */
+            border-radius: 50%; 
+            transform: translate(-50%, -50%); 
+            pointer-events: none; z-index: 5;
+        }
+
+        /* --- UPDATE TIMER BAR (Agar manual control via JS lebih mulus) --- */
+        #host-timer-bar, #st-timer { transition: width 0.1s linear; }
+        .host-ans-bucket { position: relative; overflow: hidden; min-height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .player-chip { position: absolute; background: white; color: black; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.8rem; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 20; animation: flyIn 0.5s forwards; }
+        @keyframes flyIn { from { transform: scale(0) translateY(100px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        
+        /* MODAL */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .modal-overlay.open { opacity: 1; pointer-events: auto; }
+        .modal-content { background: #1a1a2e; border: 1px solid #333; border-radius: 1rem; padding: 2rem; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; transform: scale(0.9); transition: transform 0.3s; }
+        .modal-overlay.open .modal-content { transform: scale(1); }
+        
+        .drag-active { border-color: var(--secondary) !important; background: rgba(37, 117, 252, 0.1) !important; }
+ 
+ /* ===== ABOUT MODAL ===== */
+.about-modal {
+  width: 90%;
+  max-width: 850px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 12, 41, 0.85);
+  backdrop-filter: blur(18px);
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* HEADER */
+.about-header {
+  text-align: center;
+  padding: 2rem 2rem 1rem;
+}
+
+.about-title {
+  font-size: 3.5rem;
+  font-weight: 900;
+  background: linear-gradient(90deg, #6a11cb, #2575fc);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.about-version {
+  font-size: 0.8rem;
+  letter-spacing: 0.3em;
+  color: #9ca3af;
+}
+
+/* BODY */
+.about-body {
+  padding: 0.5rem 1rem 1rem;
+  overflow-y: auto;
+}
+
+/* SCROLLBAR TRANSPARAN */
+.about-body::-webkit-scrollbar {
+  width: 6px;
+}
+.about-body::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 10px;
+}
+.about-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* SECTION */
+.about-section {
+  margin-bottom: 2rem;
+}
+
+.about-section h2 {
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+  color: #fff;
+}
+
+.about-section p {
+  color: #d1d5db;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  text-align: justify;
+}
+
+/* DEVELOPER */
+.developer {
+  display: flex;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.dev-avatar {
+  width: 120px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.dev-avatar.photo {
+  border-radius: 1rem;
+  overflow: hidden;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* FOTO */
+.dev-avatar.photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dev-avatar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.25), transparent);
+}
+.dev-info h3 {
+  font-weight: 800;
+}
+
+.dev-info span {
+  display: block;
+  font-size: 0.75rem;
+  color: #93c5fd;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+
+.dev-info p {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #e5e7eb;
+  margin-bottom: 0.75rem;
+}
+
+/* SOCIAL ICONS */
+.dev-social {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.dev-social a {
+  width: 28px;
+  height: 28px;
+  border-radius: 0.5rem;
+  background: rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.2s;
+}
+
+.dev-social a:hover {
+  background: rgba(255,255,255,0.18);
+  transform: translateY(-2px);
+}
+
+.dev-social svg {
+  width: 16px;
+  height: 16px;
+  fill: white;
+}
+
+/* DONATE */
+.donate-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.donate-card {
+  background: rgba(255,255,255,0.05);
+  border-radius: 1rem;
+  border: 1px solid rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+
+/* TOGGLE BUTTON */
+.donate-toggle {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: white;
+  font-weight: 800;
+  padding: 1rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.donate-toggle span {
+  transition: transform 0.3s;
+}
+
+.donate-card.active .donate-toggle span {
+  transform: rotate(180deg);
+}
+
+/* CONTENT */
+.donate-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, padding 0.3s ease;
+  padding: 0 1.5rem;
+  text-align: center;
+}
+
+.donate-card.active .donate-content {
+  max-height: 500px;
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+.donate-img {
+  width: 160px;
+  border-radius: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.bank-logo {
+  width: 120px;
+  margin: auto;
+}
+
+.bank-number {
+  font-family: monospace;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #facc15;
+}
+
+/* COPY */
+.bank-copy {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.copy-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.copy-btn:active {
+  transform: scale(0.9);
+}
+
+.copy-status {
+  font-size: 0.7rem;
+  color: #22c55e;
+  display: block;
+  min-height: 0.8rem;
+}
+
+.bank-name,
+.donate-note {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.donate-grid {
+  align-items: start;
+}
+
+/* RESPONSIVE */
+@media (max-width: 640px) {
+  .donate-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* FOOTER */
+.about-footer {
+  text-align: center;
+  font-size: 0.7rem;
+  color: #6b7280;
+  margin-top: 1rem;
+}
+/* =====================================================
+   QUIZZY – MOBILE OVERRIDE (REVISI FINAL)
+   Basis: CSS override lama + audit HTML lengkap
+===================================================== */
+@media (max-width: 768px) {
+
+  /* =================================
+     FIX SCROLL & SECTION
+  ================================= */
+  body {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .page-section {
+    height: auto;
+    min-height: 100vh;
+    position: relative;
+    padding-bottom: 150px; /* ruang navbar bawah */
+  }
+
+  /* =================================
+     HEADER UTAMA STUDIO – TETAP DI ATAS
+  ================================= */
+  #page-studio > nav {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 90;
+  }
+
+  #page-studio {
+    padding-top: 90px;
+    padding-bottom: 160px;
+  }
+
+  /* =================================
+     NAVBAR STUDIO (KOLEKSI, DLL) → BOTTOM
+  ================================= */
+  /* mobile tabs yang ada di HTML */
+  #page-studio > .flex.md\:hidden {
+    position: fixed !important;
+    bottom: 0;
+    left: 1rem;
+    right: 1rem;
+    top: auto !important;
+    z-index: 80;
+    background: rgba(15, 12, 41, 0.664);
+    backdrop-filter: blur(12px);
+    display: flex !important;
+    justify-content: space-around;
+    padding: 10px 6px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    border-radius: 0.75rem;
+  }
+
+  #page-studio > .flex.md\:hidden button {
+    flex: 1;
+    font-size: 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: center;
+  }
+
+  /* =================================
+     LOGIN / LANDING
+  ================================= */
+  #page-landing .glass-panel {
+    flex-direction: column;
+    min-height: unset;
+  }
+
+  /* =================================
+     HOST – PIN GAME & MODE
+  ================================= */
+  #lobby-pin {
+    font-size: 2.4rem;
+    word-break: break-word;
+    letter-spacing: 0.25em;
+  }
+
+  #stage-lobby h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+  }
+
+  #stage-lobby p {
+    font-size: 0.9rem;
+  }
+
+  #stage-lobby button.btn-primary {
+    font-size: 1rem;
+    padding: 0.75rem 1rem;
+  }
+
+  /* =================================
+     STUDENT PLAY – SOAL
+  ================================= */
+  #q-text {
+    font-size: 1.2rem;
+    line-height: 1.4;
+    padding: 0 10px;
+    text-align: center;
+  }
+
+  /* =================================
+     STUDENT PLAY – OPSI PILIHAN GANDA
+  ================================= */
+  #v-options {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    max-height: none;
+  }
+
+  .opt-btn {
+    font-size: 1.05rem;
+    min-height: 56px;
+    padding: 0.5rem;
+    border-radius: 12px;
+  }
+
+  /* Huruf / label A B C D */
+  .opt-btn span {
+    font-size: 1.3rem;
+    line-height: 1;
+  }
+
+  /* Shape icon di dalam opsi */
+  .opt-btn .s-triangle,
+  .opt-btn .s-circle,
+  .opt-btn .s-square,
+  .opt-btn .s-star {
+    width: 20px;
+    height: 20px;
+    transform: scale(0.9);
+  }
+
+  .opt-btn .s-triangle {
+    border-left-width: 10px;
+    border-right-width: 10px;
+    border-bottom-width: 16px;
+  }
+
+  /* Image option */
+  .opt-btn img {
+    max-height: 40px;
+    object-fit: contain;
+  }
+
+  /* =================================
+     HOST – GRID JAWABAN
+  ================================= */
+  #host-answers-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  /* =================================
+     MASCOT & MONSTER
+  ================================= */
+  .mascot-svg {
+    width: 80px;
+    height: 80px;
+  }
+
+  .mascot-container {
+    bottom: 90px;
+    right: 10px;
+    transform: scale(0.85);
+  }
+
+  .monster-stage {
+    transform: scale(0.8);
+  }
+
+  /* =================================
+     LEADERBOARD & SUMMARY
+  ================================= */
+  #stage-leaderboard h1,
+  #stage-summary h1 {
+    font-size: 2rem;
+  }
+
+  #stage-summary .text-7xl,
+  #stage-summary .text-6xl {
+    font-size: 2.2rem;
+  }
+
+  /* =================================
+     ABOUT
+  ================================= */
+  .about-title {
+    font-size: 2.2rem;
+  }
+
+  .developer {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .host-ans-bucket {
+    min-height: 72px;
+    padding: 0.75rem;
+    border-radius: 1rem;
+  }
+
+  .host-ans-bucket span {
+    font-size: 1rem;      /* text-base */
+  }
+}
+
+ </style>
+</head>
+<body>
+    <div id="global-loader" class="fixed inset-0 z-[100] flex flex-col justify-center items-center bg-[#0f0c29] transition-opacity duration-500">
+        <div class="q-loader-container mb-4"><div class="q-loader-ring"></div><div class="q-loader-text">Q</div></div>
+        <p class="animate-pulse tracking-[0.3em] text-xs text-blue-300 font-bold">Memuat Quizzy...</p>
+    </div>
+
+     <!-- MODAL TERMS (S&K) -->
+    <div id="modal-terms" class="modal-overlay z-[160]">
+        <div class="modal-content relative no-scrollbar bg-[#121212] border border-gray-700">
+            <button onclick="document.getElementById('modal-terms').classList.remove('open')" class="absolute top-4 right-4 text-gray-500 hover:text-white text-2xl transition z-10">×</button>
+            <h2 class="text-2xl font-bold mb-4 text-blue-400">Syarat & Ketentuan</h2>
+        <div class="text-gray-300 text-sm space-y-3 h-64 overflow-y-auto text-justify leading-relaxed pr-2">
+                <p>1. <strong>Penggunaan Wajar:</strong> Quizzy digunakan untuk tujuan pendidikan, pembelajaran, dan evaluasi pengetahuan. Penggunaan untuk aktivitas ilegal, manipulatif, atau merugikan pihak lain dilarang.</p>
+                <p>2. <strong>Akun Pengguna:</strong> Setiap pengguna bertanggung jawab atas keamanan akun miliknya. Dilarang membagikan informasi login kepada pihak lain.</p>
+                <p>3. <strong>Konten:</strong> Pengguna dilarang mengunggah, membagikan, atau membuat konten yang mengandung unsur SARA, pornografi, kekerasan, ujaran kebencian, atau melanggar hukum yang berlaku.</p>
+                <p>4. <strong>Kejujuran Akademik:</strong> Quizzy tidak boleh digunakan untuk kecurangan, plagiarisme, atau tindakan yang melanggar etika akademik.</p>
+                <p>5. <strong>Data Pribadi:</strong> Quizzy hanya mengumpulkan data yang diperlukan untuk operasional aplikasi (seperti nama dan email). Quizzy <strong>tidak meminta dan tidak menyimpan data sensitif</strong> seperti kata sandi email, data perbankan, atau identitas resmi.</p>
+                <p>6. <strong>Keamanan Data:</strong> Password pengguna disimpan dalam bentuk <strong>terenkripsi (hashed)</strong> dan tidak dapat dibaca secara langsung oleh sistem maupun pihak lain.</p>
+                <p>7. <strong>Penggunaan Data:</strong> Data pengguna digunakan semata-mata untuk keperluan layanan Quizzy, peningkatan fitur, dan pengalaman pengguna. Data tidak diperjualbelikan kepada pihak ketiga.</p>
+                <p>8. <strong>Privasi:</strong> Quizzy berkomitmen menjaga kerahasiaan dan keamanan data pengguna sesuai dengan kebijakan privasi yang berlaku.</p>
+                <p>9. <strong>Pelanggaran:</strong> Quizzy berhak menangguhkan atau menghapus akun pengguna yang melanggar syarat dan ketentuan ini tanpa pemberitahuan sebelumnya.</p>
+                <p>10. <strong>Perubahan Ketentuan:</strong> Syarat dan ketentuan dapat diperbarui sewaktu-waktu. Pengguna disarankan untuk meninjau halaman ini secara berkala.</p>
+            </div>
+            <button onclick="document.getElementById('modal-terms').classList.remove('open')" class="btn-primary mt-4 py-2">Saya Mengerti</button>
+        </div>
+    </div>
+
+    <!-- MODAL PRIVACY -->
+    <div id="modal-privacy" class="modal-overlay z-[160]">
+        <div class="modal-content relative no-scrollbar bg-[#121212] border border-gray-700">
+            <button onclick="document.getElementById('modal-privacy').classList.remove('open')" class="absolute top-4 right-4 text-gray-500 hover:text-white text-2xl transition z-10">×</button>
+            <h2 class="text-2xl font-bold mb-4 text-purple-400">Kebijakan Privasi</h2>
+            <div class="text-gray-300 text-sm space-y-3 h-64 overflow-y-auto">
+                <p>1. <strong>Data:</strong> Kami menyimpan Nama, Email, dan Foto Profil.</p>
+                <p>2. <strong>Keamanan:</strong> Password dienkripsi oleh Google Firebase.</p>
+            </div>
+            <button onclick="document.getElementById('modal-privacy').classList.remove('open')" class="btn-primary mt-4 py-2">Tutup</button>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT PROFILE -->
+    <div id="modal-profile" class="modal-overlay z-[150]">
+        <div class="modal-content relative bg-[#121212] border border-purple-500/30 shadow-2xl">
+            <button onclick="document.getElementById('modal-profile').classList.remove('open')" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">&times;</button>
+            <h2 class="text-2xl font-bold mb-6 text-center">Edit Profil Guru</h2>
+            <div class="flex flex-col items-center mb-6">
+                <div class="w-24 h-24 rounded-full overflow-hidden border-4 border-purple-500 relative bg-gray-800 mb-4 group cursor-pointer" onclick="document.getElementById('prof-img-input').click()">
+                    <img id="prof-preview" src="" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"><i class="fa-solid fa-camera"></i></div>
+                </div>
+                <input type="file" id="prof-img-input" class="hidden" accept="image/*" onchange="app.profile.handlePhotoUpload(this)">
+                <p class="text-xs text-gray-400">Klik foto untuk mengganti</p>
+            </div>
+            <div class="space-y-4">
+                <div><label class="text-xs text-gray-400 block mb-1">Nama Lengkap</label><input type="text" id="prof-name" class="glass-input"></div>
+                <div><label class="text-xs text-gray-400 block mb-1">Asal Sekolah/Institusi</label><input type="text" id="prof-school" class="glass-input" placeholder="Contoh: SMPN 1 Jakarta"></div>
+                <div><label class="text-xs text-gray-400 block mb-1">Status/Jabatan</label>
+                    <select id="prof-role" class="glass-input">
+                        <option value="">Pilih Status...</option><option value="Guru">Guru</option><option value="Dosen">Dosen</option><option value="Mahasiswa">Mahasiswa</option><option value="Pengajar Non Formal">Pengajar Non Formal</option>
+                    </select>
+                </div>
+                <button onclick="app.profile.save()" class="btn-primary py-3 mt-4">SIMPAN PERUBAHAN</button>
+            </div>
+        </div>
+    </div>
+
+<!-- MODAL ABOUT -->
+    <div id="modal-about" class="modal-overlay z-[150]">
+    <div class="modal-content relative no-scrollbar bg-[#121212] border border-gray-700 shadow-2xl">
+        <button onclick="document.getElementById('modal-about').classList.remove('open')" class="absolute top-4 right-4 text-gray-500 hover:text-white text-2xl transition z-10">×</button>
+        
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600">Quizzy</h1>
+            <p class="text-xs text-gray-500 tracking-[0.3em] uppercase mt-2">v5.5 Stable Release</p>
+        </div>
+        <div class="about-body">
+
+      <!-- DESKRIPSI -->
+      <section class="about-section">
+        <h2>🎮 Tentang Aplikasi</h2>
+        <p>
+          Quizzy adalah aplikasi pembelajaran berbasis kuis interaktif yang mengusung konsep gamifikasi
+          untuk meningkatkan motivasi belajar siswa. Dirancang untuk guru dan siswa agar proses belajar
+          terasa lebih seru, kompetitif, dan efektif.
+        </p>
+      </section>
+
+<!-- DEVELOPER -->
+<section class="about-section developer">
+<div class="dev-avatar photo">
+  <img src="https://lh3.googleusercontent.com/pw/AP1GczNFY_0lDZ7TgdSNlph1emHD8mJ1W9HevDvU7hlLYHGWilVuF1juGaAIHBoolnUNRMCI_sdKZygR--1GKEy8AJCaDewQHeEvqdnIyfHgd7PCoMFGjXuX7bTOo6kTggpMlVKnM6wMxmpsAnp7VfA1sqh1=w437-h651-s-no-gm?authuser=0">
+</div>
+
+  <div class="dev-info">
+    <h3>Muhamad Khoirul Ulum</h3>
+    <span>Indie App Developer • Indonesia 🇮🇩</span>
+
+    <p>
+      Alumni ITS NU Pekalongan dan Founder <strong>Skripzy AI</strong>. 
+      Fokus pada pengembangan aplikasi edukasi berbasis web dengan pendekatan sederhana, inklusif, dan berdampak bagi dunia pendidikan Indonesia.
+    </p>
+
+    <div class="dev-social">
+      <a href="https://instagram.com/_itsmeulumm" target="_blank" aria-label="Instagram">
+        <!-- Instagram Icon -->
+        <svg viewBox="0 0 24 24">
+          <path d="M7 2h10a5 5 0 015 5v10a5 5 0 01-5 5H7a5 5 0 01-5-5V7a5 5 0 015-5zm5 5a5 5 0 100 10 5 5 0 000-10zm6.5-.5a1 1 0 100 2 1 1 0 000-2z"/>
+        </svg>
+      </a>
+
+      <a href="https://linkedin.com/in/muhamad-khoirul-ulum-3a8725221" target="_blank" aria-label="LinkedIn">
+        <!-- LinkedIn Icon -->
+        <svg viewBox="0 0 24 24">
+          <path d="M4 3a2 2 0 110 4 2 2 0 010-4zm-2 6h4v12H2V9zm7 0h4v2h.1a4.4 4.4 0 014-2.2c4.3 0 5.1 2.8 5.1 6.5V21h-4v-5.2c0-1.2 0-2.8-1.7-2.8s-2 1.3-2 2.7V21H9V9z"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+
+<!-- DONATE -->
+<section class="about-section">
+  <h2>❤️ Dukung Pengembangan</h2>
+  <p>Jika Quizzy bermanfaat, dukung kami untuk terus mengembangkan aplikasi ini</p>
+
+  <div class="donate-grid">
+
+    <!-- QRIS -->
+    <div class="donate-card">
+      <button class="donate-toggle" onclick="toggleDonate(this)">
+        QRIS
+        <span>▾</span>
+      </button>
+
+      <div class="donate-content">
+        <img
+          src="https://lh3.googleusercontent.com/pw/AP1GczOabegVuo_E8wxhwHZ-OIJr788r9gpn4_8zystMcp2PHp9PQaGApnWSosbsWaW_Jvty7R5ghlaU1LVjDJx8UTb7jxgpTLWnfBT3B62xXyXGMb0EKM117wEnk9vSU2T5iviMREHcBVFlbBiqvMY07dzp=w462-h651-s-no-gm?authuser=0"
+          alt="QRIS"
+          class="donate-img"
+        >
+        <span class="donate-note">Scan via e-wallet / m-banking</span>
+      </div>
+    </div>
+
+    <!-- BANK -->
+    <div class="donate-card">
+      <button class="donate-toggle" onclick="toggleDonate(this)">
+        Bank BRI
+        <span>▾</span>
+      </button>
+
+      <div class="donate-content">
+        <img
+          src="https://lh3.googleusercontent.com/pw/AP1GczPfutrD3CHSGrUGuRC1oKT7h39Y_6i-XMboKRlGGrY7hAqgTy7ZvOpT2ptVrkpbnceZnzluOEHIxyCmAjxTRf8Fqin_NpgK1INfbvA48ezCZZWVf-KaeMvZRseAu7twK2eaIVj2eVmeO7qn0qd59q_K=w577-h433-s-no-gm?authuser=0"
+          alt="BRI Logo"
+          class="bank-logo"
+        >
+
+        <div class="bank-copy">
+          <p class="bank-number" id="bankNumber">597201037038539</p>
+          <button class="copy-btn" onclick="copyRekening(event)">⿻</button>
+        </div>
+
+        <span class="bank-name">a.n Muhamad Khoirul Ulum</span>
+        <span class="copy-status" id="copyStatus"></span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+      <footer class="about-footer">
+        © 2025 Quizzy • Built with passion for education
+      </footer>
+
+    </div>
+  </div>
+</div>
+    <!-- MODAL HISTORY -->
+    <div id="modal-history" class="modal-overlay">
+        <div class="modal-content relative">
+            <button onclick="document.getElementById('modal-history').classList.remove('open')" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">&times;</button>
+            <h2 class="text-2xl font-bold mb-4">Detail Riwayat</h2>
+            <div id="history-detail-content"></div>
+        </div>
+    </div>
+
+    <!-- 1. LANDING -->
+    <section id="page-landing" class="page-section bg-wave items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-5xl flex flex-col md:flex-row overflow-hidden min-h-[500px] shadow-2xl">
+            <div class="md:w-1/2 bg-gradient-to-br from-purple-600 to-blue-600 p-8 flex flex-col justify-center items-center text-center relative overflow-hidden">
+                <div class="absolute w-64 h-64 bg-white/20 rounded-full -top-10 -left-10 blur-3xl"></div>
+                <div class="absolute w-40 h-40 bg-pink-500/30 rounded-full bottom-10 right-10 blur-xl animate-pulse"></div>
+                <h1 class="text-7xl font-black mb-2 tracking-tighter relative z-10 drop-shadow-lg">Quizzy</h1>
+                <p class="text-blue-100 relative z-10 mb-8 font-light text-lg">Gamifikasi Belajar Seru</p>
+                <div class="glass-panel p-6 w-full max-w-xs relative z-10 hover:scale-105 transition transform duration-300">
+                    <p class="text-xs uppercase tracking-widest mb-4 text-gray-300">Untuk Siswa</p>
+                    <button onclick="app.router('join')" class="bg-white text-purple-600 w-full py-4 rounded-xl font-black hover:bg-gray-100 transition shadow-lg text-lg flex justify-center items-center gap-2">
+                        <i class="fa-solid fa-rocket"></i> GABUNG GAME
+                    </button>
+                    <button onclick="app.router('download')" class="text-[10px] font-bold text-blue-200/70 hover:text-white hover:underline transition mt-2 flex items-center justify-center gap-1 w-full">
+            <i class="fa-solid fa-download"></i> Download Quizzy For Windows & Android
+        </button>
+                </div>
+            </div>
+             <div class="md:w-1/2 bg-black/20 flex flex-col relative overflow-hidden h-full">
+                <div class="overflow-y-auto no-scrollbar p-8 h-full flex flex-col max-h-[500px] md:max-h-full">
+                    
+                    <!-- Wrapper dengan 'my-auto' agar Login (pendek) tetap di tengah, tapi Register (panjang) bisa scroll -->
+                    <div class="my-auto w-full space-y-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <h2 class="text-2xl font-bold">Portal Guru</h2>
+                            <div class="flex gap-2 text-sm">
+                                <button onclick="app.auth.toggleMode('login')" id="tab-login" class="text-white font-bold border-b-2 border-white transition">Masuk</button>
+                                <button onclick="app.auth.toggleMode('register')" id="tab-register" class="text-gray-400 hover:text-white transition">Daftar</button>
+                            </div>
+                        </div>
+
+                        <form id="auth-form" onsubmit="app.auth.handleEmailAuth(event)" class="space-y-4" data-mode="login">
+                            <input type="email" id="email" class="glass-input" placeholder="Email Sekolah" required>
+                            
+                    <!-- AREA FORM TAMBAHAN (Default Hidden) -->
+                    <div id="reg-extra-fields" class="hidden space-y-4 animate-fade-in-up">
+                        <input type="text" id="reg-fullname" class="glass-input" placeholder="Nama Lengkap">
+                        <input type="text" id="reg-school" class="glass-input" placeholder="Asal Sekolah/Institusi">
+                        <select id="reg-role" class="glass-input">
+                            <option value="" disabled selected>Pilih Status Anda...</option>
+                        <option value="Guru">Guru</option><option value="Dosen">Dosen</option><option value="Mahasiswa">Mahasiswa</option><option value="Pengajar Non Formal">Pengajar Non Formal</option>
+                        </select>
+                        <div><label class="text-xs text-gray-400 ml-1 mb-1 block">Foto Profil</label><input type="file" id="reg-photo" class="glass-input text-sm" accept="image/*"></div>
+                        <div class="flex items-start gap-2 pt-2">
+                            <input type="checkbox" id="reg-terms" class="mt-1 w-4 h-4 accent-purple-500">
+                            <label for="reg-terms" class="text-xs text-gray-400 leading-snug">Saya menyetujui <a href="#" onclick="document.getElementById('modal-terms').classList.add('open')" class="text-blue-400 hover:underline">Syarat & Ketentuan</a> Quizzy.</label>
+                        </div>
+                    </div>
+
+                    <input type="password" id="password" class="glass-input" placeholder="Kata Sandi" required>
+                    <button type="submit" class="btn-primary" id="auth-submit-btn">Masuk Studio</button>
+                </form>
+                <div class="my-6 flex items-center gap-4"><div class="h-px bg-gray-600 flex-1"></div><span class="text-xs text-gray-500">ATAU</span><div class="h-px bg-gray-600 flex-1"></div></div>
+                <button onclick="app.auth.googleLogin()" class="glass-input flex items-center justify-center gap-3 hover:bg-white/10 font-bold transition">
+                    <i class="fa-brands fa-google text-lg"></i> Masuk dengan Google
+                </button>
+            </div>
+        </div>
+    </section>
+<!-- 6. HALAMAN DOWNLOAD -->
+    <section id="page-download" class="page-section bg-wave items-center justify-center p-4">
+        <div class="glass-panel p-6 md:p-10 w-full max-w-4xl relative animate-fade-in-up border border-white/10 shadow-2xl z-50">
+            
+            <!-- Tombol Kembali -->
+            <button onclick="app.router('landing')" class="absolute top-6 left-6 text-gray-400 hover:text-white transition flex items-center gap-2 group z-50 cursor-pointer">
+                <div class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10"><i class="fa-solid fa-arrow-left"></i></div>
+                <span class="text-xs font-bold hidden md:inline">Kembali</span>
+            </button>
+            
+            <div class="text-center mb-10 mt-8 md:mt-0 relative z-40">
+                <h2 class="text-3xl font-black text-white mb-2">Download Quizzy</h2>
+                <p class="text-[11px] text-gray-400 font-medium leading-relaxed max-w-md mx-auto">
+                    Install aplikasi Quizzy untuk fleksibilitas akses yang lebih cepat dan stabil tanpa tergantung browser.
+                </p>
+            </div>
+
+            <div class="text-center relative z-40">
+                <p class="text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-4 font-bold">Download for</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                    
+                    <!-- Windows Button -->
+                    <!-- Ganti HREF di bawah dengan link Dropbox (dl=1) atau GitHub Releases kamu -->
+                    <a href="https://www.mediafire.com/file/8gpyg378cqgg9n8/Quizzy.zip/file" 
+                       class="flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-blue-900/40 to-black/40 border border-blue-500/30 hover:border-blue-400 hover:bg-blue-900/30 transition group transform hover:scale-[1.02] duration-200 no-underline cursor-pointer">
+                        <i class="fa-brands fa-windows text-4xl text-blue-500 group-hover:text-white mb-3 transition"></i>
+                        <span class="text-xl font-bold text-white">Windows</span>
+                        <span class="text-[10px] text-blue-300 mt-1 opacity-60 group-hover:opacity-100">.zip (Portable)</span>
+                    </a>
+
+                    <!-- Android Button -->
+                    <!-- Ganti HREF di bawah dengan link Dropbox (dl=1) atau GitHub Releases kamu -->
+                    <a href="https://www.mediafire.com/file/jzx5ke5xy8g5ukr/Quizzy_Studio.apk/file" 
+                       class="flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-green-900/40 to-black/40 border border-green-500/30 hover:border-green-400 hover:bg-green-900/30 transition group transform hover:scale-[1.02] duration-200 no-underline cursor-pointer">
+                        <i class="fa-brands fa-android text-4xl text-green-500 group-hover:text-white mb-3 transition"></i>
+                        <span class="text-xl font-bold text-white">Android</span>
+                        <span class="text-[10px] text-green-300 mt-1 opacity-60 group-hover:opacity-100">.apk (Installer)</span>
+                    </a>
+
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- 2. SISWA JOIN -->
+    <section id="page-join" class="page-section bg-wave items-center justify-center p-4">
+        <div class="glass-panel p-8 w-full max-w-md text-center relative overflow-hidden animate-fade-in-up">
+            <button onclick="app.router('landing')" class="absolute top-4 left-4 text-gray-400 hover:text-white transition"><i class="fa-solid fa-arrow-left"></i></button>
+            <h2 class="text-4xl font-black mb-8 mt-4">MASUKKAN PIN</h2>
+            <input type="tel" id="input-pin" class="glass-input text-center text-4xl font-black tracking-[0.5em] mb-4 uppercase h-20 placeholder:text-gray-600 placeholder:tracking-normal placeholder:text-lg" placeholder="123456" maxlength="6">
+            <input type="text" id="input-name" class="glass-input text-center text-xl mb-6 font-bold" placeholder="Nama Kamu" maxlength="12">
+            <button onclick="app.student.joinGame()" class="btn-primary py-4 text-xl shadow-lg shadow-purple-500/40">🚀 MELUNCUR</button>
+        </div>
+    </section>
+
+    <!-- STUDENT PLAY AREA -->
+    <section id="page-play" class="page-section flex-col bg-[#0f0c29]">
+         <div class="h-2 w-full bg-gray-900 sticky top-0 z-50"><div id="st-timer" class="h-full bg-gradient-to-r from-blue-400 to-purple-600 w-full"></div></div>
+        <div class="p-4 flex justify-between items-center bg-black/20">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center font-bold text-sm" id="st-initial"></div>
+            <span class="font-bold truncate max-w-[120px]" id="st-name">Player</span>
+        </div>
+        <button onclick="confirmStudentExit()" 
+                class="text-red-400 hover:text-red-500 text-xl transition">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        </div>
+                
+         <div class="flex-grow flex flex-col p-4 justify-center relative overflow-hidden">
+             <!-- STATES -->
+             <div id="v-wait" class="text-center animate-pulse">
+                 <h2 class="text-3xl font-black mb-2">SIAP-SIAP!</h2>
+                 <p class="text-gray-400">Mata ke layar depan ya...</p>
+                 <div class="mt-8 flex justify-center"><div class="q-loader-container"><div class="q-loader-ring"></div></div></div>
+             </div>
+             
+             <div id="v-options" class="grid grid-cols-2 gap-4 h-full max-h-[500px] hidden"></div>
+             
+             <div id="v-seq" class="hidden h-full flex flex-col justify-center">
+                 <p class="text-center mb-4 text-sm text-gray-400">Urutkan dari Atas ke Bawah</p>
+                 <div id="seq-container" class="space-y-2"></div>
+                 <button onclick="app.student.submitSeq()" class="btn-primary mt-6 py-4">KIRIM JAWABAN</button>
+             </div>
+             
+             <div id="v-hotspot" class="hidden h-full flex flex-col items-center justify-center">
+                 <p class="text-center mb-4 text-sm text-gray-400">Ketuk bagian gambar yang benar</p>
+                 <div class="relative w-full max-w-md aspect-square bg-black rounded-lg overflow-hidden border border-gray-600" onclick="app.student.tapHotspot(event)">
+                     <img id="st-hs-img" class="w-full h-full object-contain pointer-events-none">
+                     <div id="st-hs-dot" class="w-6 h-6 bg-blue-500/50 border-2 border-blue-400 rounded-full absolute -translate-x-1/2 -translate-y-1/2 hidden pointer-events-none"></div>
+                     <div id="st-hs-dot-fix" class="w-3 h-3 bg-white rounded-full absolute -translate-x-1/2 -translate-y-1/2 hidden pointer-events-none"></div>
+                 </div>
+                 <button onclick="app.student.submitHS()" class="btn-primary mt-6 py-4 w-full max-w-md">KIRIM</button>
+             </div>
+             
+             <div id="v-sent" class="hidden text-center">
+                 <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl shadow-[0_0_30px_rgba(34,197,94,0.5)]"><i class="fa-solid fa-check"></i></div>
+                 <h2 class="text-3xl font-black">TERKIRIM!</h2>
+                 <p class="text-gray-400 mt-2">Tunggu waktunya habis ya...</p>
+             </div>
+             
+             <div id="v-feedback" class="hidden text-center">
+                 <h2 id="fb-title" class="text-6xl font-black mb-4">BENAR!</h2>
+                 <div class="glass-panel p-6 inline-block min-w-[200px]">
+                     <p class="text-xs uppercase text-gray-400 tracking-widest mb-2">SKOR KAMU</p>
+                     <p id="fb-score" class="text-4xl font-bold text-white">0</p>
+                 </div>
+             </div>
+             
+             <div id="v-summary" class="hidden text-center">
+                 <h2 class="text-4xl font-black mb-8 text-yellow-400">GAME SELESAI</h2>
+                 <div class="glass-panel p-8 mb-8">
+                     <p class="text-sm text-gray-400 mb-2">Skor Akhir</p>
+                     <p id="st-sum-score" class="text-6xl font-black mb-6">0</p>
+                     <p class="text-sm text-gray-400 mb-2">Peringkat</p>
+                     <p id="st-sum-rank" class="text-4xl font-bold text-blue-400"># -</p>
+                 </div>
+                 <button onclick="app.router('landing'); location.reload();" class="glass-input py-3 hover:bg-white/10">Main Lagi</button>
+             </div>
+         </div>
+    </section>
+
+    <!-- 3. STUDIO (PORTAL GURU) -->
+    <section id="page-studio" class="page-section p-4 md:p-8">
+<nav class="flex justify-between items-center mb-2 glass-panel p-3 sticky top-2 z-[60] bg-[rgba(34,29,74,0.8)] backdrop-blur-md border-b border-gray-700/50">
+        <div class="flex items-center gap-3 md:gap-4 cursor-pointer hover:opacity-80 transition" onclick="document.getElementById('modal-about').classList.add('open')" title="Tentang Aplikasi">
+                <div class="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center font-bold text-xl shadow-lg">Q</div>
+                <h1 class="font-bold text-base md:text-lg tracking-wide block text-white">Studio Quizzy</h1>
+            </div>
+
+               <div class="flex items-center gap-2 md:gap-3">
+                <button onclick="app.studio.createQuiz()" class="btn-primary w-auto px-3 py-2 md:px-4 text-xs flex items-center gap-2 shadow-purple-500/20"><i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">BARU</span></button>
+
+                <div class="relative cursor-pointer group" onclick="document.getElementById('modal-profile').classList.add('open')" title="Profil Saya">
+                    <div class="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gray-700 flex items-center justify-center overflow-hidden border border-white/20 group-hover:border-white transition shadow-lg">
+                        <img id="header-profile-img" src="" class="w-full h-full object-cover hidden">
+                        <span id="header-profile-initial" class="font-bold text-xs md:text-sm text-white">G</span>
+                    </div>
+                    <div id="profile-incomplete-dot" class="profile-badge-dot hidden" style="width: 8px; height: 8px; top: 0; right: 0;"></div>
+                </div>
+
+                <button onclick="app.auth.logout()" class="bg-red-500/10 text-red-400 px-3 py-2 rounded-lg text-xs hover:bg-red-500 hover:text-white transition border border-red-500/20" title="Keluar"><i class="fa-solid fa-right-from-bracket"></i></button>
+            </div>
+        </nav>
+
+        <div class="hidden md:flex mb-6 gap-2 border-b border-gray-700/30 sticky top-[80px] z-50 bg-[rgba(15,12,40,0)] backdrop-blur-xl p-2 rounded-b-xl shadow-lg transition-all">
+            <button id="tab-my-quiz" class="tab-btn active" onclick="app.studio.switchTab('my')"><i class="fa-solid fa-folder"></i> Koleksi</button>
+            <button id="tab-library" class="tab-btn" onclick="app.studio.switchTab('library')"><i class="fa-solid fa-globe"></i> Bank Soal</button>
+            <button id="tab-history" class="tab-btn" onclick="app.studio.switchTab('history')"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat</button>
+        </div>
+        <div class="flex md:hidden justify-between mb-4 px-2">
+             <button class="text-gray-400 hover:text-white text-xs" onclick="app.studio.switchTab('my')"><i class="fa-solid fa-folder text-lg mb-1"></i> Koleksi</button>
+             <button class="text-gray-400 hover:text-white text-xs" onclick="app.studio.switchTab('library')"><i class="fa-solid fa-globe text-lg mb-1"></i> Bank Soal</button>
+             <button class="text-gray-400 hover:text-white text-xs" onclick="app.studio.switchTab('history')"><i class="fa-solid fa-clock-rotate-left text-lg mb-1"></i> Riwayat</button>
+        </div>
+   
+        <div id="library-filters" class="hidden flex flex-wrap gap-4 mb-6 px-4">
+            <select class="glass-input py-2 text-sm w-auto" id="lib-filter-level">
+                <option value="all">Semua Jenjang</option><option value="SD">SD</option><option value="SMP">SMP</option><option value="SMA">SMA</option><option value="UMUM">UMUM</option>
+            </select>
+            <select class="glass-input py-2 text-sm w-auto" id="lib-filter-subject">
+                <option value="all">Semua Mapel</option><option value="Matematika">Matematika</option><option value="IPA">IPA</option><option value="IPS">IPS</option><option value="Bahasa Indonesia">B. Indonesia</option><option value="Inggris">B. Inggris</option><option value="Umum">Umum</option>
+            </select>
+            <button onclick="app.studio.loadQuizzes()" class="bg-white/10 px-4 py-2 rounded hover:bg-white/20">Cari</button>
+        </div>
+
+        <div id="quiz-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pb-20"></div>
+    </section>
+
+    <!-- 4. EDITOR -->
+    <section id="page-editor" class="page-section p-4 md:p-8">
+        <div class="max-w-4xl mx-auto w-full pb-32">
+            <div class="flex items-center justify-between mb-6 sticky top-4 z-40 glass-panel p-4 backdrop-blur-xl shadow-2xl">
+                <div class="flex items-center gap-4"><button onclick="app.router('studio')" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition"><i class="fa-solid fa-arrow-left"></i></button><h2 class="font-bold text-lg hidden md:block">Editor Kuis</h2></div>
+                <div class="flex gap-2">
+                    <button onclick="app.studio.publishToLibrary()" class="bg-blue-500/20 hover:bg-blue-500 text-blue-200 hover:text-white px-4 py-2 rounded-lg font-bold text-sm transition"><i class="fa-solid fa-globe"></i> Publikasikan <span class="tooltip-trigger">?<span class="tooltip-content">Bagikan kuis ini ke Bank Soal Publik agar guru lain bisa melihatnya.</span></span></button>
+                    <button onclick="app.studio.saveQuiz()" class="bg-green-500 px-6 py-2 rounded-lg font-bold hover:bg-green-400 shadow-lg shadow-green-500/30 flex items-center gap-2 transition transform active:scale-95"><i class="fa-solid fa-floppy-disk"></i> SIMPAN</button>
+                </div>
+            </div>
+            
+            <div class="glass-panel p-6 mb-6">
+                <label class="text-xs uppercase text-gray-400 font-bold tracking-wider">Judul Kuis</label>
+                <input type="text" id="edit-title" class="bg-transparent text-3xl font-bold w-full border-none focus:ring-0 placeholder-gray-600 focus:placeholder-gray-400 transition" placeholder="Contoh: Matematika Dasar...">
+                <div class="flex gap-4 mt-4">
+                    <select id="edit-level" class="glass-input py-1 text-sm w-auto"><option value="UMUM">Jenjang Umum</option><option value="SD">SD</option><option value="SMP">SMP</option><option value="SMA">SMA</option></select>
+                    <select id="edit-subject" class="glass-input py-1 text-sm w-auto"><option value="Umum">Mapel Umum</option><option value="Matematika">Matematika</option><option value="IPA">IPA</option><option value="IPS">IPS</option><option value="Bahasa Indonesia">B. Indonesia</option><option value="Inggris">B. Inggris</option></select>
+                </div>
+            </div>
+
+            <!-- Import Section -->
+            <div id="import-area" class="glass-panel p-6 mb-6 border-2 border-dashed border-gray-600 flex flex-col items-center justify-center text-center transition hover:border-purple-500 hover:bg-white/5 relative">
+                <div class="flex flex-col gap-2 items-center pointer-events-none">
+                    <i class="fa-solid fa-file-csv text-3xl text-gray-400"></i>
+                    <h3 class="font-bold text-sm text-gray-300">Import Soal dari Excel/CSV</h3>
+                    <p class="text-xs text-gray-500 max-w-sm">Tarik file kesini atau klik untuk upload. Format: Pertanyaan, A, B, C, D, IndexBenar(1-4)</p>
+                </div>
+                <input type="file" accept=".csv" class="absolute inset-0 opacity-0 cursor-pointer" onchange="app.studio.importCSV(this)" 
+                       ondragenter="this.parentElement.classList.add('drag-active')" 
+                       ondragleave="this.parentElement.classList.remove('drag-active')"
+                       ondrop="this.parentElement.classList.remove('drag-active')">
+                <a href="#" class="mt-4 text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 z-10 relative pointer-events-auto" onclick="app.studio.downloadTemplate(event)"><i class="fa-solid fa-download"></i> Download Template</a>
+            </div>
+
+            <div id="edit-questions" class="space-y-8"></div>
+            
+            <div class="fixed bottom-8 left-1/2 transform -translate-x-1/2 glass-panel p-2 flex gap-2 z-50 shadow-2xl bg-[rgba(27,24,52,0.5)] backdrop-blur-xl border border-white/20 overflow-x-auto max-w-full">
+                <button onclick="app.studio.addQuestionUI('multiple_choice')" class="p-3 hover:bg-purple-600/50 rounded-lg transition text-center min-w-[70px]" title="Pilihan Ganda"><i class="fa-solid fa-list-ul text-xl block mb-1"></i> <span class="text-[10px] font-bold block">Ganda</span></button>
+                <button onclick="app.studio.addQuestionUI('image_choice')" class="p-3 hover:bg-blue-600/50 rounded-lg transition text-center min-w-[70px]" title="Gambar"><i class="fa-solid fa-images text-xl block mb-1"></i> <span class="text-[10px] font-bold block">Gambar</span></button>
+                <button onclick="app.studio.addQuestionUI('shape')" class="p-3 hover:bg-yellow-600/50 rounded-lg transition text-center min-w-[70px]" title="Bentuk"><i class="fa-solid fa-shapes text-xl block mb-1"></i> <span class="text-[10px] font-bold block">Bentuk</span></button>
+                <button onclick="app.studio.addQuestionUI('sequencing')" class="p-3 hover:bg-green-600/50 rounded-lg transition text-center min-w-[70px]" title="Susun"><i class="fa-solid fa-sort-amount-down text-xl block mb-1"></i> <span class="text-[10px] font-bold block">Susun</span></button>
+                <button onclick="app.studio.addQuestionUI('hotspot')" class="p-3 hover:bg-red-600/50 rounded-lg transition text-center min-w-[70px]" title="Hotspot"><i class="fa-solid fa-bullseye text-xl block mb-1"></i> <span class="text-[10px] font-bold block">Hotspot</span></button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 5. HOST GAME -->
+    <section id="page-host" class="page-section flex-col bg-[#050505]">
+        <div class="h-3 w-full bg-gray-900 sticky top-0 z-50"><div id="host-timer-bar" class="h-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-600 w-full transition-all ease-linear shadow-[0_0_15px_rgba(34,197,94,0.5)]"></div></div>
+        <div class="flex justify-between items-center px-8 py-4 bg-black/40 border-b border-gray-800 backdrop-blur">
+            <div class="flex items-center gap-4">
+                <div class="bg-white/10 px-4 py-1 rounded-lg border border-white/20 flex flex-col"><span class="text-[10px] text-gray-400 uppercase tracking-wider block">PIN Game</span><span class="font-black text-3xl text-white tracking-widest leading-none font-mono" id="host-pin-display">...</span></div>
+            </div>
+            <div class="flex items-center gap-6">
+                <div id="host-timer-count" class="text-4xl font-black text-white hidden">20</div>
+                <div class="text-right"><span class="block text-xs text-gray-400 uppercase">Pemain</span><span class="font-bold text-2xl text-white"><i class="fa-solid fa-users text-blue-400 mr-2"></i><span id="host-player-count">0</span></span></div>
+                <button onclick="app.router('studio')" class="bg-red-500/20 hover:bg-red-500 text-red-200 hover:text-white p-3 rounded-lg transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+        </div>
+
+        <div id="host-main" class="flex-grow flex flex-col justify-center items-center relative p-8">
+            <div id="host-mascot" class="mascot-container"><div id="mascot-bubble" class="mascot-bubble">Halo! Siap main?</div><div id="mascot-svg-wrapper"></div></div>
+
+            <!-- SHARED QUESTION DISPLAY FOR ALL MODES -->
+            <div id="shared-question-display" class="w-full max-w-7xl text-center hidden mb-6 z-20 relative">
+                <span class="bg-blue-600 text-white px-6 py-2 rounded-full text-lg font-bold uppercase tracking-wider mb-6 inline-block shadow-lg shadow-blue-500/30" id="q-type-badge">...</span>
+                <h2 id="q-text" class="text-5xl md:text-6xl font-bold leading-tight drop-shadow-2xl mb-8">...</h2>
+                <div id="q-media" class="mt-6 hidden"><img id="q-img-display" class="h-[350px] mx-auto rounded-xl border-4 border-white shadow-2xl object-contain bg-black/50"></div>
+            </div>
+
+            <!-- LOBBY -->
+            <div id="stage-lobby" class="text-center w-full max-w-7xl">
+                <h1 class="text-7xl font-black mb-8 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 drop-shadow-lg">GABUNG SEKARANG!</h1>
+                <div class="flex justify-center gap-8 mb-8">
+                     <div class="glass-panel p-10 animate-pulse border-4 border-purple-500/50 shadow-[0_0_50px_rgba(168,85,247,0.3)]">
+                        <p class="text-sm uppercase tracking-[0.5em] text-gray-400 mb-2">KODE PIN</p>
+                        <h2 class="text-9xl font-black text-white font-mono" id="lobby-pin">...</h2>
+                    </div>
+                </div>
+                <div class="mb-8 flex justify-center gap-4 bg-black/30 p-2 rounded-xl inline-flex">
+                    <span class="text-gray-400 flex items-center px-2">Waktu:</span>
+                    <button onclick="app.host.setTimer(10)" class="t-btn px-4 py-1 rounded bg-gray-700 hover:bg-purple-600 transition" id="t-10">10s</button>
+                    <button onclick="app.host.setTimer(20)" class="t-btn px-4 py-1 rounded bg-purple-600 hover:bg-purple-600 transition ring-2 ring-white" id="t-20">20s</button>
+                    <button onclick="app.host.setTimer(30)" class="t-btn px-4 py-1 rounded bg-gray-700 hover:bg-purple-600 transition" id="t-30">30s</button>
+                </div>
+                <div id="lobby-players" class="flex flex-wrap justify-center gap-4 mb-16 min-h-[100px] content-start"></div>
+                <div class="flex justify-center gap-6">
+                    <button onclick="app.host.startGame('classic')" class="btn-primary w-auto px-16 py-6 text-3xl shadow-purple-500/50 hover:scale-105 transition border border-white/20">👑 MODE KLASIK</button>
+                    <button disabled class="btn-primary w-auto px-16 py-6 text-3xl bg-gray-600 cursor-not-allowed opacity-50 grayscale border border-white/20 relative" title="Segera Hadir">
+                        👹 BOSS RAID
+                        <span class="absolute -top-3 -right-3 bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold">SOON</span>                </div>
+            </div>
+            
+            <!-- GAMEPLAY CONTAINER -->
+            <div id="stage-gameplay-container" class="w-full flex flex-col items-center hidden relative z-10">
+                <!-- CLASSIC GRID -->
+                <div id="stage-classic" class="w-full max-w-7xl hidden">
+                    <div id="host-answers-grid" class="grid grid-cols-2 gap-6 w-full min-h-[350px]"></div>
+                </div>
+
+                <!-- MONSTER STAGE -->
+                <div id="stage-monster" class="w-full max-w-6xl text-center hidden monster-stage">
+                    <div class="w-full max-w-3xl mb-8 relative">
+                        <div class="flex justify-between text-white font-bold mb-2"><span class="text-red-400 text-xl">BOSS HP</span><span id="monster-hp-text" class="text-xl font-mono">10000/10000</span></div>
+                        <div class="w-full h-10 bg-gray-900 rounded-full overflow-hidden border-4 border-gray-700 shadow-xl relative">
+                            <div id="monster-hp-bar" class="h-full bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 w-full transition-all duration-300 ease-out"></div>
+                            <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTAgMGg0MHY0MEgwVjB6IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTAgNDBMNDAgMEgwdjQweiIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjEpIi8+PC9zdmc+')] opacity-30"></div>
+                        </div>
+                    </div>
+                    <div class="relative h-[400px] w-full flex justify-center items-end pb-10" id="monster-area">
+                        <div id="monster-asset-wrapper" class="monster-asset-container">
+                            <!-- MONSTER DISPLAYED HERE -->
+                        </div>
+                        <div id="projectiles-container" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+                    </div>
+                    <div class="glass-panel px-8 py-4 mb-8 bg-black/40 text-left w-full max-w-2xl h-16 overflow-hidden relative">
+                        <div id="battle-log" class="text-sm font-mono text-green-400 absolute bottom-4 w-full transition-all">Menunggu serangan...</div>
+                    </div>
+                </div>
+
+                <!-- REVEAL ZONE (Shared) -->
+                <div id="host-reveal-area" class="mt-8 hidden w-full flex justify-center"></div>
+
+                <button id="btn-next-round" onclick="app.host.nextQuestion()" class="btn-primary w-auto px-12 py-4 text-xl shadow-[0_0_20px_rgba(106,17,203,0.5)] animate-pulse hidden mt-8">
+                    RONDE BERIKUTNYA <i class="fa-solid fa-forward ml-2"></i>
+                </button>
+            </div>
+            
+            <!-- LEADERBOARD -->
+            <div id="stage-leaderboard" class="hidden w-full max-w-4xl text-center z-10">
+                <h1 class="text-6xl font-black mb-12 text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]">🏆 KLASEMEN SEMENTARA</h1>
+                <div id="lb-list" class="space-y-4 mb-12"></div>
+                <button id="btn-next-classic" onclick="app.host.nextQuestion()" class="btn-primary w-auto px-12 py-4 text-2xl">SOAL SELANJUTNYA <i class="fa-solid fa-arrow-right ml-2"></i></button>
+            </div>
+            
+            <!-- SUMMARY -->
+            <div id="stage-pre-summary" class="hidden text-center z-20">
+                <h1 class="text-5xl font-bold text-white mb-4">Quiz Selesai!</h1>
+                <p class="text-2xl text-blue-300 animate-pulse">Menghitung hasil akhir...</p>
+            </div>
+            <div id="stage-summary" class="hidden w-full max-w-6xl text-center z-20 flex flex-col items-center">
+                <h1 class="text-7xl font-black mb-8 bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500">🏆 PODIUM JUARA 🏆</h1>
+                <div id="summary-podium" class="flex justify-center items-end gap-8 min-h-[350px] mb-12 w-full"></div>
+                <div id="summary-details" class="hidden w-full max-w-4xl glass-panel p-8 mb-8 animate-fade-in-up bg-black/60 border border-white/20">
+                    <h3 class="text-3xl font-bold mb-8 border-b border-gray-600 pb-4 text-left"><i class="fa-solid fa-chart-pie mr-2 text-blue-400"></i> Analisis Kelas</h3>
+                    <div class="grid grid-cols-3 gap-8 mb-8">
+                        <div class="bg-white/5 p-6 rounded-xl"><p class="text-gray-400 uppercase text-xs tracking-wider mb-2">Total Peserta</p><p class="text-5xl font-black text-white" id="sum-total-players">0</p></div>
+                        <div class="bg-white/5 p-6 rounded-xl"><p class="text-gray-400 uppercase text-xs tracking-wider mb-2">Rata-rata Skor</p><p class="text-5xl font-black text-yellow-400" id="sum-avg-score">0</p></div>
+                        <div class="bg-white/5 p-6 rounded-xl"><p class="text-gray-400 uppercase text-xs tracking-wider mb-2">Akurasi Kelas</p><p class="text-5xl font-black text-green-400" id="sum-class-acc">0%</p></div>
+                    </div>
+                    <div class="bg-white/5 p-6 rounded-xl"><div class="flex justify-between text-sm text-gray-300 mb-2"><span>Benar</span><span>Salah</span></div><div class="w-full h-8 bg-red-500/20 rounded-full overflow-hidden flex relative border border-white/10"><div id="sum-bar-correct" class="h-full bg-green-500" style="width: 50%"></div><div id="sum-bar-wrong" class="h-full bg-red-500" style="width: 50%"></div></div></div>
+                </div>
+                <div class="flex gap-4">
+                    <button onclick="document.getElementById('summary-details').classList.toggle('hidden')" class="bg-white/10 px-8 py-4 rounded-xl hover:bg-white/20 transition font-bold border border-white/20 text-lg flex items-center gap-2"><i class="fa-solid fa-list-check"></i> LIHAT ANALISIS</button>
+                    <button onclick="app.router('studio')" class="btn-primary w-auto px-12 py-4 text-xl bg-white text-purple-600 hover:bg-gray-100 flex items-center gap-2"><i class="fa-solid fa-house"></i> KEMBALI KE STUDIO</button>
+                </div>
+            </div>
+        </div>
+    </section>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInAnonymously, onAuthStateChanged, signOut, GoogleAuthProvider, signInWithPopup, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, collection, query, where, onSnapshot, serverTimestamp, orderBy, increment, limit, writeBatch, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+const firebaseConfig = { apiKey: "AIzaSyCV6MW5B2Au4gEbeSO5qdvb3TSmpdAir5s", authDomain: "quizzy-eb33b.firebaseapp.com", databaseURL: "https://quizzy-eb33b-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "quizzy-eb33b", storageBucket: "quizzy-eb33b.firebasestorage.app", messagingSenderId: "519164189816", appId: "1:519164189816:web:444bce5bfde0add134e18d", measurementId: "G-PGK6EPK64V" };
+const appInfo = { id: typeof __app_id !== 'undefined' ? __app_id : 'default-quizzy-id', fbApp: initializeApp(firebaseConfig) };
+const auth = getAuth(appInfo.fbApp);
+const db = getFirestore(appInfo.fbApp);
+const IMGBB_KEY = "1ba2aedfc8203388203a7341c44c1ca5";
+
+// --- UTILITIES ---
+const compressImage = (file, maxWidth = 800, quality = 0.7) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                // Hitung rasio aspek baru
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                // Kompres ke JPEG dengan kualitas 70%
+                canvas.toBlob((blob) => {
+                    resolve(blob);
+                }, 'image/jpeg', quality);
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
+};
+
+const uploadImage = async (file) => { 
+    try { 
+        // Panggil fungsi compressImage sebelum upload dengan max 800px
+        const compressedBlob = await compressImage(file, 800, 0.7);
+        
+        const f = new FormData(); 
+        f.append("image", compressedBlob); // Upload blob hasil kompresi, bukan file asli
+        
+        const r = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, { method: "POST", body: f }); 
+        const d = await r.json(); 
+        return d.data.url; 
+    } catch (e) { 
+        alert("Upload Gagal atau Batal. Cek koneksi."); 
+        return null; 
+    } 
+};
+const getMascotSVG = (e) => { const c={idle:'#2575fc',happy:'#2ecc71',sad:'#e74c3c',wait:'#f1c40f'}[e]||'#2575fc'; const m=e==='happy'?'d="M30 65 Q50 80 70 65"':e==='sad'?'d="M30 75 Q50 60 70 75"':'d="M30 70 L70 70"'; const eyes=e==='wait'?'<circle cx="35" cy="45" r="5"/><circle cx="65" cy="45" r="5"/>':'<circle cx="35" cy="45" r="8" fill="white"/><circle cx="65" cy="45" r="8" fill="white"/><circle cx="35" cy="45" r="3"/><circle cx="65" cy="45" r="3"/>'; return `<svg viewBox="0 0 100 100" class="mascot-svg animate-bounce"><rect x="10" y="20" width="80" height="70" rx="10" fill="${c}" stroke="white" stroke-width="4"/><rect x="20" y="10" width="10" height="10" fill="gray"/><rect x="70" y="10" width="10" height="10" fill="gray"/><line x1="25" y1="10" x2="15" y2="0" stroke="gray" stroke-width="3"/><circle cx="15" cy="0" r="4" fill="red" class="animate-pulse"/>${eyes}<path ${m} stroke="white" stroke-width="4" fill="none"/></svg>`; };
+const setMascot = (e,t=null) => { document.getElementById('mascot-svg-wrapper').innerHTML=getMascotSVG(e); if(t){const b=document.getElementById('mascot-bubble'); b.innerText=t; b.classList.add('show'); setTimeout(()=>b.classList.remove('show'),4000);} };
+setInterval(()=>{if(!document.getElementById('page-host').classList.contains('active'))return; const p=["Semangat!","Ayo bisa!","Fokus ya!","Jangan nyerah!","Seru kan?","Hihihi","Wow!"]; if(Math.random()>0.7)setMascot('idle',p[Math.floor(Math.random()*p.length)]);},8000);
+
+window.app = {
+    user: null, 
+    
+    // --- UTILS: TIMER SYNC ---
+    utils: {
+        startTimer: (elId, durationSeconds, serverStartTime) => {
+            const el = document.getElementById(elId);
+            if(!el || !serverStartTime) return;
+            el.style.transition = 'none';
+            
+            const startMs = serverStartTime.toDate().getTime();
+            const endMs = startMs + (durationSeconds * 1000);
+            
+            const update = () => {
+                const now = Date.now();
+                const remaining = endMs - now;
+                const pct = Math.max(0, (remaining / (durationSeconds * 1000)) * 100);
+                
+                el.style.width = pct + "%";
+                
+                if (pct < 25) el.className = 'h-full w-full bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.8)]';
+                else if (pct < 50) el.className = 'h-full w-full bg-yellow-400';
+                else el.className = 'h-full w-full bg-gradient-to-r from-blue-400 to-purple-600';
+
+                if (remaining > 0 && document.getElementById(elId)) {
+                    requestAnimationFrame(update);
+                }
+            };
+            requestAnimationFrame(update);
+        }
+    },
+
+    router: (pid) => { 
+        document.querySelectorAll('.page-section').forEach(el=>el.classList.remove('active')); 
+        const t=document.getElementById(`page-${pid}`); 
+        if(t)t.classList.add('active'); 
+        if(pid==='studio'&&app.user&&!app.user.isAnonymous)app.studio.init(); 
+    },
+profile: {
+        currentData: {},
+        load: async (uid) => {
+            try {
+                const docSnap = await getDoc(doc(db, `artifacts/${appInfo.id}/users`, uid));
+                if (docSnap.exists()) { app.profile.currentData = docSnap.data(); } 
+                else { app.profile.currentData = { name: app.user.displayName || "Guru", photoURL: app.user.photoURL, role: "", school: "" }; }
+                app.profile.updateUI();
+            } catch (e) { console.error("Load Profile Error", e); }
+        },
+        updateUI: () => {
+            const p = app.profile.currentData;
+            const imgEl = document.getElementById('header-profile-img');
+            const initEl = document.getElementById('header-profile-initial');
+            const dot = document.getElementById('profile-incomplete-dot');
+            
+            if (p.photoURL) { imgEl.src = p.photoURL; imgEl.classList.remove('hidden'); initEl.classList.add('hidden'); } 
+            else { imgEl.classList.add('hidden'); initEl.classList.remove('hidden'); initEl.innerText = (p.name || "G").charAt(0).toUpperCase(); }
+
+            document.getElementById('prof-name').value = p.name || "";
+            document.getElementById('prof-school').value = p.school || "";
+            document.getElementById('prof-role').value = p.role || "";
+            document.getElementById('prof-preview').src = p.photoURL || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+
+            if (!p.name || !p.school || !p.role) dot.classList.remove('hidden'); else dot.classList.add('hidden');
+        },
+        handlePhotoUpload: async (input) => {
+            if (input.files[0]) { const url = await uploadImage(input.files[0]); if (url) { document.getElementById('prof-preview').src = url; app.profile.currentData.photoURL = url; } }
+        },
+        save: async () => {
+            const name = document.getElementById('prof-name').value;
+            const school = document.getElementById('prof-school').value;
+            const role = document.getElementById('prof-role').value;
+            const photoURL = app.profile.currentData.photoURL;
+            if(!name) return alert("Nama tidak boleh kosong.");
+            const btn = document.querySelector('#modal-profile button'); btn.innerText = "Menyimpan..."; btn.disabled = true;
+            try {
+                await setDoc(doc(db, `artifacts/${appInfo.id}/users`, app.user.uid), { name, school, role, photoURL, updatedAt: serverTimestamp() }, { merge: true });
+                if (name !== app.user.displayName || photoURL !== app.user.photoURL) { await updateProfile(auth.currentUser, { displayName: name, photoURL: photoURL }); }
+                app.profile.load(app.user.uid); document.getElementById('modal-profile').classList.remove('open'); alert("Profil berhasil diperbarui!");
+            } catch (e) { alert("Gagal: " + e.message); } finally { btn.innerText = "SIMPAN PERUBAHAN"; btn.disabled = false; }
+        }
+    },
+
+    auth: { 
+        init: () => { 
+            setTimeout(()=>document.getElementById('global-loader').classList.add('opacity-0','pointer-events-none'),2000); 
+            onAuthStateChanged(auth,(u)=>{
+                window.app.user=u; 
+                if(u&&!u.isAnonymous) {
+                    app.profile.load(u.uid);
+                    app.router('studio'); 
+                }
+                else if(u&&u.isAnonymous){ 
+                       if(sessionStorage.getItem('last_pin')){ 
+                        app.student.pin=sessionStorage.getItem('last_pin'); 
+                        app.student.name=sessionStorage.getItem('last_name'); 
+                        getDoc(doc(db,`artifacts/${appInfo.id}/public/data/quizzy`,app.student.pin)).then(s=>{
+                            if(s.exists() && s.data().status !== 'ended'){
+                                app.student.quizData=s.data().quizData; 
+                                app.student.myID=u.uid; 
+                                app.router('play'); 
+                                app.student.listen();
+                            } else {
+                                app.student.leaveGame();
+                            }
+                        }); 
+                    } else app.router('join'); 
+                } else app.router('landing');
+            }); 
+        }, 
+           toggleMode:(m)=>{
+            const form = document.getElementById('auth-form'); form.dataset.mode = m;
+            document.getElementById('auth-submit-btn').innerText = m==='login' ? "Masuk Studio" : "Daftar Akun"; 
+            document.getElementById('tab-login').className = m==='login' ? "text-white font-bold border-b-2" : "text-gray-400"; 
+            document.getElementById('tab-register').className = m==='register' ? "text-white font-bold border-b-2" : "text-gray-400";
+            const extras = document.getElementById('reg-extra-fields');
+            if (m === 'register') { extras.classList.remove('hidden'); document.getElementById('email').placeholder = "Email"; } 
+            else { extras.classList.add('hidden'); document.getElementById('email').placeholder = "Email Sekolah"; }
+        }, 
+        handleEmailAuth:async(e)=>{
+            e.preventDefault(); 
+            const em=document.getElementById('email').value, pw=document.getElementById('password').value; 
+            const mode = e.target.dataset.mode; const btn = document.getElementById('auth-submit-btn');
+            try {
+                btn.innerText = "Memproses..."; btn.disabled = true;
+                if (mode === 'register') {
+                    const name = document.getElementById('reg-fullname').value; const school = document.getElementById('reg-school').value;
+                    const role = document.getElementById('reg-role').value; const terms = document.getElementById('reg-terms').checked;
+                    const photoInput = document.getElementById('reg-photo');
+                    if (!name || !school || !role) throw new Error("Mohon lengkapi semua data diri.");
+                    if (!terms) throw new Error("Anda harus menyetujui Syarat & Ketentuan.");
+                    const cred = await createUserWithEmailAndPassword(auth, em, pw); const user = cred.user;
+                    let photoURL = ""; if (photoInput.files[0]) { photoURL = await uploadImage(photoInput.files[0]); }
+                    await setDoc(doc(db, `artifacts/${appInfo.id}/users`, user.uid), { name, school, role, photoURL, email: em, createdAt: serverTimestamp() });
+                    await updateProfile(user, { displayName: name, photoURL: photoURL });
+                    alert("Pendaftaran berhasil!");
+                } else { await signInWithEmailAndPassword(auth, em, pw); }
+            } catch(err) { alert(err.message); btn.disabled = false; btn.innerText = mode==='login' ? "Masuk Studio" : "Daftar Akun"; }
+        }, 
+        googleLogin:async()=>{
+            try {
+                const res = await signInWithPopup(auth,new GoogleAuthProvider()); const user = res.user;
+                const docRef = doc(db, `artifacts/${appInfo.id}/users`, user.uid); const docSnap = await getDoc(docRef);
+                if (!docSnap.exists()) { await setDoc(docRef, { name: user.displayName, email: user.email, photoURL: user.photoURL, school: "", role: "", createdAt: serverTimestamp() }); }
+            } catch(e) { alert(e.message); }
+        }, 
+        logout:async()=>{ await signOut(auth); sessionStorage.clear(); app.router('landing'); } 
+    },
+
+    studio: {
+        activeTab: 'my',
+        init: () => { app.studio.loadQuizzes(); },
+        switchTab: (tab) => {
+            app.studio.activeTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(tab === 'my' ? 'tab-my-quiz' : tab === 'library' ? 'tab-library' : 'tab-history').classList.add('active');
+            document.getElementById('library-filters').classList.toggle('hidden', tab !== 'library');
+            app.studio.loadQuizzes();
+        },
+        loadQuizzes: () => {
+            const list = document.getElementById('quiz-list');
+            list.innerHTML = '<div class="loader"></div>';
+            
+            if (app.studio.activeTab === 'history') {
+                const ref = query(collection(db, `artifacts/${appInfo.id}/users/${app.user.uid}/history`), orderBy('playedAt', 'desc'));
+                onSnapshot(ref, s => {
+                    let html = '';
+                    if (s.empty) { list.innerHTML = '<p class="col-span-full text-center text-gray-400 py-10">Belum ada riwayat game.</p>'; return; }
+                    s.forEach(doc => {
+                        const h = doc.data();
+                        const date = h.playedAt ? h.playedAt.toDate().toLocaleDateString() : '';
+                        html += `
+                        <div class="glass-panel p-6 flex flex-col justify-between h-auto hover:bg-white/5 transition border-l-4 border-blue-500 cursor-pointer" onclick="app.studio.viewHistoryDetail('${doc.id}')">
+                            <div>
+                                <div class="text-xs text-gray-400 mb-2">${date} • ${h.mode === 'monster' ? '👹 Boss Raid' : '👑 Classic'}</div>
+                                <h3 class="font-bold text-xl mb-2">${h.title}</h3>
+                                <div class="flex gap-4 text-sm text-gray-300">
+                                    <span><i class="fa-solid fa-users"></i> ${h.players} Pemain</span>
+                                    <span><i class="fa-solid fa-trophy"></i> 1st: ${h.winner}</span>
+                                </div>
+                            </div>
+                        </div>`;
+                    });
+                    list.innerHTML = html;
+                });
+                return;
+            }
+
+            let ref;
+            if (app.studio.activeTab === 'my') {
+                ref = query(collection(db, `artifacts/${appInfo.id}/users/${app.user.uid}/quizzes`), orderBy('updatedAt', 'desc'));
+            } else {
+                ref = query(collection(db, `artifacts/${appInfo.id}/public/data/library`), orderBy('createdAt', 'desc'));
+            }
+
+            onSnapshot(ref, s => {
+                let html = '';
+                let docs = [];
+                s.forEach(d => docs.push({id: d.id, ...d.data()}));
+                
+                if(app.studio.activeTab === 'library') {
+                    const level = document.getElementById('lib-filter-level').value;
+                    const subj = document.getElementById('lib-filter-subject').value;
+                    if(level !== 'all') docs = docs.filter(d => d.level === level);
+                    if(subj !== 'all') docs = docs.filter(d => d.subject === subj);
+                }
+
+                if (docs.length === 0) { list.innerHTML = '<p class="col-span-full text-center text-gray-400 py-10">Tidak ada kuis ditemukan.</p>'; return; }
+                
+                docs.forEach(d => {
+                    let btns = '';
+                    if (app.studio.activeTab === 'my') {
+                        btns = `
+                        <button onclick="app.studio.edit('${d.id}')" class="bg-white/10 p-2 rounded hover:bg-white/20 text-blue-300"><i class="fa-solid fa-pen"></i></button>
+                        <button onclick="app.host.setup('${d.id}')" class="btn-primary flex-1 text-sm py-2 shadow-lg">MAIN <i class="fa-solid fa-play ml-1"></i></button>
+                        <button onclick="app.studio.delete('${d.id}')" class="bg-red-500/20 p-2 rounded hover:bg-red-500 text-red-200"><i class="fa-solid fa-trash"></i></button>`;
+                        if (!d.isPublished) btns += `<button onclick="app.studio.publishFromCard('${d.id}')" class="bg-blue-500/20 p-2 rounded hover:bg-blue-500 text-blue-200 ml-1" title="Publikasikan"><i class="fa-solid fa-globe"></i></button>`;
+                    } else {
+                        btns = `<button onclick="app.studio.copyFromLibrary('${d.id}')" class="btn-primary w-full text-sm py-2">Salin ke Akun Saya 📥</button>`;
+                    }
+                    
+                    html += `
+                    <div class="glass-panel p-6 flex flex-col justify-between h-56 hover:bg-white/5 transition border-l-4 border-purple-500">
+                        <div>
+                            <h3 class="font-bold text-xl line-clamp-2 mb-2">${d.title}</h3>
+                            <div class="flex flex-wrap gap-2 text-xs text-gray-400">
+                                <span class="bg-white/10 px-2 py-1 rounded">${d.questions?.length||0} Soal</span>
+                                ${d.level ? `<span class="bg-white/10 px-2 py-1 rounded">${d.level}</span>` : ''}
+                                ${d.subject ? `<span class="bg-white/10 px-2 py-1 rounded">${d.subject}</span>` : ''}
+                            </div>
+                            ${d.author ? `<div class="text-xs text-blue-300 mt-2">by ${d.author}</div>` : ''}
+                        </div>
+                        <div class="flex gap-2 mt-4">${btns}</div>
+                    </div>`;
+                });
+                list.innerHTML = html;
+            });
+        },
+        viewHistoryDetail: async (id) => {
+            const docSnap = await getDoc(doc(db, `artifacts/${appInfo.id}/users/${app.user.uid}/history`, id));
+            if (!docSnap.exists()) return;
+            const h = docSnap.data();
+            const container = document.getElementById('history-detail-content');
+            
+            let html = `<div class="mb-4">
+                <h3 class="text-xl font-bold">${h.title}</h3>
+                <p class="text-gray-400">${h.playedAt ? h.playedAt.toDate().toLocaleString() : ''}</p>
+            </div>
+            <div class="overflow-y-auto max-h-64">
+                <table class="w-full text-sm text-left">
+                    <thead class="text-xs text-gray-400 uppercase bg-white/5">
+                        <tr><th class="px-4 py-2">Rank</th><th class="px-4 py-2">Nama</th><th class="px-4 py-2">Skor</th></tr>
+                    </thead>
+                    <tbody>`;
+            
+            if (h.playerData && h.playerData.length > 0) {
+                h.playerData.forEach((p, i) => {
+                    html += `<tr class="border-b border-gray-700">
+                        <td class="px-4 py-2">#${i+1}</td>
+                        <td class="px-4 py-2 font-bold">${p.name}</td>
+                        <td class="px-4 py-2 text-yellow-400">${p.score}</td>
+                    </tr>`;
+                });
+            } else {
+                html += `<tr><td colspan="3" class="px-4 py-4 text-center text-gray-500">Detail pemain tidak tersedia.</td></tr>`;
+            }
+            html += `</tbody></table></div>`;
+            
+            container.innerHTML = html;
+            document.getElementById('modal-history').classList.add('open');
+        },
+        importCSV: (input) => {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                const lines = text.split(/\r?\n/);
+                let count = 0;
+                lines.forEach((line, index) => {
+                    if (index === 0) return;
+                    if (!line.trim()) return;
+                    const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); 
+                    if (cols.length >= 6) {
+                        const q = {
+                            type: 'multiple_choice',
+                            text: cols[0].replace(/^"|"$/g, '').trim(),
+                            options: [cols[1], cols[2], cols[3], cols[4]].map(s => s.replace(/^"|"$/g, '').trim()),
+                            correctIndex: parseInt(cols[5].trim()) - 1
+                        };
+                        if (q.text && !isNaN(q.correctIndex)) {
+                            app.studio.renderQuestionItem(q);
+                            count++;
+                        }
+                    }
+                });
+                if(count === 0) alert("Gagal mengimpor. Pastikan format CSV benar.");
+                else alert(`Berhasil import ${count} soal!`);
+                input.value = '';
+            };
+            reader.readAsText(file);
+        },
+        downloadTemplate: (e) => {
+            e.stopPropagation();
+            const csvContent = "data:text/csv;charset=utf-8,Pertanyaan,Opsi A,Opsi B,Opsi C,Opsi D, Jawaban Benar (1=A 2=B dst..)\nSiapa Presiden Pertama RI?,Soekarno,Hatta,Habibie,Jokowi,1";
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "quizzy_template.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        },
+        createQuiz: () => { app.currentQuizId=null; document.getElementById('edit-title').value=''; document.getElementById('edit-questions').innerHTML=''; app.router('editor'); },
+        edit: async(id) => { app.currentQuizId=id; const s=await getDoc(doc(db,`artifacts/${appInfo.id}/users/${app.user.uid}/quizzes`,id)); if(!s.exists())return; const d=s.data(); document.getElementById('edit-title').value=d.title; document.getElementById('edit-questions').innerHTML=''; d.questions.forEach(q=>app.studio.renderQuestionItem(q)); app.router('editor'); },
+        delete: async(id) => { if(confirm("Hapus?"))await deleteDoc(doc(db,`artifacts/${appInfo.id}/users/${app.user.uid}/quizzes`,id)); },
+        copyFromLibrary: async(libId) => {
+            if(!confirm("Salin kuis ini ke koleksi Anda?")) return;
+            const s = await getDoc(doc(db, `artifacts/${appInfo.id}/public/data/library`, libId));
+            if(!s.exists()) return alert("Error");
+            const d = s.data();
+            delete d.author; 
+            d.updatedAt = serverTimestamp();
+            d.createdAt = serverTimestamp();
+            await addDoc(collection(db, `artifacts/${appInfo.id}/users/${app.user.uid}/quizzes`), d);
+            alert("Berhasil disalin! Cek tab Koleksi Saya.");
+            app.studio.switchTab('my');
+        },
+        publishFromCard: async(id) => {
+            if(!confirm("Publikasikan kuis ini ke Bank Soal?")) return;
+            const s = await getDoc(doc(db, `artifacts/${appInfo.id}/users/${app.user.uid}/quizzes`, id));
+            const d = s.data();
+            await addDoc(collection(db, `artifacts/${appInfo.id}/public/data/library`), {
+                title: d.title, questions: d.questions, level: d.level || 'UMUM', subject: d.subject || 'Umum',
+                author: app.user.email || 'Guru Quizzy', createdAt: serverTimestamp()
+            });
+            await updateDoc(doc(db, `artifacts/${appInfo.id}/users/${app.user.uid}/quizzes`, id), { isPublished: true });
+            alert("Berhasil dipublikasikan!");
+        },
+        publishToLibrary: async() => {
+             alert("Silakan SIMPAN kuis terlebih dahulu.");
+             app.studio.saveQuiz(true);
+        },
+        doPublish: async (quizId, data) => {
+             await addDoc(collection(db, `artifacts/${appInfo.id}/public/data/library`), {
+                title: data.title, questions: data.questions, level: data.level, subject: data.subject,
+                author: app.user.email || 'Guru Quizzy', createdAt: serverTimestamp()
+            });
+            await updateDoc(doc(db, `artifacts/${appInfo.id}/users/${app.user.uid}/quizzes`, quizId), { isPublished: true });
+            alert("Kuis berhasil dipublikasikan ke Bank Soal!");
+        },
+        addQuestionUI: (t) => app.studio.renderQuestionItem({type:t,text:'',options:t==='sequencing'?['','','','']:['','','',''],correctIndex:0}),
+        renderQuestionItem: (d) => {
+            const id=Date.now()+Math.random().toString(36).substr(2,5); 
+            const w=document.createElement('div'); w.className='glass-panel p-6 relative q-item border border-gray-700 hover:border-purple-500 transition'; w.dataset.type=d.type;
+            let c='';
+            if(d.type==='multiple_choice'||d.type==='shape') c=`<div class="grid grid-cols-2 gap-3">${[0,1,2,3].map(i=>`<div class="flex items-center gap-2 bg-black/30 p-2 rounded-lg"><input type="radio" name="rad-${id}" value="${i}" class="w-5 h-5 accent-purple-500 q-correct" ${d.correctIndex===i?'checked':''}><input class="glass-input py-2 text-sm q-opt" placeholder="Opsi ${i+1}" value="${d.options?.[i]||''}"></div>`).join('')}</div>`;
+            else if(d.type==='image_choice') c=`<div class="grid grid-cols-2 gap-3">${[0,1,2,3].map(i=>`<div class="flex flex-col gap-2 bg-black/30 p-2 rounded-lg"><div class="flex items-center gap-2"><input type="radio" name="rad-${id}" value="${i}" class="w-5 h-5 accent-purple-500 q-correct" ${d.correctIndex===i?'checked':''}> <span class="text-xs text-gray-400">Opsi ${i+1}</span></div><div class="relative h-20 bg-black/50 rounded flex items-center justify-center cursor-pointer overflow-hidden border border-gray-600 hover:border-blue-500" onclick="this.nextElementSibling.click()"><img src="${d.options?.[i]||''}" class="absolute inset-0 w-full h-full object-cover ${d.options?.[i]?'':'hidden'} q-img-preview"><span class="text-xs text-gray-500 ${d.options?.[i]?'hidden':''}">+ Upload</span></div><input type="file" class="hidden" accept="image/*" onchange="app.studio.handleImg(this)"><input type="hidden" class="q-opt" value="${d.options?.[i]||''}"></div>`).join('')}</div>`;
+            else if(d.type==='sequencing') c=`<div class="space-y-2"><p class="text-xs text-yellow-500 mb-2">Urutan Benar (Atas ke Bawah)</p>${[0,1,2,3].map(i=>`<div class="flex items-center gap-2"><span class="bg-gray-700 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">${i+1}</span><input class="glass-input py-2 text-sm q-opt" placeholder="Item ${i+1}" value="${d.options?.[i]||''}"></div>`).join('')}</div>`;
+            else if(d.type==='hotspot') {
+                c=`<div class="flex flex-col gap-4">
+                    <div class="flex gap-4 items-center">
+                        <div class="flex-1"><label class="text-xs text-gray-400">Gambar</label><input type="file" class="glass-input text-xs" accept="image/*" onchange="app.studio.handleHotspotImg(this,'${id}')"></div>
+                        <div class="w-32"><label class="text-xs text-gray-400">Radius</label><input type="number" class="glass-input q-radius" value="${d.radius||10}" oninput="app.studio.updateHotspotVisual('${id}', this.value)"></div>
+                    </div>
+                    <div class="hotspot-editor-area bg-black relative h-[300px] w-full" onclick="app.studio.setHotspot(event,'${id}')">
+<img src="${d.imageUrl||''}" 
+     class="h-full w-full object-contain mx-auto pointer-events-none q-main-img ${d.imageUrl?'':'hidden'}"
+     id="img-${id}"
+     onload="app.studio.updateHotspotVisual('${id}', ${d.radius || 10})">
+                        <div class="hotspot-target ${d.x?'':'hidden'}" id="target-${id}" style="left:${d.x}%;top:${d.y}%">
+                        <div class="hotspot-radius-visual" id="radius-${id}"></div>
+                            </div>
+                        <span class="absolute inset-0 flex items-center justify-center text-gray-600 pointer-events-none ${d.imageUrl?'hidden':''}">Klik Area Jawaban</span>
+                    </div>
+                    <input type="hidden" class="q-img-url" value="${d.imageUrl||''}">
+                    <input type="hidden" class="q-hs-x" value="${d.x||50}">
+                    <input type="hidden" class="q-hs-y" value="${d.y||50}">
+                </div>`;
+            }
+            w.innerHTML = `<div class="flex justify-between items-start mb-4"><div class="bg-blue-600 px-3 py-1 rounded text-xs font-bold uppercase">${d.type.replace('_',' ')}</div><button onclick="this.closest('.q-item').remove()" class="text-red-400 hover:text-red-200"><i class="fa-solid fa-trash"></i></button></div><div class="mb-4"><label class="text-xs text-gray-400 uppercase">Pertanyaan</label><input class="glass-input font-bold q-text" value="${d.text||''}" placeholder="Tulis soal..."></div>${c}`;
+            document.getElementById('edit-questions').appendChild(w);
+        },
+        handleImg: async(i)=>{const u=await uploadImage(i.files[0]); if(u){const p=i.previousElementSibling; p.querySelector('img').src=u; p.querySelector('img').classList.remove('hidden'); p.querySelector('span').classList.add('hidden'); i.nextElementSibling.value=u;}},
+        handleHotspotImg: async(i,id)=>{const u=await uploadImage(i.files[0]); if(u){document.getElementById(`img-${id}`).src=u; document.getElementById(`img-${id}`).classList.remove('hidden'); i.closest('.q-item').querySelector('.q-img-url').value=u;}},
+        setHotspot: (e,id)=>{const r=e.currentTarget.getBoundingClientRect(), x=((e.clientX-r.left)/r.width)*100, y=((e.clientY-r.top)/r.height)*100, t=document.getElementById(`target-${id}`); t.style.left=x+'%'; t.style.top=y+'%'; t.classList.remove('hidden'); const p=t.closest('.q-item'); p.querySelector('.q-hs-x').value=x; p.querySelector('.q-hs-y').value=y;},
+        updateHotspotVisual: (id, val) => {
+        const r = document.getElementById(`radius-${id}`);
+        const img = document.getElementById(`img-${id}`);
+        if (!r || !img) return;
+
+        const rect = img.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+
+        const radiusPx = (val / 100) * Math.min(rect.width, rect.height);
+        const diameterPx = radiusPx * 2;
+
+        r.style.width = diameterPx + 'px';
+        r.style.height = diameterPx + 'px';
+    },
+    
+        collectQuestions: () => {
+            return [...document.querySelectorAll('.q-item')].map(el=>{
+                const tp=el.dataset.type, tx=el.querySelector('.q-text').value; if(!tx)return null;
+                const b={type:tp,text:tx};
+                if(tp==='hotspot'){
+                    b.imageUrl=el.querySelector('.q-img-url').value; 
+                    b.x=+el.querySelector('.q-hs-x').value; 
+                    b.y=+el.querySelector('.q-hs-y').value; 
+                    b.radius=+el.querySelector('.q-radius').value;
+                }
+                else{b.options=[...el.querySelectorAll('.q-opt')].map(i=>i.value); if(tp!=='sequencing')b.correctIndex=+el.querySelector('.q-correct:checked')?.value||0;}
+                return b;
+            }).filter(Boolean);
+        },
+        saveQuiz: async(offerPublish = false)=>{
+            const t=document.getElementById('edit-title').value; if(!t)return alert("Judul wajib!");
+            const q=app.studio.collectQuestions();
+            if(!q || q.length===0)return alert("Isi soal!");
+            const b=document.querySelector('button[onclick="app.studio.saveQuiz()"]'); b.innerText="Saving..."; b.disabled=true;
+            const level = document.getElementById('edit-level').value;
+            const subject = document.getElementById('edit-subject').value;
+            try{
+                const r=collection(db,`artifacts/${appInfo.id}/users/${app.user.uid}/quizzes`); 
+                const pl={title:t,questions:q,level,subject,updatedAt:serverTimestamp()}; 
+                let savedId = app.currentQuizId;
+                if(app.currentQuizId) {
+                    await setDoc(doc(r,app.currentQuizId),pl,{merge:true});
+                } else {
+                    pl.createdAt=serverTimestamp(); 
+                    const ref = await addDoc(r,pl);
+                    savedId = ref.id;
+                }
+                if(offerPublish || confirm("Kuis tersimpan! Publikasikan ke Bank Soal?")) {
+                    await app.studio.doPublish(savedId, pl);
+                }
+                app.router('studio');
+            } catch(e){alert("Error: "+e.message);} finally{b.innerText="SIMPAN"; b.disabled=false;}
+        }
+    },
+
+    host: {
+        data: null, pin: null, listeners: [], timerDuration: 20, timerInterval: null, tauntTimer: null,
+        monsterConfig: {
+            state: 'idle', timer: null,
+            assets: {
+                idle: 'https://files.catbox.moe/k3b84w.webm',
+                hit: 'https://files.catbox.moe/k3b84w.webm',
+                win: 'https://files.catbox.moe/k3b84w.webm',
+                dizzy: 'https://files.catbox.moe/k3b84w.webm',
+                laugh: 'https://files.catbox.moe/k3b84w.webm'
+            }
+        },
+        setTimer: (s) => {
+            app.host.timerDuration = s;
+            document.querySelectorAll('.t-btn').forEach(b => b.classList.replace('ring-2', 'ring-0'));
+            document.querySelectorAll('.t-btn').forEach(b => b.classList.replace('bg-purple-600', 'bg-gray-700'));
+            const btn = document.getElementById(`t-${s}`);
+            if(btn) btn.classList.add('ring-2', 'ring-white', 'bg-purple-600');
+        },
+        renderMonsterAsset: (url, containerId) => {
+            const c = document.getElementById(containerId); if(!c) return;
+            c.innerHTML = '';
+            if(url.includes('.webm') || url.includes('.mp4')) {
+                const v = document.createElement('video'); v.src = url; v.autoplay = true; v.loop = true; v.muted = true; v.setAttribute('playsinline', ''); c.appendChild(v);
+            } else {
+                const i = document.createElement('img'); i.src = url; c.appendChild(i);
+            }
+        },
+        setMonsterState: (state) => {
+            const cfg = app.host.monsterConfig; const w = document.getElementById('monster-asset-wrapper'); if(!w) return;
+            const url = cfg.assets[state] || cfg.assets.idle;
+            if(state === 'hit') {
+                w.classList.add('hit');
+                app.host.renderMonsterAsset(url, 'monster-asset-wrapper');
+                if(cfg.timer) clearTimeout(cfg.timer);
+                cfg.timer = setTimeout(() => {
+                    const hp = parseInt(document.getElementById('monster-hp-text').innerText.split('/')[0]);
+                    const max = parseInt(document.getElementById('monster-hp-text').innerText.split('/')[1]);
+                    const nextState = (hp < max * 0.3) ? 'dizzy' : 'idle';
+                    app.host.setMonsterState(nextState);
+                    w.classList.remove('hit');
+                }, 4500);
+            } else {
+                app.host.renderMonsterAsset(url, 'monster-asset-wrapper');
+            }
+        },
+        setup: async(qid) => {
+            app.host.listeners.forEach(unsub => unsub());
+            app.host.listeners = [];
+
+            const s=await getDoc(doc(db,`artifacts/${appInfo.id}/users/${app.user.uid}/quizzes`,qid)); app.host.data=s.data();
+            const pin=Math.floor(100000+Math.random()*900000).toString(); app.host.pin=pin;
+            await setDoc(doc(db,`artifacts/${appInfo.id}/public/data/quizzy`,pin), {hostId:app.user.uid, quizId:qid, status:'lobby', currentQ:-1, monsterHP:100, createdAt:serverTimestamp(), quizData:app.host.data});
+            document.getElementById('lobby-pin').innerText=pin; document.getElementById('host-pin-display').innerText=pin;
+            document.getElementById('stage-lobby').classList.remove('hidden');
+            ['stage-gameplay-container', 'shared-question-display', 'stage-leaderboard', 'stage-pre-summary', 'stage-summary'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+            app.router('host'); setMascot('idle',"Halo! Yuk main!");
+            app.host.setTimer(20);
+            app.host.listeners.push(onSnapshot(collection(db,`artifacts/${appInfo.id}/public/data/quizzy/${pin}/players`),s=>{document.getElementById('lobby-players').innerHTML=''; document.getElementById('host-player-count').innerText=s.size; s.forEach(d=>document.getElementById('lobby-players').innerHTML+=`<div class="bg-white/10 px-6 py-3 rounded-full font-bold animate-bounce text-lg border border-purple-500 shadow-lg">${d.data().name}</div>`);}));
+        },
+        startGame: async(m) => {
+            app.host.mode=m;
+            if(m==='monster'){const p=Math.max(1,parseInt(document.getElementById('host-player-count').innerText)); const max=p*app.host.data.questions.length*800; await updateDoc(doc(db,`artifacts/${appInfo.id}/public/data/quizzy`,app.host.pin),{mode:m,maxHP:max,monsterHP:max}); app.host.maxHP=max;}
+            document.getElementById('stage-lobby').classList.add('hidden'); app.host.currentQIndex=-1; app.host.nextQuestion();
+        },
+        nextQuestion: async() => {
+            app.host.currentQIndex++;
+            app.host.setMonsterState('idle'); 
+            if(app.host.currentQIndex >= app.host.data.questions.length) return app.host.endSequence();
+            
+            // Hapus tombol-tombol flow sebelumnya untuk reset
+            document.getElementById('btn-next-round').classList.add('hidden'); 
+            document.getElementById('btn-next-classic').classList.add('hidden');
+            document.getElementById('stage-leaderboard').classList.add('hidden'); // Sembunyikan leaderboard
+
+            const q=app.host.data.questions[app.host.currentQIndex];
+            document.querySelectorAll('#host-main > div').forEach(e=>e.classList.add('hidden'));
+            
+            document.getElementById('stage-gameplay-container').classList.remove('hidden');
+            document.getElementById('shared-question-display').classList.remove('hidden'); 
+            document.getElementById('host-mascot').classList.remove('hidden');
+            
+            document.getElementById('q-text').innerText=q.text; 
+            document.getElementById('q-type-badge').innerText=q.type.replace('_',' ');
+            
+            const media=document.getElementById('q-media'), imgDisp=document.getElementById('q-img-display');
+            const hostGrid = document.getElementById('host-answers-grid'); hostGrid.innerHTML = '';
+            const revealArea = document.getElementById('host-reveal-area');
+            revealArea.classList.add('hidden'); revealArea.innerHTML = '';
+
+            if(app.host.mode==='monster'){
+                document.getElementById('stage-monster').classList.remove('hidden');
+                document.getElementById('stage-classic').classList.add('hidden');
+                if(q.type === 'hotspot' || q.type === 'image_choice' || q.imageUrl) {
+                     if(q.imageUrl || q.options.some(o=>o.includes('http'))) {
+                         if(q.imageUrl) { media.classList.remove('hidden'); imgDisp.src=q.imageUrl; imgDisp.style.display='block'; }
+                         else { media.classList.add('hidden'); }
+                     }
+                } else { media.classList.add('hidden'); }
+            } else {
+                document.getElementById('stage-classic').classList.remove('hidden');
+                document.getElementById('stage-monster').classList.add('hidden');
+                
+                if(q.type==='hotspot'){
+                    media.classList.remove('hidden'); imgDisp.src=q.imageUrl; imgDisp.style.display='block';
+                    hostGrid.innerHTML=`<div class="col-span-2 glass-panel flex items-center justify-center text-3xl font-bold h-32" id="bucket-0">Ketuk area jawaban di layarmu!</div>`;
+                } else {
+                    media.classList.add('hidden'); imgDisp.style.display='none';
+                    if(q.type==='sequencing'){
+                        hostGrid.className='flex flex-col gap-3 w-full max-w-2xl mx-auto';
+                        const shuffledOpts = [...q.options].sort(()=>Math.random()-0.5);
+                        shuffledOpts.forEach(o=>hostGrid.innerHTML+=`<div class="glass-panel p-4 text-xl font-bold flex gap-4"><i class="fa-solid fa-bars text-gray-400"></i> ${o}</div>`);
+                    } else {
+                        hostGrid.className='grid grid-cols-2 gap-6 w-full min-h-[350px]';
+                        const clr=['bg-red','bg-blue','bg-yellow','bg-green'], icn=['s-triangle','s-circle','s-square','s-star'];
+                        q.options.forEach((o,i)=>{
+                            let v=q.type==='shape'?`<div class="${icn[i]} scale-150 mb-2"></div>`:q.type==='image_choice'?`<img src="${o}" class="h-20 rounded mb-2">`:'';
+                            let t=q.type==='image_choice'?`Opsi ${i+1}`:o;
+                            hostGrid.innerHTML+=`<div class="host-ans-bucket glass-panel border-b-8 border-white/20 ${clr[i]}" id="bucket-${i}">${v}<span class="text-2xl font-bold">${t}</span></div>`;
+                        });
+                    }
+                }
+            }
+
+            // RESET BAR & UPDATE FIRESTORE DENGAN TIMESTAMP
+            const bar=document.getElementById('host-timer-bar'); 
+            bar.style.transition='none'; bar.style.width='100%';
+
+            await updateDoc(doc(db,`artifacts/${appInfo.id}/public/data/quizzy`,app.host.pin),{
+                status:'playing',
+                currentQ:app.host.currentQIndex,
+                startTime:serverTimestamp(), 
+                qDuration: app.host.timerDuration
+            });
+
+            setMascot('wait', app.host.mode==='monster'?"Serang Boss!":"Ayo jawab!");
+            
+            // TIMER HOST (VISUAL SAJA, SISWA PAKAI SYNC)
+            const timerEl = document.getElementById('host-timer-count');
+            timerEl.classList.remove('hidden', 'text-red-500', 'animate-heartbeat');
+            let timeLeft = app.host.timerDuration;
+            timerEl.innerText = timeLeft;
+            
+            if(app.host.timerInterval) clearInterval(app.host.timerInterval);
+            app.host.timerInterval = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = timeLeft;
+                if(timeLeft <= 5) {
+                    timerEl.classList.add('text-red-500', 'animate-heartbeat');
+                }
+                if(timeLeft <= 0) {
+                    clearInterval(app.host.timerInterval);
+                    app.host.endQuestion();
+                }
+            }, 1000);
+
+            // ANIMASI CSS UNTUK HOST BAR
+            setTimeout(() => {
+                bar.style.transition = `width ${app.host.timerDuration}s linear`;
+                bar.style.width = '0%';
+            }, 100);
+            
+            const totalPlayers = parseInt(document.getElementById('host-player-count').innerText);
+            app.host.listeners.push(onSnapshot(query(collection(db,`artifacts/${appInfo.id}/public/data/quizzy/${app.host.pin}/answers`),where('qIndex','==',app.host.currentQIndex)),s=>{
+                // FIX: Jika semua sudah menjawab, beri jeda sedikit agar tidak "jump scare"
+                if (s.size >= totalPlayers && totalPlayers > 0) {
+                     if(app.host.timerInterval) clearInterval(app.host.timerInterval); // Stop timer countdown
+                     // Delay 1.5 detik sebelum menutup soal agar animasi projectile/chip selesai
+                     setTimeout(() => { if(document.getElementById('stage-gameplay-container').classList.contains('hidden')) return; app.host.endQuestion(); }, 1500);
+                }
+                s.docChanges().forEach(c=>{
+                    if(c.type==='added'){
+                        const ans=c.doc.data();
+                        if(app.host.mode === 'monster') {
+                            if(ans.correct) {
+                                app.host.shootProjectile(ans.name);
+                                updateDoc(doc(db,`artifacts/${appInfo.id}/public/data/quizzy`,app.host.pin),{monsterHP:increment(-ans.score)});
+                            }
+                        } else {
+                            let tid='bucket-0';
+                            if(['multiple_choice','shape','image_choice'].includes(q.type)) tid=`bucket-${ans.answer}`;
+                            const b=document.getElementById(tid)||document.getElementById('host-answers-grid');
+                            if(b){
+                                const chip=document.createElement('div'); chip.className='player-chip'; chip.innerText=ans.name;
+                                chip.style.left=(Math.random()*80+10)+'%'; chip.style.top=(Math.random()*80+10)+'%';
+                                b.appendChild(chip);
+                            }
+                        }
+                    }
+                });
+            }));
+            
+            if(app.host.mode === 'monster') {
+                app.host.listeners.push(onSnapshot(doc(db,`artifacts/${appInfo.id}/public/data/quizzy`,app.host.pin), s=>{
+                    const d = s.data();
+                    if(d && d.monsterHP !== undefined) app.host.updateMonsterHP(d.monsterHP);
+                }));
+            }
+        },
+        shootProjectile: (name) => {
+            const container = document.getElementById('projectiles-container');
+            const p = document.createElement('div');
+            p.className = 'projectile'; p.innerText = name;
+            p.style.left = (Math.random() * 80 + 10) + '%'; p.style.bottom = '0px';
+            container.appendChild(p);
+            const log = document.getElementById('battle-log'); log.innerText = `${name} menyerang!`; log.style.opacity = '1';
+            const anim = p.animate([{ bottom: '0px', transform: 'scale(1)' }, { bottom: '300px', transform: 'scale(1.5)' }], { duration: 500, easing: 'ease-in' });
+            anim.onfinish = () => {
+                p.remove(); app.host.setMonsterState('hit');
+                const dmg = document.createElement('div'); dmg.className = 'dmg-float'; dmg.innerText = "-1000";
+                dmg.style.left = (50 + (Math.random()*20-10)) + '%'; dmg.style.top = '20%';
+                document.getElementById('monster-area').appendChild(dmg); setTimeout(()=>dmg.remove(), 1000);
+            };
+        },
+        updateMonsterHP: (currentHP) => {
+            const maxHP = app.host.maxHP || 1000;
+            const pct = Math.max(0, (currentHP / maxHP) * 100);
+            document.getElementById('monster-hp-bar').style.width = `${pct}%`;
+            document.getElementById('monster-hp-text').innerText = `${Math.ceil(Math.max(0, currentHP))} / ${Math.ceil(maxHP)}`;
+            const bar = document.getElementById('monster-hp-bar');
+            if (pct < 20) { bar.classList.remove('from-red-600', 'via-orange-500'); bar.classList.add('bg-red-900', 'animate-pulse'); app.host.setMonsterState('dizzy'); } 
+            else if (pct < 50) { bar.classList.add('from-red-600'); bar.classList.remove('to-yellow-500'); }
+            
+            if (currentHP <= 0) { 
+                app.host.setMonsterState('win');
+                document.getElementById('monster-asset-wrapper').style.filter = "grayscale(1) blur(2px)";
+                setTimeout(() => app.host.endSequence(), 3000);
+            }
+        },
+        endQuestion: async() => {
+            if(app.host.tauntTimer) clearInterval(app.host.tauntTimer);
+            if(app.host.timerInterval) clearInterval(app.host.timerInterval);
+            await updateDoc(doc(db,`artifacts/${appInfo.id}/public/data/quizzy`,app.host.pin),{status:'revealed'});
+            
+            // Hapus tombol perantara "Ronde Berikutnya"
+            // Langsung fokus ke visual jawaban benar
+            
+            app.host.listeners.forEach(u=>u()); app.host.listeners=[];
+            const q=app.host.data.questions[app.host.currentQIndex];
+
+            if(app.host.mode !== 'monster') {
+                if(['multiple_choice','shape','image_choice'].includes(q.type)){
+                    [0,1,2,3].forEach(i=>{if(i!==q.correctIndex)document.getElementById(`bucket-${i}`)?.classList.add('opacity-20');});
+                }
+            }
+            
+            setMascot('happy',"Yey!");
+            
+            // OTOMATIS KE KLASEMEN SETELAH 5 DETIK (Memberi waktu lihat jawaban)
+            setTimeout(()=>{
+                document.getElementById('stage-gameplay-container').classList.add('hidden');
+                document.getElementById('shared-question-display').classList.add('hidden');
+                if(app.host.mode==='monster') app.host.showMonsterResult(); else app.host.showLeaderboard();
+            }, 5000);
+        },
+        showMonsterResult: async () => { 
+            document.getElementById('stage-monster').classList.remove('hidden');
+             // Jika monster mode, mungkin langsung lanjut atau tampilkan stat sederhana
+             // Untuk konsistensi, kita tampilkan tombol next di sini juga kalau perlu, atau auto next
+             // Sederhananya, kita pakai leaderboard juga tapi versi monster, atau tombol next muncul
+             app.host.showLeaderboard(); 
+        },
+        showLeaderboard: () => {
+            document.getElementById('stage-leaderboard').classList.remove('hidden');
+            // Pastikan tombol Next Question (Klasik) muncul
+            document.getElementById('btn-next-classic').classList.remove('hidden');
+            
+            onSnapshot(query(collection(db,`artifacts/${appInfo.id}/public/data/quizzy/${app.host.pin}/players`),orderBy('score','desc'),limit(5)),s=>{
+                const l=document.getElementById('lb-list'); l.innerHTML=''; let i=1;
+                s.forEach(d=>{const p=d.data(); l.innerHTML+=`<div class="glass-panel p-4 flex justify-between items-center text-2xl font-bold"><div class="flex items-center gap-4"><span class="text-yellow-400">#${i++}</span><span>${p.name}</span></div><span>${Math.round(p.score)}</span></div>`;});
+            });
+        },
+        endSequence: async() => {
+            if(app.host.tauntTimer) clearInterval(app.host.tauntTimer);
+            if(app.host.timerInterval) clearInterval(app.host.timerInterval);
+            
+            const podiumSnap = await getDocs(query(collection(db,`artifacts/${appInfo.id}/public/data/quizzy/${app.host.pin}/players`),orderBy('score','desc')));
+            const playersList = [];
+            podiumSnap.forEach(d => playersList.push(d.data()));
+            const winners = playersList.slice(0,3).map(p => p.name);
+            const totalP = parseInt(document.getElementById('host-player-count').innerText);
+            
+            await addDoc(collection(db, `artifacts/${appInfo.id}/users/${app.user.uid}/history`), {
+                title: app.host.data.title,
+                mode: app.host.mode,
+                players: totalP,
+                winner: winners[0] || '-',
+                playerData: playersList,
+                playedAt: serverTimestamp()
+            });
+
+            document.querySelectorAll('#host-main > div').forEach(e=>e.classList.add('hidden'));
+            document.getElementById('stage-pre-summary').classList.remove('hidden');
+            setMascot('happy',"Selesai! Lihat hasilnya...");
+            await updateDoc(doc(db,`artifacts/${appInfo.id}/public/data/quizzy`,app.host.pin),{status:'ended'});
+            setTimeout(()=>{
+                document.getElementById('stage-pre-summary').classList.add('hidden');
+                document.getElementById('stage-summary').classList.remove('hidden');
+                app.host.renderPodium();
+            },3000);
+        },
+        renderPodium: async() => {
+            const q=query(collection(db,`artifacts/${appInfo.id}/public/data/quizzy/${app.host.pin}/players`),orderBy('score','desc'));
+            const s=await getDocs(q); const p=[]; s.forEach(d=>p.push(d.data()));
+            const l=document.getElementById('summary-podium'); l.innerHTML='';
+            if(p.length>0){
+                if(p[1])l.innerHTML+=`<div class="flex flex-col items-center animate-fade-in-up" style="animation-delay:0.2s"><div class="text-xl font-bold mb-2">${p[1].name}</div><div class="w-32 bg-gray-400 h-32 rounded-t-lg flex items-center justify-center text-4xl font-black shadow-lg">2</div><div class="font-mono mt-2">${p[1].score}</div></div>`;
+                if(p[0])l.innerHTML+=`<div class="flex flex-col items-center animate-fade-in-up" style="animation-delay:0.4s"><div class="text-3xl font-black mb-2 text-yellow-400">👑 ${p[0].name}</div><div class="w-40 bg-gradient-to-b from-yellow-300 to-yellow-600 h-48 rounded-t-lg flex items-center justify-center text-6xl font-black text-white shadow-2xl relative"><div class="absolute inset-0 bg-white/20"></div>1</div><div class="font-mono mt-2 text-xl font-bold text-yellow-400">${p[0].score}</div></div>`;
+                if(p[2])l.innerHTML+=`<div class="flex flex-col items-center animate-fade-in-up" style="animation-delay:0.3s"><div class="text-xl font-bold mb-2">${p[2].name}</div><div class="w-32 bg-orange-600 h-24 rounded-t-lg flex items-center justify-center text-4xl font-black shadow-lg">3</div><div class="font-mono mt-2">${p[2].score}</div></div>`;
+                confetti({particleCount:200,spread:100,origin:{y:0.6}});
+            }
+            document.getElementById('sum-total-players').innerText=p.length;
+            const avg=p.length>0?Math.round(p.reduce((a,b)=>a+b.score,0)/p.length):0; document.getElementById('sum-avg-score').innerText=avg;
+            const ansS=await getDocs(collection(db,`artifacts/${appInfo.id}/public/data/quizzy/${app.host.pin}/answers`));
+            let tc=0; ansS.forEach(d=>{if(d.data().correct)tc++});
+            const acc=ansS.size>0?Math.round((tc/ansS.size)*100):0;
+            document.getElementById('sum-class-acc').innerText=acc+'%'; document.getElementById('sum-bar-correct').style.width=acc+'%'; document.getElementById('sum-bar-wrong').style.width=(100-acc)+'%';
+        }
+    },
+
+    student: {
+        pin: null, myID: null, name: null, quizData: null, currentQ: -1, seqAnswer: [], isSubmitting: false, listenerUnsub: null,
+        
+        joinGame: async() => {
+            const pin=document.getElementById('input-pin').value, name=document.getElementById('input-name').value;
+            if(!pin||!name)return alert("Lengkapi Data");
+            
+            Object.keys(sessionStorage).forEach(k => {
+                if(k.startsWith('ans_') || k.startsWith('score_') || k.startsWith('corr_')) sessionStorage.removeItem(k);
+            });
+
+            const g=await getDoc(doc(db,`artifacts/${appInfo.id}/public/data/quizzy`,pin));
+            if(!g.exists())return alert("PIN Salah atau Game Tidak Ditemukan");
+            if(g.data().status === 'ended') return alert("Game sudah berakhir.");
+            
+            await signInAnonymously(auth); 
+            app.student.myID=auth.currentUser.uid; app.student.pin=pin; app.student.name=name;
+            sessionStorage.setItem('last_pin',pin); sessionStorage.setItem('last_name',name);
+            
+            if(g.data().quizData) { 
+                app.student.quizData = g.data().quizData; 
+                app.student.preloadImages(); 
+            } else { 
+                const qDoc = await getDoc(doc(db, `artifacts/${appInfo.id}/users/${g.data().hostId}/quizzes`, g.data().quizId)); 
+                app.student.quizData = qDoc.data(); 
+                app.student.preloadImages();
+            }
+            
+            await setDoc(doc(db,`artifacts/${appInfo.id}/public/data/quizzy`,pin,'players',app.student.myID),{name,score:0});
+            document.getElementById('st-initial').innerText=name.substr(0,1).toUpperCase(); 
+            document.getElementById('st-name').innerText=name;
+            app.router('play'); 
+            app.student.listen();
+        },
+        preloadImages: () => {
+            if(!app.student.quizData) return;
+            app.student.quizData.questions.forEach(q => {
+                if(q.imageUrl) new Image().src = q.imageUrl;
+                if(q.type === 'image_choice') q.options.forEach(u => new Image().src = u);
+            });
+        },
+        leaveGame: () => {
+            if(app.student.listenerUnsub) app.student.listenerUnsub();
+            sessionStorage.clear();
+            window.location.reload();
+        },
+        listen: () => {
+            if(app.student.listenerUnsub) app.student.listenerUnsub();
+            app.student.listenerUnsub = onSnapshot(doc(db,`artifacts/${appInfo.id}/public/data/quizzy`,app.student.pin), async(s)=>{
+                if(!s.exists()) { alert("Game telah ditutup oleh host."); app.student.leaveGame(); return; }
+                const g=s.data();
+                
+                ['v-wait','v-options','v-seq','v-hotspot','v-sent','v-feedback','v-summary'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+                
+                if(g.status==='ended'){
+                    document.getElementById('v-summary').classList.remove('hidden');
+                    const myD=(await getDoc(doc(db,`artifacts/${appInfo.id}/public/data/quizzy/${app.student.pin}/players/${app.student.myID}`))).data();
+                    const rankQ = query(collection(db,`artifacts/${appInfo.id}/public/data/quizzy/${app.student.pin}/players`), where('score','>',myD.score));
+                    const rankS = await getDocs(rankQ);
+                    document.getElementById('st-sum-score').innerText=myD.score; 
+                    document.getElementById('st-sum-rank').innerText="#"+(rankS.size+1);
+                    return;
+                }
+                
+                if(g.currentQ!==app.student.currentQ){
+                    app.student.currentQ=g.currentQ; 
+                    app.student.isSubmitting=false;
+                    document.getElementById('st-timer').style.width = '100%';
+                }
+                
+                if(g.status==='lobby'||g.status==='starting') {
+                    document.getElementById('v-wait').classList.remove('hidden');
+                }
+                else if(g.status==='playing'){
+                    // LOGIKA FIX: Jika sudah jawab, tampilkan "v-sent" (Terkirim), BUKAN langsung "v-feedback"
+                    if(sessionStorage.getItem(`ans_${g.currentQ}_${app.student.myID}`) || app.student.isSubmitting){
+                        document.getElementById('v-sent').classList.remove('hidden');
+                    }
+                    else{
+                        const q=app.student.quizData.questions[g.currentQ];
+                        if (!q) return;
+
+                        const dur = g.qDuration || 20;
+                        app.utils.startTimer('st-timer', dur, g.startTime);
+                        
+                        if(q.type==='multiple_choice'||q.type==='shape'||q.type==='image_choice'){
+                            const o=document.getElementById('v-options'); o.classList.remove('hidden'); o.innerHTML='';
+                            const clr=['bg-red','bg-blue','bg-yellow','bg-green'], icn=['s-triangle','s-circle','s-square','s-star'];
+                            q.options.forEach((opt,i)=>{
+                                let c=q.type==='multiple_choice'?`<span class="text-6xl font-black">${String.fromCharCode(65+i)}</span>`:q.type==='shape'?`<div class="${icn[i]} scale-[2]"></div>`:`<img src="${opt}" class="h-20 rounded">`;
+                                o.innerHTML+=`<button onclick="app.student.submit(this, ${i})" class="opt-btn ${clr[i]} transform active:scale-95 transition-all">${c}</button>`;
+                            });
+                        } else if(q.type==='sequencing'){
+                            document.getElementById('v-seq').classList.remove('hidden');
+                            if(document.getElementById('seq-container').innerHTML === '') {
+                                app.student.seqAnswer=q.options.map((t,i)=>({t,i})).sort(()=>Math.random()-0.5);
+                                app.student.renderSeq();
+                            }
+                        } else if(q.type==='hotspot'){
+                            document.getElementById('v-hotspot').classList.remove('hidden');
+                            document.getElementById('st-hs-img').src=q.imageUrl; document.getElementById('st-hs-dot').classList.add('hidden');
+                            app.student.hsAns=null;
+                        }
+                    }
+                } else if(g.status==='revealed'){
+                    // Baru munculkan feedback Benar/Salah di sini
+                    document.getElementById('v-feedback').classList.remove('hidden');
+                    const corr=sessionStorage.getItem(`corr_${g.currentQ}_${app.student.myID}`)==='true';
+                    const pts=sessionStorage.getItem(`score_${g.currentQ}_${app.student.myID}`) || 0;
+                    document.getElementById('fb-title').innerText=corr?"BENAR!":"SALAH";
+                    document.getElementById('fb-title').className=corr?"text-6xl font-black mb-4 text-green-500":"text-6xl font-black mb-4 text-red-500";
+                    document.getElementById('fb-score').innerText=corr?`+${pts} Poin`:"0 Poin";
+                    document.getElementById('seq-container').innerHTML = ''; 
+                }
+            });
+        },
+        renderSeq:()=>{const c=document.getElementById('seq-container'); c.innerHTML=''; app.student.seqAnswer.forEach((item,idx)=>{c.innerHTML+=`<div class="seq-item ${app.student.selectedSeq===idx?'selected':''}" onclick="app.student.handleSeqClick(${idx})"><span class="font-bold text-lg">${idx+1}. ${item.t}</span><i class="fa-solid fa-arrows-up-down text-gray-400"></i></div>`;});},
+        handleSeqClick:(idx)=>{if(app.student.selectedSeq===undefined||app.student.selectedSeq===null){app.student.selectedSeq=idx;}else if(app.student.selectedSeq===idx){app.student.selectedSeq=null;}else{const temp=app.student.seqAnswer[app.student.selectedSeq]; app.student.seqAnswer[app.student.selectedSeq]=app.student.seqAnswer[idx]; app.student.seqAnswer[idx]=temp; app.student.selectedSeq=null;} app.student.renderSeq();},
+        submitSeq:()=>{const ans=app.student.seqAnswer.map(x=>x.i); app.student.submit(null, ans);},
+        tapHotspot:(e)=>{
+            const r=e.currentTarget.getBoundingClientRect(); 
+            app.student.hsAns={x:((e.clientX-r.left)/r.width)*100,y:((e.clientY-r.top)/r.height)*100}; 
+            const d=document.getElementById('st-hs-dot'); 
+            d.style.left=app.student.hsAns.x+'%'; d.style.top=app.student.hsAns.y+'%'; d.classList.remove('hidden'); 
+            const df=document.getElementById('st-hs-dot-fix'); 
+            df.style.left=app.student.hsAns.x+'%'; df.style.top=app.student.hsAns.y+'%';
+        },
+        submitHS: () => {
+            if(!app.student.hsAns) return alert("Ketuk gambar dulu!");
+            app.student.submit(null, app.student.hsAns);
+        },
+        submit: async(btn, ans) => {
+            if(app.student.isSubmitting) return;
+            const g = await getDoc(doc(db,`artifacts/${appInfo.id}/public/data/quizzy`,app.student.pin));
+            if(sessionStorage.getItem(`ans_${g.data().currentQ}_${app.student.myID}`)) return;
+
+            app.student.isSubmitting = true;
+            if(btn) btn.classList.add('opacity-50', 'scale-95');
+
+            const gd = g.data();
+            const q = app.student.quizData.questions[gd.currentQ];
+            
+            const now = Date.now();
+            const start = gd.startTime.toDate().getTime();
+            const durationMs = (gd.qDuration || 20) * 1000;
+            const rem = Math.max(0, durationMs - (now - start));
+            let score = Math.max(500, Math.ceil(1000 * (rem / durationMs)));
+            let correct = false;
+
+            if(q.type === 'hotspot'){
+                const dx = ans.x - q.x;
+                const dy = ans.y - q.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if(dist <= (q.radius || 10)) correct = true;
+            } else if(q.type === 'sequencing'){
+                 const correctSeq = JSON.stringify([0,1,2,3].slice(0, q.options.length));
+                 if(JSON.stringify(ans) === correctSeq) correct = true;
+            } else {
+                if(ans === q.correctIndex) correct = true;
+            }
+
+            if(!correct) score = 0;
+
+            await addDoc(collection(db,`artifacts/${appInfo.id}/public/data/quizzy/${app.student.pin}/answers`), {
+                name: app.student.name, answer: ans, correct, score, qIndex: gd.currentQ, submittedAt: serverTimestamp()
+            });
+
+            if(correct) {
+                await updateDoc(doc(db,`artifacts/${appInfo.id}/public/data/quizzy/${app.student.pin}/players/${app.student.myID}`), {
+                    score: increment(score)
+                });
+            }
+
+            sessionStorage.setItem(`ans_${gd.currentQ}_${app.student.myID}`, 'true');
+            sessionStorage.setItem(`corr_${gd.currentQ}_${app.student.myID}`, correct);
+            sessionStorage.setItem(`score_${gd.currentQ}_${app.student.myID}`, score);
+            
+            // Sembunyikan opsi, tampilkan "Terkirim" (tapi belum feedback benar/salah)
+            document.getElementById('v-options').classList.add('hidden');
+            document.getElementById('v-seq').classList.add('hidden');
+            document.getElementById('v-hotspot').classList.add('hidden');
+            document.getElementById('v-sent').classList.remove('hidden');
+        }
+    }
+};
+window.confirmStudentExit = function () {
+  const ok = confirm("Keluar dari game?\nJawaban kamu tidak akan tersimpan.");
+
+  if (!ok) return;
+
+  studentExitClean();
+};
+function studentExitClean() {
+  // Hapus session siswa
+  localStorage.removeItem('quizzy_student_session');
+
+  // Jika ada listener Firebase, hentikan
+  if (app.student && app.student._hostWatcher) {
+    app.student._hostWatcher();
+    app.student._hostWatcher = null;
+  }
+
+  // Reset state penting (aman)
+  if (app.state) {
+    app.state.gamePin = null;
+  }
+
+  // Arahkan ke halaman join PIN
+  app.router('join');
+}
+
+/*fungsi radius baru*/
+function resolveRadiusPx(hotspot, imgEl) {
+  const minSide = Math.min(
+    imgEl.getBoundingClientRect().width,
+    imgEl.getBoundingClientRect().height
+  );
+
+  // 100 = 10% dari sisi terpendek gambar
+  return (hotspot.radius / 100) * (minSide * 0.1);
+}
+
+  /* === EXPAND / COLLAPSE DONATE === */
+  document.querySelectorAll(".donate-toggle").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const card = btn.closest(".donate-card");
+      card.classList.toggle("active");
+    });
+  });
+
+  /* === COPY BANK NUMBER === */
+  document.querySelectorAll(".copy-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+
+      const numberEl = btn
+        .closest(".donate-content")
+        .querySelector(".bank-number");
+
+      const statusEl = btn
+        .closest(".donate-content")
+        .querySelector(".copy-status");
+
+      navigator.clipboard.writeText(numberEl.innerText).then(() => {
+        statusEl.innerText = "✓ Nomor rekening tersalin";
+        setTimeout(() => statusEl.innerText = "", 2000);
+      });
+    });
+  });
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+            .then(reg => console.log('Service Worker registered', reg))
+            .catch(err => console.log('Service Worker failed', err));
+    });
+}
+window.onload = app.auth.init;
+</script>
+    
+    </body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "quizzy-api",
+  "main": "src/index.js",
+  "compatibility_date": "2024-09-25",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "ai": {
+    "binding": "AI"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "quizzy-d1",
+      "database_id": "local-quizzy-d1"
+    }
+  ]
+}

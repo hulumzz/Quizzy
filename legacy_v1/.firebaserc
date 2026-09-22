@@ -1,0 +1,18 @@
+{
+  "projects": {
+    "default": "quizzy-eb33b"
+  },
+  "targets": {
+    "quizzy-eb33b": {
+      "hosting": {
+        "landing": [
+          "quizzy-eb33b"
+        ],
+        "app": [
+          "app-quizzy-eb33b"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
