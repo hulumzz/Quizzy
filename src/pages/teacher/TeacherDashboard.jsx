@@ -1,202 +1,45 @@
-import React, { useState } from 'react';
-import { 
-  Plus, 
-  BookOpen, 
-  Users, 
-  Gamepad2, 
-  Sparkles, 
-  ChevronRight, 
-  Copy, 
-  Check, 
-  QrCode,
-  Calendar,
-  Layers
-} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowRightIcon, AttendanceIcon, ClassesIcon, MembersIcon, QuizIcon } from '../../components/icons';
+import { Button, Card, EmptyState, SectionHeader, Skeleton } from '../../components/ui';
+import { GettingStarted, MetricCard, QuickAction, WeekAgenda, WelcomeBanner } from '../../components/dashboard/DashboardWidgets';
+import { useAuth } from '../../context/useAuth';
+import ClassCard from '../../features/classes/components/ClassCard';
+import { useClasses } from '../../features/classes/hooks/useClasses';
+import { classErrorMessage } from '../../services/class.service';
 
-export default function TeacherDashboard({ onOpenClassDetail }) {
-  const [copiedCode, setCopiedCode] = useState(null);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newClassName, setNewClassName] = useState('');
-  const [newClassDesc, setNewClassDesc] = useState('');
-
-  // Sample initial classes state
-  const [classes, setClasses] = useState([
-    {
-      id: 'c1',
-      name: 'Matematika XI IPA 1',
-      code: 'MTK-11A',
-      description: 'Kelas matematika materi aljabar & kalkulus dasar',
-      studentsCount: 32,
-      materialsCount: 5,
-      quizzesCount: 3,
-      updatedAt: 'Kemarin'
-    },
-    {
-      id: 'c2',
-      name: 'Fisika Dasar - Gelombang',
-      code: 'FIS-GEL',
-      description: 'Studi gelombang mekanik & elektromagnetik',
-      studentsCount: 28,
-      materialsCount: 4,
-      quizzesCount: 2,
-      updatedAt: 'Hari ini'
-    }
-  ]);
-
-  const handleCopyCode = (code, e) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(code);
-    setCopiedCode(code);
-    setTimeout(() => setCopiedCode(null), 2000);
-  };
-
-  const handleCreateClass = (e) => {
-    e.preventDefault();
-    if (!newClassName.trim()) return;
-
-    const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const newCls = {
-      id: 'c_' + Date.now(),
-      name: newClassName,
-      code: newCode,
-      description: newClassDesc || 'Kelas pembelajaran baru',
-      studentsCount: 0,
-      materialsCount: 0,
-      quizzesCount: 0,
-      updatedAt: 'Baru saja'
-    };
-
-    setClasses([newCls, ...classes]);
-    setNewClassName('');
-    setNewClassDesc('');
-    setShowCreateModal(false);
-  };
+export default function TeacherDashboard() {
+  const { user, userProfile } = useAuth();
+  const { classes, status, error, configured, reload } = useClasses();
+  const firstName = (userProfile?.name || user?.displayName || 'Guru').trim().split(/\s+/)[0];
+  const ready = status === 'success';
+  const count = (field) => classes.reduce((total, item) => total + (Number(item[field]) || 0), 0);
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
-      {/* Top Welcome Banner */}
-      <div className="relative overflow-hidden rounded-3xl glass-card p-8 border border-purple-500/20 bg-gradient-to-r from-purple-900/30 via-bg-dark to-blue-900/20">
-        <div className="relative z-10 space-y-3 max-w-2xl">
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-xs font-bold border border-purple-500/30">
-            <Sparkles className="w-3.5 h-3.5" /> Workspace Pengajar Quizzy
-          </span>
-          <h2 className="text-3xl md:text-4xl font-black leading-tight">
-            Selamat Datang di <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Quizzy LMS</span>
-          </h2>
-          <p className="text-gray-300 text-sm leading-relaxed">
-            Kelola ruang kelas, susun materi Notion-style, berdiskusi dengan siswa, pantau presensi Geotagging, dan jalankan Live Game Kuis interaktif.
-          </p>
-        </div>
-
-        <button 
-          onClick={() => setShowCreateModal(true)}
-          className="mt-6 sm:mt-0 relative z-10 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 font-bold text-sm hover:scale-105 transition shadow-lg shadow-purple-500/30 flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" /> Buat Kelas Baru
-        </button>
-      </div>
-
-      {/* Class List Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-xl font-bold">Daftar Kelas Saya ({classes.length})</h3>
-          <p className="text-xs text-gray-400">Pilih kelas untuk mengelola materi, presensi, & kuis</p>
-        </div>
-      </div>
-
-      {/* Class Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {classes.map((cls) => (
-          <div
-            key={cls.id}
-            onClick={() => onOpenClassDetail(cls)}
-            className="group glass-card p-6 rounded-3xl border border-white/10 hover:border-purple-500/50 transition duration-300 cursor-pointer flex flex-col justify-between hover:shadow-xl hover:shadow-purple-500/10"
-          >
-            <div className="space-y-4">
-              <div className="flex justify-between items-start">
-                <span 
-                  onClick={(e) => handleCopyCode(cls.code, e)}
-                  className="px-3 py-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-xs font-mono font-bold border border-purple-500/30 flex items-center gap-1.5 transition"
-                  title="Klik untuk salin kode kelas"
-                >
-                  {cls.code}
-                  {copiedCode === cls.code ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5 opacity-70" />}
-                </span>
-
-                <span className="text-xs text-gray-400 flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5 text-blue-400" /> {cls.studentsCount} Siswa
-                </span>
-              </div>
-
-              <div>
-                <h4 className="font-extrabold text-xl group-hover:text-purple-300 transition mb-1">{cls.name}</h4>
-                <p className="text-xs text-gray-400 line-clamp-2">{cls.description}</p>
-              </div>
-            </div>
-
-            <div className="pt-6 border-t border-white/5 mt-6 flex items-center justify-between text-xs text-gray-400">
-              <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1"><BookOpen className="w-3.5 h-3.5 text-purple-400" /> {cls.materialsCount} Materi</span>
-                <span className="flex items-center gap-1"><Gamepad2 className="w-3.5 h-3.5 text-pink-400" /> {cls.quizzesCount} Kuis</span>
-              </div>
-
-              <div className="w-8 h-8 rounded-full bg-white/5 group-hover:bg-purple-600 group-hover:text-white transition flex items-center justify-center">
-                <ChevronRight className="w-4 h-4" />
-              </div>
-            </div>
+    <div className="qz-dashboard qz-enter">
+      <div className="qz-workspace-heading"><div><span className="qz-eyebrow">WORKSPACE ANDA</span><h2>Hari baru, inspirasi baru.</h2></div><span className="qz-workspace-heading__note">Belajar. Terhubung. Bertumbuh.</span></div>
+      <div className="qz-home-layout">
+        <div className="qz-home-main">
+          <WelcomeBanner name={firstName} />
+          <div className="qz-metrics" aria-label="Ringkasan kelas">
+            <MetricCard icon={ClassesIcon} label="Kelas aktif" value={ready ? classes.filter((item) => item.status === 'active').length : '—'} detail={ready ? 'Dalam daftar kelas Anda' : 'Menunggu data kelas'} />
+            <MetricCard icon={MembersIcon} label="Keanggotaan siswa" value={ready ? count('studentsCount') : '—'} detail="Total anggota di setiap kelas" tone="mint" />
+            <MetricCard icon={QuizIcon} label="Kuis kelas" value={ready ? count('quizzesCount') : '—'} detail="Dari daftar kelas Anda" tone="peach" />
           </div>
-        ))}
-      </div>
-
-      {/* Create Class Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="glass-card p-6 md:p-8 rounded-3xl border border-white/20 w-full max-w-md space-y-6">
-            <h3 className="text-xl font-bold">Buat Kelas Pembelajaran Baru</h3>
-
-            <form onSubmit={handleCreateClass} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-300 mb-1.5">Nama Kelas</label>
-                <input 
-                  type="text" 
-                  required
-                  placeholder="Contoh: Fisika Kuantum XI IPA 2"
-                  value={newClassName}
-                  onChange={(e) => setNewClassName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-sm focus:outline-none focus:border-purple-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-300 mb-1.5">Deskripsi / Mata Pelajaran</label>
-                <textarea 
-                  rows="3"
-                  placeholder="Deskripsi singkat mengenai fokus materi kelas ini..."
-                  value={newClassDesc}
-                  onChange={(e) => setNewClassDesc(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-sm focus:outline-none focus:border-purple-500"
-                ></textarea>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button 
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="flex-1 py-3 rounded-xl bg-white/10 hover:bg-white/20 font-bold text-sm transition"
-                >
-                  Batal
-                </button>
-                <button 
-                  type="submit"
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 font-bold text-sm transition hover:scale-[1.02]"
-                >
-                  Buat Kelas
-                </button>
-              </div>
-            </form>
-          </div>
+          <section>
+            <SectionHeader title="Apa yang ingin Anda lakukan?" />
+            <div className="qz-quick-grid">
+              <QuickAction to="/teacher/classes" icon={ClassesIcon} title="Kelola kelas" description="Ruang belajar & anggota" />
+              <QuickAction to="/teacher/quizzes" icon={QuizIcon} title="Siapkan kuis" description="Ide untuk evaluasi" tone="peach" />
+              <QuickAction to="/teacher/attendance" icon={AttendanceIcon} title="Buka presensi" description="Kehadiran di kelas" tone="mint" />
+            </div>
+          </section>
+          <section className="qz-home-classes">
+            <SectionHeader title="Ruang kelas Anda" description="Semua perjalanan belajar dimulai dari sebuah kelas." action={<Link to="/teacher/classes" className="qz-text-link">Semua kelas <ArrowRightIcon size={16} /></Link>} />
+            {status === 'loading' ? <div className="qz-class-grid qz-class-grid--preview" role="status" aria-label="Memuat kelas"><Skeleton height={215} /><Skeleton height={215} /></div> : status === 'error' ? <div className="qz-inline-state qz-inline-state--error" role="alert">{classErrorMessage(error)} <Button variant="ghost" size="sm" onClick={reload}>Coba lagi</Button></div> : classes.length ? <div className="qz-class-grid qz-class-grid--preview">{classes.slice(0, 4).map((item) => <ClassCard key={item.id} classItem={item} />)}</div> : <Card className="qz-class-empty"><EmptyState icon={ClassesIcon} title={configured ? 'Kelas pertama, banyak kemungkinan.' : 'Ruang kelas sedang disiapkan'} description={configured ? 'Satu tempat untuk berbagi materi, bertukar ide, dan belajar bersama.' : 'Layanan kelas belum tersedia. Kelas Anda akan muncul di sini setelah terhubung.'} action={<Link to="/teacher/classes" className="qz-text-link">{configured ? 'Buat kelas pertama' : 'Buka halaman kelas'} <ArrowRightIcon size={17} /></Link>} /></Card>}
+          </section>
         </div>
-      )}
+        <div className="qz-home-rail"><WeekAgenda /><GettingStarted /></div>
+      </div>
     </div>
   );
 }

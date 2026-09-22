@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, BookOpen, Gamepad2, UserCog, GraduationCap, ArrowRight, Loader2 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { Gamepad2, UserCog, GraduationCap, ArrowRight, Loader2 } from 'lucide-react';
+import { useAuth } from '../context/useAuth';
 
-export default function Auth({ onAuthComplete }) {
-  const { signInWithGoogle, signInAsGuest, saveUserProfile } = useAuth();
-  const [step, setStep] = useState('login'); // 'login' | 'role'
+export default function Auth({ onAuthComplete, initialStep = 'login' }) {
+  const { user, signInWithGoogle, signInAsGuest, saveUserProfile } = useAuth();
+  const [step, setStep] = useState(initialStep);
   const [selectedRole, setSelectedRole] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [pendingUser, setPendingUser] = useState(null);
+  const [pendingUser, setPendingUser] = useState(initialStep === 'role' ? user : null);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (initialStep === 'role' && user) {
+      setPendingUser(user);
+      setStep('role');
+    }
+  }, [initialStep, user]);
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
@@ -18,7 +25,7 @@ export default function Auth({ onAuthComplete }) {
       const result = await signInWithGoogle();
       setPendingUser(result.user);
       setStep('role');
-    } catch (e) {
+    } catch {
       setError('Login gagal. Pastikan popup tidak diblokir browser.');
     } finally {
       setIsLoading(false);
@@ -40,7 +47,7 @@ export default function Auth({ onAuthComplete }) {
         isAnonymous: true,
       });
       onAuthComplete('student');
-    } catch (e) {
+    } catch {
       setError('Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       setIsLoading(false);
@@ -60,7 +67,7 @@ export default function Auth({ onAuthComplete }) {
         isAnonymous: false,
       });
       onAuthComplete(selectedRole);
-    } catch (e) {
+    } catch {
       setError('Gagal menyimpan profil. Coba lagi.');
     } finally {
       setIsLoading(false);
@@ -88,8 +95,8 @@ export default function Auth({ onAuthComplete }) {
             {/* Logo */}
             <div className="text-center mb-8">
               <img src="/logo.png" alt="Quizzy" className="h-16 mx-auto mb-3 drop-shadow-[0_0_16px_rgba(168,85,247,0.6)]" />
-              <h1 className="text-3xl font-black tracking-tight">Quizzy <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">LMS</span></h1>
-              <p className="text-gray-400 text-sm mt-1">Platform Pembelajaran Modern & Gamified</p>
+              <h1 className="text-3xl font-black tracking-tight">Quizzy</h1>
+              <p className="text-gray-400 text-sm mt-1">Ruang belajar yang terhubung dan menyenangkan</p>
             </div>
 
             {/* Card */}
@@ -134,11 +141,11 @@ export default function Auth({ onAuthComplete }) {
                 className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10 transition text-sm disabled:opacity-60"
               >
                 <Gamepad2 className="w-5 h-5 text-purple-400" />
-                Gabung Game sebagai Tamu (Siswa)
+                Gabung kuis sebagai tamu
               </button>
 
               <p className="text-[11px] text-gray-500 text-center pt-1">
-                Login sebagai tamu hanya untuk bergabung ke Live Quiz via PIN. <br />Fitur LMS lengkap memerlukan akun Google.
+                Akun tamu digunakan untuk bergabung ke sesi kuis melalui PIN. <br />Gunakan Google untuk mengakses ruang belajar lengkap.
               </p>
             </div>
           </motion.div>

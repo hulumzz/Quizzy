@@ -29,6 +29,7 @@ build/
 workers/.wrangler/
 .dev.vars
 workers/.dev.vars
+implementation-plan.md
 
 # Legacy & Backups
 legacy_v1/

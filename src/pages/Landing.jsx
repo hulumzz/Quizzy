@@ -1,14 +1,10 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   Gamepad2, 
   Wand2, 
   Timer, 
   QrCode, 
-  Layers, 
-  Share2, 
-  FileSpreadsheet, 
-  Gift, 
   ListOrdered, 
   Crosshair, 
   ArrowUpDown, 
@@ -19,7 +15,6 @@ import {
   BookOpen,
   MessageSquare
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 export default function Landing({ onEnterApp }) {
   return (
@@ -39,7 +34,7 @@ export default function Landing({ onEnterApp }) {
               alt="Quizzy Logo" 
               className="h-10 w-auto group-hover:scale-110 transition duration-300 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" 
             />
-            <span className="text-xl font-bold tracking-wide group-hover:text-purple-400 transition">Quizzy LMS</span>
+            <span className="text-xl font-bold tracking-wide group-hover:text-purple-400 transition">Quizzy</span>
           </div>
 
           <div className="hidden md:flex items-center gap-1 p-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
@@ -69,17 +64,17 @@ export default function Landing({ onEnterApp }) {
             className="hero-content text-center lg:text-left"
           >
             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-semibold mb-4">
-              <Sparkles className="w-3.5 h-3.5" /> Next-Gen Learning Management System
+              <Sparkles className="w-3.5 h-3.5" /> Ruang belajar modern untuk kelas
             </span>
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-black leading-[1.1] mb-6">
               Pembelajaran <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 text-glow">
-                Interaktif & Overkill
+                Lebih Hidup
               </span>
             </h1>
             
             <p className="text-gray-300 text-base sm:text-lg mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-              Quizzy memadukan <b>Learning Workspace</b> Notion-style, <b>Ruang Diskusi Kelas</b>, <b>Presensi GPS</b>, dan <b>Kuis Gamified</b> dalam satu platform ringan berdaya AI.
+              Quizzy dirancang untuk menyatukan <b>materi</b>, <b>diskusi kelas</b>, <b>presensi</b>, dan <b>kuis interaktif</b> dalam satu pengalaman belajar yang ringan.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
@@ -116,7 +111,7 @@ export default function Landing({ onEnterApp }) {
               
               <div className="absolute -bottom-6 -left-2 glass-card p-4 rounded-2xl w-60 animate-float border-l-4 border-purple-500 hidden md:block">
                 <div className="flex justify-between text-xs mb-1 font-bold text-purple-300">
-                  <span>⚡ AI Learning Workspace</span>
+                  <span>Ruang belajar terpadu</span>
                 </div>
                 <div className="text-xs text-gray-300">Materi, Diskusi & Live Quiz terintegrasi</div>
               </div>
@@ -130,7 +125,7 @@ export default function Landing({ onEnterApp }) {
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-5xl font-black mb-4">
-              4 Pilar <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Quizzy LMS</span>
+              4 Pilar <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Quizzy</span>
             </h2>
             <p className="text-gray-400 max-w-xl mx-auto">
               Platform lengkap untuk menciptakan ruang kelas digital yang aktif dan kolaboratif.
@@ -142,15 +137,15 @@ export default function Landing({ onEnterApp }) {
               <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
                 <BookOpen className="w-6 h-6" />
               </div>
-              <h3 className="text-xl font-bold mb-2">1. Learning Workspace</h3>
-              <p className="text-sm text-gray-400">Materi Notion-style dengan dukungan teks, gambar, lampiran file, & video YouTube.</p>
+              <h3 className="text-xl font-bold mb-2">1. Ruang Materi</h3>
+              <p className="text-sm text-gray-400">Materi terstruktur yang mendukung teks, gambar, lampiran, dan video.</p>
             </div>
 
             <div className="glass-card p-6 rounded-2xl border border-blue-500/20 hover:border-blue-500/50 transition">
               <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 mb-4">
                 <MessageSquare className="w-6 h-6" />
               </div>
-              <h3 className="text-xl font-bold mb-2">2. Discussion Space</h3>
+              <h3 className="text-xl font-bold mb-2">2. Ruang Diskusi</h3>
               <p className="text-sm text-gray-400">Ruang diskusi terbenam di setiap materi agar siswa aktif bertanya & menjawab.</p>
             </div>
 
@@ -158,16 +153,16 @@ export default function Landing({ onEnterApp }) {
               <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center text-pink-400 mb-4">
                 <Gamepad2 className="w-6 h-6" />
               </div>
-              <h3 className="text-xl font-bold mb-2">3. Gamified Assessment</h3>
-              <p className="text-sm text-gray-400">Kuis interaktif realtime dengan timer, leaderboard, sound fx, & animasi meriah.</p>
+              <h3 className="text-xl font-bold mb-2">3. Kuis Interaktif</h3>
+              <p className="text-sm text-gray-400">Evaluasi yang dirancang lebih hidup dengan sesi kuis dan umpan balik.</p>
             </div>
 
             <div className="glass-card p-6 rounded-2xl border border-green-500/20 hover:border-green-500/50 transition">
               <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center text-green-400 mb-4">
                 <UserCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-xl font-bold mb-2">4. Geotagged Attendance</h3>
-              <p className="text-sm text-gray-400">Sesi presensi berbasis lokasi GPS (Geofencing) dengan rekap otomatis.</p>
+              <h3 className="text-xl font-bold mb-2">4. Presensi</h3>
+              <p className="text-sm text-gray-400">Sesi kehadiran kelas dengan riwayat dan validasi lokasi sederhana.</p>
             </div>
           </div>
         </div>
@@ -177,8 +172,8 @@ export default function Landing({ onEnterApp }) {
       <section id="features" className="py-24 relative">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">Fitur <span className="text-blue-400">Lengkap</span> & Praktis</h2>
-            <p className="text-gray-400">Semua yang Anda butuhkan untuk menghidupkan kelas digital.</p>
+            <h2 className="text-3xl md:text-5xl font-bold mb-4">Ruang Belajar yang <span className="text-blue-400">Terhubung</span></h2>
+            <p className="text-gray-400">Kemampuan inti yang sedang dibangun menjadi satu pengalaman kelas digital.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -186,32 +181,32 @@ export default function Landing({ onEnterApp }) {
               <div className="w-14 h-14 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-400 text-2xl mb-4 group-hover:rotate-12 transition">
                 <Wand2 />
               </div>
-              <h3 className="text-xl font-bold mb-2">Cloudflare AI Assist</h3>
-              <p className="text-sm text-gray-400">Rangkum materi & susun kuis otomatis berbasis AI hanya dalam satu klik.</p>
+              <h3 className="text-xl font-bold mb-2">Quizzy Assist</h3>
+              <p className="text-sm text-gray-400">Asisten yang dirancang untuk membantu meringkas materi dan menyiapkan pertanyaan.</p>
             </div>
 
             <div className="glass-card p-6 rounded-2xl hover:-translate-y-2 transition duration-300 group">
               <div className="w-14 h-14 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 text-2xl mb-4 group-hover:rotate-12 transition">
                 <Gamepad2 />
               </div>
-              <h3 className="text-xl font-bold mb-2">Live Quiz & Self-Paced</h3>
-              <p className="text-sm text-gray-400">Pilih mode Live Game PIN bersama-sama atau tugas mandiri kelas.</p>
+              <h3 className="text-xl font-bold mb-2">Kuis live & mandiri</h3>
+              <p className="text-sm text-gray-400">Ikuti sesi bersama melalui PIN atau kerjakan evaluasi sesuai waktu belajar.</p>
             </div>
 
             <div className="glass-card p-6 rounded-2xl hover:-translate-y-2 transition duration-300 group">
               <div className="w-14 h-14 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 text-2xl mb-4 group-hover:rotate-12 transition">
                 <Timer />
               </div>
-              <h3 className="text-xl font-bold mb-2">Kontrol Realtime</h3>
-              <p className="text-sm text-gray-400">Guru memegang kendali penuh atas timer, kunci jawaban, & leaderboard.</p>
+              <h3 className="text-xl font-bold mb-2">Kontrol sesi</h3>
+              <p className="text-sm text-gray-400">Guru akan mengendalikan timer, penguncian jawaban, dan momen hasil kuis.</p>
             </div>
 
             <div className="glass-card p-6 rounded-2xl hover:-translate-y-2 transition duration-300 group">
               <div className="w-14 h-14 rounded-xl bg-green-500/20 flex items-center justify-center text-green-400 text-2xl mb-4 group-hover:rotate-12 transition">
                 <QrCode />
               </div>
-              <h3 className="text-xl font-bold mb-2">Akses QR & Kode Kelas</h3>
-              <p className="text-sm text-gray-400">Siswa bergabung tanpa ribet via QR Code scanner atau PIN singkat.</p>
+              <h3 className="text-xl font-bold mb-2">Kode kelas & PIN</h3>
+              <p className="text-sm text-gray-400">Alur bergabung dirancang ringkas melalui kode kelas atau PIN kuis.</p>
             </div>
           </div>
         </div>
@@ -221,8 +216,8 @@ export default function Landing({ onEnterApp }) {
       <section id="types" className="py-20 relative bg-black/30">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">Tipe Soal <span className="text-purple-400">Variatif</span></h2>
-            <p className="text-gray-400">Mendukung kreativitas dengan berbagai model interaksi soal.</p>
+              <h2 className="text-3xl md:text-5xl font-bold mb-4">Arah Kuis <span className="text-purple-400">Quizzy</span></h2>
+            <p className="text-gray-400">Format berikut menjadi arah pengembangan pengalaman evaluasi Quizzy.</p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -252,7 +247,7 @@ export default function Landing({ onEnterApp }) {
 
       {/* Footer */}
       <footer className="py-12 border-t border-white/10 text-center text-gray-500 text-sm">
-        <p>© 2026 Quizzy LMS. Modern Gamified Learning Platform.</p>
+        <p>© 2026 Quizzy. Ruang belajar modern untuk guru dan siswa.</p>
       </footer>
     </div>
   );

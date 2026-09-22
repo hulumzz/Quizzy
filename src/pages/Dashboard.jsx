@@ -9,7 +9,6 @@ import {
   Sparkles, 
   LogOut,
   FileText,
-  Video,
   Clock,
   Users,
   Send,
@@ -34,7 +33,7 @@ export default function Dashboard({ onBackToLanding }) {
   const [isAiGenerating, setIsAiGenerating] = useState(false);
 
   // Mock data for initial UI preview
-  const [classes, setClasses] = useState([
+  const [classes] = useState([
     { id: 'c1', name: 'Matematika XI IPA 1', code: 'MTK-11A', students: 32, materials: 5, quizzes: 3 },
     { id: 'c2', name: 'Fisika Dasar - Gelombang', code: 'FIS-GEL', students: 28, materials: 3, quizzes: 2 },
   ]);
@@ -89,7 +88,7 @@ export default function Dashboard({ onBackToLanding }) {
               });
               setGeoStatus('Lokasi Berhasil Terverifikasi');
             }
-          } catch (e) {
+          } catch {
             setGeoStatus('Gagal memverifikasi lokasi');
           } finally {
             setIsCheckingIn(false);

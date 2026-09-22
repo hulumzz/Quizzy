@@ -1,0 +1,30 @@
+export { default as QuizzyIcon } from './QuizzyIcon';
+export {
+  HomeIcon,
+  ClassesIcon,
+  QuizIcon,
+  AttendanceIcon,
+  ProgressIcon,
+  BookmarkIcon,
+  AiAssistIcon,
+  NotificationIcon,
+  ProfileIcon,
+  MembersIcon,
+  MaterialIcon,
+  DiscussionIcon,
+  SettingsIcon,
+} from './glyphs/navigation';
+export {
+  AddIcon,
+  MenuIcon,
+  CloseIcon,
+  LogoutIcon,
+  CalendarIcon,
+  ArrowRightIcon,
+  SearchIcon,
+  ErrorIcon,
+  ChevronDownIcon,
+  EditIcon,
+  DeleteIcon,
+  LinkIcon,
+} from './glyphs/utility';

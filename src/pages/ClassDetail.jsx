@@ -6,20 +6,16 @@ import {
   UserCheck, 
   Gamepad2, 
   Plus, 
-  Video, 
   FileText, 
   MapPin, 
   Clock, 
   Send, 
   CheckCircle2, 
-  AlertCircle, 
   Loader2,
-  Users,
   Copy,
   Check,
-  Bookmark
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 
 export default function ClassDetail({ classData, onBack, userRole }) {
   const { userProfile, user } = useAuth();
@@ -27,7 +23,6 @@ export default function ClassDetail({ classData, onBack, userRole }) {
   
   // Geolocation & Attendance state
   const [geoStatus, setGeoStatus] = useState(null);
-  const [userCoords, setUserCoords] = useState(null);
   const [checkinResult, setCheckinResult] = useState(null);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
 
@@ -53,7 +48,7 @@ export default function ClassDetail({ classData, onBack, userRole }) {
   const [newComment, setNewComment] = useState('');
 
   // Sample Notion Materials
-  const [materials, setMaterials] = useState([
+  const [materials] = useState([
     {
       id: 'm1',
       title: 'Modul 1: Spektrum Gelombang Elektromagnetik',
@@ -99,11 +94,7 @@ export default function ClassDetail({ classData, onBack, userRole }) {
       setIsCheckingIn(false);
     } else {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          setUserCoords({ lat, lng, accuracy: position.coords.accuracy });
-          
+        () => {
           setTimeout(() => {
             setCheckinResult({
               status: 'Hadir',

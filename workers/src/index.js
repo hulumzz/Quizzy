@@ -118,7 +118,7 @@ app.get('/api/classes', async (c) => {
   try {
     const { results } = await c.env.DB.prepare("SELECT * FROM classes ORDER BY created_at DESC").all();
     return c.json({ classes: results });
-  } catch (e) {
+  } catch {
     return c.json({ classes: [] });
   }
 });

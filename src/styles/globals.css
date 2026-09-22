@@ -1,0 +1,91 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--qz-bg);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--qz-bg);
+  color: var(--qz-text);
+  font-family: var(--qz-font-sans);
+  font-weight: 450;
+  letter-spacing: -0.006em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid rgba(101, 72, 216, 0.28);
+  outline-offset: 2px;
+}
+
+a {
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+}
+
+.qz-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Expressive landing/auth utilities kept intentionally separate from the calm app shell. */
+.bg-orb {
+  position: fixed;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.4;
+  z-index: -10;
+  animation: floatOrb 20s infinite ease-in-out alternate;
+}
+
+.orb-1 { width: 50vw; height: 50vw; background: #a855f7; top: -10%; left: -10%; opacity: 0.3; filter: blur(100px); }
+.orb-2 { width: 40vw; height: 40vw; background: #3b82f6; bottom: -10%; right: -10%; opacity: 0.3; filter: blur(100px); }
+.orb-3 { width: 30vw; height: 30vw; background: #ec4899; top: 40%; left: 40%; opacity: 0.3; filter: blur(100px); }
+.grid-bg {
+  background-size: 50px 50px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+}
+.glass-nav { background: rgba(5, 5, 10, 0.72); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.glass-card { background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01)); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.06); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); }
+.text-glow { text-shadow: 0 0 20px rgba(168, 85, 247, 0.5); }
+
+@keyframes floatOrb {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(50px, 50px) scale(1.1); }
+}

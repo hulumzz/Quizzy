@@ -7,6 +7,15 @@ export default {
   theme: {
     extend: {
       colors: {
+        'qz-bg': 'var(--qz-bg)',
+        'qz-surface': 'var(--qz-surface)',
+        'qz-border': 'var(--qz-border)',
+        'qz-text': 'var(--qz-text)',
+        'qz-muted': 'var(--qz-text-muted)',
+        'qz-primary': 'var(--qz-primary)',
+        'qz-success': 'var(--qz-success)',
+        'qz-warning': 'var(--qz-warning)',
+        'qz-danger': 'var(--qz-danger)',
         'neon-blue': '#3b82f6',
         'neon-purple': '#a855f7',
         'neon-pink': '#ec4899',

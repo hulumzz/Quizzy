@@ -1,0 +1,119 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Quizzy authenticated learning workspace API
+
+Parameters:
+  FirebaseProjectId:
+    Type: String
+    Description: Firebase project ID used as ID-token audience.
+    MinLength: 1
+  AllowedOrigins:
+    Type: CommaDelimitedList
+    Description: Exact frontend origins allowed to call the Function URL.
+    Default: http://localhost:5173
+
+Resources:
+  QuizzyTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PROVISIONED
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: OwnerIndex
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+      SSESpecification:
+        SSEEnabled: true
+
+  ClassesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Authenticated class and material workspace API.
+      CodeUri: ../
+      Handler: src/functions/classes/index.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - arm64
+      MemorySize: 256
+      Timeout: 10
+      ReservedConcurrentExecutions: 5
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref QuizzyTable
+          FIREBASE_PROJECT_ID: !Ref FirebaseProjectId
+      Policies:
+        - Statement:
+            - Sid: ReadClassData
+              Effect: Allow
+              Action:
+                - dynamodb:Query
+                - dynamodb:GetItem
+                - dynamodb:BatchGetItem
+              Resource:
+                - !GetAtt QuizzyTable.Arn
+                - !Sub '${QuizzyTable.Arn}/index/OwnerIndex'
+            - Sid: WriteLearningData
+              Effect: Allow
+              Action:
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+              Resource: !GetAtt QuizzyTable.Arn
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: BUFFERED
+        Cors:
+          AllowCredentials: false
+          AllowHeaders:
+            - authorization
+            - content-type
+            - x-idempotency-key
+          AllowMethods:
+            - GET
+            - POST
+            - PUT
+            - DELETE
+          AllowOrigins: !Ref AllowedOrigins
+          MaxAge: 300
+
+  ClassesFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${ClassesFunction}'
+      RetentionInDays: 7
+
+Outputs:
+  ClassesFunctionUrl:
+    Description: Set this value as VITE_API_URL without the trailing slash.
+    Value: !GetAtt ClassesFunctionUrl.FunctionUrl
+  TableName:
+    Description: DynamoDB table used by Quizzy.
+    Value: !Ref QuizzyTable

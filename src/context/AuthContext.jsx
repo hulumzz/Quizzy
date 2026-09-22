@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   auth,
   db,
@@ -10,8 +10,7 @@ import {
   getDoc,
 } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-
-const AuthContext = createContext(null);
+import { AuthContext } from './auth-context';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -19,7 +18,7 @@ export function AuthProvider({ children }) {
     try {
       const saved = localStorage.getItem('quizzy_user_profile');
       return saved ? JSON.parse(saved) : null;
-    } catch (e) {
+    } catch {
       return null;
     }
   });
@@ -121,8 +120,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
 }

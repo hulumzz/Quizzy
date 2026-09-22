@@ -1,0 +1,53 @@
+import { useEffect, useId, useRef } from 'react';
+import IconButton from './IconButton';
+import { CloseIcon } from '../icons';
+
+export default function Dialog({ open, onClose, title, description, children, footer }) {
+  const titleId = useId();
+  const descriptionId = useId();
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const previous = document.activeElement;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusable = () => [...(dialogRef.current?.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), a[href], [tabindex="0"]') || [])].filter((node) => node.getClientRects().length);
+    const input = dialogRef.current?.querySelector('input:not(:disabled), textarea:not(:disabled)');
+    (input || dialogRef.current)?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose?.();
+      if (event.key !== 'Tab') return;
+      const items = focusable();
+      if (!items.length) { event.preventDefault(); return; }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) { event.preventDefault(); last.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = oldOverflow;
+      previous?.focus?.();
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="qz-dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose?.()}>
+      <div ref={dialogRef} className="qz-dialog qz-enter" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} tabIndex={-1}>
+        <div className="qz-dialog__header">
+          <div>
+            <h2 id={titleId}>{title}</h2>
+            {description ? <p id={descriptionId}>{description}</p> : null}
+          </div>
+          <IconButton label="Tutup dialog" onClick={onClose}><CloseIcon size={18} /></IconButton>
+        </div>
+        <div className="qz-dialog__body">{children}</div>
+        {footer ? <div className="qz-dialog__footer">{footer}</div> : null}
+      </div>
+    </div>
+  );
+}
