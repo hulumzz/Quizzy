@@ -23,16 +23,16 @@ import {
   increment 
 } from "firebase/firestore";
 
-// Firebase credentials extracted from existing legacy Quizzy project
+// Firebase configuration loaded securely from environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyCV6MW5B2Au4gEbeSO5qdvb3TSmpdAir5s",
-  authDomain: "quizzy-eb33b.firebaseapp.com",
-  databaseURL: "https://quizzy-eb33b-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "quizzy-eb33b",
-  storageBucket: "quizzy-eb33b.firebasestorage.app",
-  messagingSenderId: "519164189816",
-  appId: "1:519164189816:web:444bce5bfde0add134e18d",
-  measurementId: "G-PGK6EPK64V"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || ""
 };
 
 // Initialize Firebase App

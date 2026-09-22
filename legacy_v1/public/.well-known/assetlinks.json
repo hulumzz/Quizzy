@@ -1,8 +1,0 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "id.my.quizzyhub.app.twa",
-        "sha256_cert_fingerprints": ["0B:B9:36:78:88:11:B8:43:B6:9F:E5:25:F0:83:7F:A8:A3:AD:1E:1A:14:86:89:F2:45:C9:C4:93:AE:40:14:16"]
-      }
-    }]
