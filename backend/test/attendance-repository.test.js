@@ -25,13 +25,18 @@ test('owner creates attendance as a draft with server ownership', async () => {
   assert.equal(session.status, 'draft');
 });
 
-test('student list hides drafts and attaches only their own check-in', async () => {
-  const documentClient = { async send() { return { Items: [
-    { entityType: 'ATTENDANCE', id: 'draft-1', classId: 'class-1', title: 'Draft', status: 'draft', latitude: 1, longitude: 1, radiusMeters: 100, createdAt: '2026-09-23T03:00:00Z', updatedAt: '2026-09-23T03:00:00Z' },
-    { entityType: 'ATTENDANCE', id: 'active-1', classId: 'class-1', title: 'Aktif', status: 'active', latitude: 1, longitude: 1, radiusMeters: 100, createdAt: '2026-09-23T02:00:00Z', updatedAt: '2026-09-23T02:00:00Z' },
-    { entityType: 'ATTENDANCE_CHECKIN', attendanceId: 'active-1', uid: 'student-1', name: 'Dina', distanceMeters: 12, checkedInAt: '2026-09-23T02:10:00Z' },
-    { entityType: 'ATTENDANCE_CHECKIN', attendanceId: 'active-1', uid: 'student-2', name: 'Rafi', distanceMeters: 20, checkedInAt: '2026-09-23T02:11:00Z' },
-  ] }; } };
+test('student list hides drafts, separates check-in storage, and attaches only their own check-in', async () => {
+  const commands = [];
+  const documentClient = { async send(command) {
+    commands.push(command);
+    if (commands.length === 1) return { Items: [
+      { entityType: 'ATTENDANCE', id: 'draft-1', classId: 'class-1', title: 'Draft', status: 'draft', latitude: 1, longitude: 1, radiusMeters: 100, createdAt: '2026-09-23T03:00:00Z', updatedAt: '2026-09-23T03:00:00Z' },
+      { entityType: 'ATTENDANCE', id: 'active-1', classId: 'class-1', title: 'Aktif', status: 'active', latitude: 1, longitude: 1, radiusMeters: 100, createdAt: '2026-09-23T02:00:00Z', updatedAt: '2026-09-23T02:00:00Z' },
+    ] };
+    return { Responses: { QuizzyTest: [
+      { entityType: 'ATTENDANCE_CHECKIN', attendanceId: 'active-1', uid: 'student-1', name: 'Dina', distanceMeters: 12, checkedInAt: '2026-09-23T02:10:00Z' },
+    ] } };
+  } };
   const repository = new AttendanceRepository({ tableName: 'QuizzyTest', documentClient, classRepository: classRepository('member') });
   const list = await repository.list('class-1', 'student-1');
   assert.equal(list.length, 1);
@@ -39,6 +44,7 @@ test('student list hides drafts and attaches only their own check-in', async () 
   assert.equal(list[0].checkIn.uid, 'student-1');
   assert.equal(list[0].latitude, undefined);
   assert.equal(list[0].longitude, undefined);
+  assert.deepEqual(commands[1].input.RequestItems.QuizzyTest.Keys, [{ PK: 'ATTENDANCE#active-1', SK: 'CHECKIN#student-1' }]);
 });
 
 test('check-in rejects users outside the configured server radius', async () => {
@@ -72,20 +78,24 @@ test('successful check-in uses a transaction that rechecks active status', async
   const transaction = commands[2].input.TransactItems;
   assert.equal(transaction[0].ConditionCheck.ExpressionAttributeValues[':active'], 'active');
   assert.equal(transaction[1].Put.Item.uid, 'student-1');
+  assert.equal(transaction[1].Put.Item.PK, 'ATTENDANCE#attendance-1');
+  assert.equal(transaction[1].Put.Item.SK, 'CHECKIN#student-1');
   assert.equal(checkIn.status, 'present');
 });
 
-test('teacher detail returns present and absent recap', async () => {
-  let calls = 0;
+test('teacher detail returns present and absent recap from the session check-in partition', async () => {
+  const commands = [];
   const documentClient = {
-    async send() {
-      calls += 1;
-      if (calls === 1) return { Item: { entityType: 'ATTENDANCE', id: 'attendance-1', classId: 'class-1', title: 'Pertemuan', status: 'ended', latitude: -6.98, longitude: 109.64, radiusMeters: 100, createdAt: '2026-09-23T00:00:00Z', updatedAt: '2026-09-23T01:00:00Z' } };
+    async send(command) {
+      commands.push(command);
+      if (commands.length === 1) return { Item: { entityType: 'ATTENDANCE', id: 'attendance-1', classId: 'class-1', title: 'Pertemuan', status: 'ended', latitude: -6.98, longitude: 109.64, radiusMeters: 100, createdAt: '2026-09-23T00:00:00Z', updatedAt: '2026-09-23T01:00:00Z' } };
       return { Items: [{ entityType: 'ATTENDANCE_CHECKIN', attendanceId: 'attendance-1', uid: 'student-1', name: 'Dina', distanceMeters: 5, checkedInAt: '2026-09-23T00:15:00Z' }] };
     },
   };
   const repository = new AttendanceRepository({ tableName: 'QuizzyTest', documentClient, classRepository: classRepository('owner') });
   const detail = await repository.detail('class-1', 'attendance-1', 'teacher-1');
+  assert.equal(commands[1].input.ExpressionAttributeValues[':attendance'], 'ATTENDANCE#attendance-1');
+  assert.equal(commands[1].input.ExpressionAttributeValues[':checkin'], 'CHECKIN#');
   assert.deepEqual(detail.summary, { totalMembers: 2, presentCount: 1, absentCount: 1 });
   assert.deepEqual(detail.recap.map((item) => item.status), ['present', 'absent']);
 });

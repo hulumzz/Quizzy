@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { BatchGetCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { conflict, forbidden, HttpError, notFound } from '../http/errors.js';
 
 function sessionKey(classId, attendanceId) {
   return { PK: `CLASS#${classId}`, SK: `ATTENDANCE#${attendanceId}` };
 }
 
-function checkInKey(classId, attendanceId, uid) {
-  return { PK: `CLASS#${classId}`, SK: `ATTENDANCE#${attendanceId}#CHECKIN#${uid}` };
+function checkInKey(attendanceId, uid) {
+  return { PK: `ATTENDANCE#${attendanceId}`, SK: `CHECKIN#${uid}` };
 }
 
 function publicCheckIn(item) {
@@ -91,19 +91,32 @@ export class AttendanceRepository {
       KeyConditionExpression: 'PK = :class AND begins_with(SK, :attendance)',
       ExpressionAttributeValues: { ':class': `CLASS#${classId}`, ':attendance': 'ATTENDANCE#' },
       ConsistentRead: true,
-      Limit: 250,
     }));
-    const all = result.Items || [];
-    const sessions = all.filter((item) => item.entityType === 'ATTENDANCE');
+    let sessions = (result.Items || []).filter((item) => item.entityType === 'ATTENDANCE');
     sessions.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    sessions = sessions.slice(0, 100);
     if (classItem.accessRole === 'owner') return sessions.map(publicSession);
 
-    const checkIns = new Map(all
-      .filter((item) => item.entityType === 'ATTENDANCE_CHECKIN' && item.uid === uid)
+    sessions = sessions.filter((item) => item.status !== 'draft');
+    if (!sessions.length) return [];
+
+    let pendingKeys = sessions.map((item) => checkInKey(item.id, uid));
+    const checkInItems = [];
+    for (let attempt = 0; attempt < 3 && pendingKeys.length; attempt += 1) {
+      const checkInResult = await this.client.send(new BatchGetCommand({
+        RequestItems: {
+          [this.tableName]: { Keys: pendingKeys, ConsistentRead: true },
+        },
+      }));
+      checkInItems.push(...(checkInResult.Responses?.[this.tableName] || []));
+      pendingKeys = checkInResult.UnprocessedKeys?.[this.tableName]?.Keys || [];
+    }
+    if (pendingKeys.length) throw new HttpError(503, 'ATTENDANCE_LIST_UNAVAILABLE', 'Riwayat presensi sedang sibuk. Silakan coba lagi.');
+
+    const checkIns = new Map(checkInItems
+      .filter((item) => item.entityType === 'ATTENDANCE_CHECKIN')
       .map((item) => [item.attendanceId, item]));
-    return sessions
-      .filter((item) => item.status !== 'draft')
-      .map((item) => publicSession(item, { checkIn: publicCheckIn(checkIns.get(item.id)) }, { includeLocation: false }));
+    return sessions.map((item) => publicSession(item, { checkIn: publicCheckIn(checkIns.get(item.id)) }, { includeLocation: false }));
   }
 
   async create({ classId, ownerId, title, latitude, longitude, radiusMeters, now = new Date().toISOString() }) {
@@ -172,7 +185,7 @@ export class AttendanceRepository {
 
     const existing = await this.client.send(new GetCommand({
       TableName: this.tableName,
-      Key: checkInKey(classId, attendanceId, uid),
+      Key: checkInKey(attendanceId, uid),
       ConsistentRead: true,
     }));
     if (existing.Item) return publicCheckIn(existing.Item);
@@ -186,7 +199,7 @@ export class AttendanceRepository {
     }
 
     const item = {
-      ...checkInKey(classId, attendanceId, uid),
+      ...checkInKey(attendanceId, uid),
       entityType: 'ATTENDANCE_CHECKIN',
       attendanceId,
       classId,
@@ -224,7 +237,7 @@ export class AttendanceRepository {
       if (!transactionConflict(error)) throw error;
       const [refreshedSession, refreshedCheckIn] = await Promise.all([
         this.getSession(classId, attendanceId),
-        this.client.send(new GetCommand({ TableName: this.tableName, Key: checkInKey(classId, attendanceId, uid), ConsistentRead: true })),
+        this.client.send(new GetCommand({ TableName: this.tableName, Key: checkInKey(attendanceId, uid), ConsistentRead: true })),
       ]);
       if (refreshedCheckIn.Item) return publicCheckIn(refreshedCheckIn.Item);
       if (refreshedSession.status !== 'active') throw conflict('ATTENDANCE_NOT_ACTIVE', 'Sesi presensi sudah berakhir.');
@@ -239,7 +252,7 @@ export class AttendanceRepository {
       if (session.status === 'draft') throw notFound('Sesi presensi tidak ditemukan.');
       const result = await this.client.send(new GetCommand({
         TableName: this.tableName,
-        Key: checkInKey(classId, attendanceId, uid),
+        Key: checkInKey(attendanceId, uid),
         ConsistentRead: true,
       }));
       return publicSession(session, { checkIn: publicCheckIn(result.Item) }, { includeLocation: false });
@@ -249,10 +262,10 @@ export class AttendanceRepository {
       this.classRepository.listMembers(classId, uid),
       this.client.send(new QueryCommand({
         TableName: this.tableName,
-        KeyConditionExpression: 'PK = :class AND begins_with(SK, :checkin)',
-        ExpressionAttributeValues: { ':class': `CLASS#${classId}`, ':checkin': `ATTENDANCE#${attendanceId}#CHECKIN#` },
+        KeyConditionExpression: 'PK = :attendance AND begins_with(SK, :checkin)',
+        ExpressionAttributeValues: { ':attendance': `ATTENDANCE#${attendanceId}`, ':checkin': 'CHECKIN#' },
         ConsistentRead: true,
-        Limit: 200,
+        Limit: 100,
       })),
     ]);
     const byUid = new Map((checkIns.Items || []).filter((item) => item.entityType === 'ATTENDANCE_CHECKIN').map((item) => [item.uid, item]));
