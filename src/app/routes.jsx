@@ -14,8 +14,10 @@ const StudentDashboard = lazy(() => import('../pages/student/StudentDashboard'))
 const StudentClasses = lazy(() => import('../pages/student/StudentClasses'));
 const TeacherDashboard = lazy(() => import('../pages/teacher/TeacherDashboard'));
 const TeacherClasses = lazy(() => import('../pages/teacher/TeacherClasses'));
+const TeacherAttendance = lazy(() => import('../pages/teacher/TeacherAttendance'));
 const ClassOverview = lazy(() => import('../pages/ClassOverview'));
 const ClassMaterials = lazy(() => import('../pages/ClassMaterials'));
+const ClassAttendance = lazy(() => import('../pages/ClassAttendance'));
 const MaterialReader = lazy(() => import('../pages/MaterialReader'));
 const MaterialEditor = lazy(() => import('../pages/teacher/MaterialEditor'));
 const StudentLearningLibrary = lazy(() => import('../pages/student/StudentLearningLibrary'));
@@ -40,8 +42,7 @@ function AuthRoute({ onboarding = false }) {
 }
 
 const teacherPlaceholder = {
-  quizzes: <FeaturePlaceholder title="Kuis" description="Siapkan evaluasi dan sesi kuis untuk siswa." emptyTitle="Belum ada kuis" emptyDescription="Studio kuis akan dibangun setelah fondasi kelas dan materi selesai." />,
-  attendance: <FeaturePlaceholder title="Presensi" description="Kelola sesi dan riwayat kehadiran kelas." emptyTitle="Belum ada sesi presensi" emptyDescription="Presensi akan diaktifkan setelah kelas memiliki data yang tersimpan." />,
+  quizzes: <FeaturePlaceholder title="Kuis" description="Siapkan evaluasi dan sesi kuis untuk siswa." emptyTitle="Belum ada kuis" emptyDescription="Studio kuis akan dibangun setelah fondasi kelas, materi, diskusi, dan presensi tervalidasi end-to-end." />,
 };
 
 export default function AppRoutes() {
@@ -53,31 +54,33 @@ export default function AppRoutes() {
         <Route path="/onboarding" element={<AuthRoute onboarding />} />
 
         <Route element={<RequireAuth><AppShell /></RequireAuth>}>
-        <Route path="teacher" element={<RequireRole role="teacher"><Navigate to="home" replace /></RequireRole>} />
-        <Route path="teacher/home" element={<RequireRole role="teacher"><TeacherDashboard /></RequireRole>} />
-        <Route path="teacher/classes" element={<RequireRole role="teacher"><TeacherClasses /></RequireRole>} />
-        <Route path="teacher/classes/:classId/overview" element={<RequireRole role="teacher"><ClassOverview role="teacher" /></RequireRole>} />
-        <Route path="teacher/classes/:classId/materials" element={<RequireRole role="teacher"><ClassMaterials role="teacher" /></RequireRole>} />
-        <Route path="teacher/classes/:classId/materials/new" element={<RequireRole role="teacher"><MaterialEditor /></RequireRole>} />
-        <Route path="teacher/classes/:classId/materials/:materialId/edit" element={<RequireRole role="teacher"><MaterialEditor /></RequireRole>} />
-        <Route path="teacher/classes/:classId/materials/:materialId/discussions" element={<RequireRole role="teacher"><MaterialDiscussion role="teacher" /></RequireRole>} />
-        <Route path="teacher/classes/:classId/materials/:materialId" element={<RequireRole role="teacher"><MaterialReader role="teacher" /></RequireRole>} />
-        <Route path="teacher/classes/:classId/discussions" element={<RequireRole role="teacher"><ClassDiscussions role="teacher" /></RequireRole>} />
-        <Route path="teacher/classes/:classId/*" element={<RequireRole role="teacher"><FeaturePlaceholder title="Ruang kelas" description="Materi dan diskusi sudah tersedia. Modul kuis, presensi, serta pengaturan anggota akan dilanjutkan pada tahap berikutnya." emptyTitle="Modul ini belum tersedia" /></RequireRole>} />
-        <Route path="teacher/quizzes" element={<RequireRole role="teacher">{teacherPlaceholder.quizzes}</RequireRole>} />
-        <Route path="teacher/attendance" element={<RequireRole role="teacher">{teacherPlaceholder.attendance}</RequireRole>} />
+          <Route path="teacher" element={<RequireRole role="teacher"><Navigate to="home" replace /></RequireRole>} />
+          <Route path="teacher/home" element={<RequireRole role="teacher"><TeacherDashboard /></RequireRole>} />
+          <Route path="teacher/classes" element={<RequireRole role="teacher"><TeacherClasses /></RequireRole>} />
+          <Route path="teacher/classes/:classId/overview" element={<RequireRole role="teacher"><ClassOverview role="teacher" /></RequireRole>} />
+          <Route path="teacher/classes/:classId/materials" element={<RequireRole role="teacher"><ClassMaterials role="teacher" /></RequireRole>} />
+          <Route path="teacher/classes/:classId/materials/new" element={<RequireRole role="teacher"><MaterialEditor /></RequireRole>} />
+          <Route path="teacher/classes/:classId/materials/:materialId/edit" element={<RequireRole role="teacher"><MaterialEditor /></RequireRole>} />
+          <Route path="teacher/classes/:classId/materials/:materialId/discussions" element={<RequireRole role="teacher"><MaterialDiscussion role="teacher" /></RequireRole>} />
+          <Route path="teacher/classes/:classId/materials/:materialId" element={<RequireRole role="teacher"><MaterialReader role="teacher" /></RequireRole>} />
+          <Route path="teacher/classes/:classId/discussions" element={<RequireRole role="teacher"><ClassDiscussions role="teacher" /></RequireRole>} />
+          <Route path="teacher/classes/:classId/attendance" element={<RequireRole role="teacher"><ClassAttendance role="teacher" /></RequireRole>} />
+          <Route path="teacher/classes/:classId/*" element={<RequireRole role="teacher"><FeaturePlaceholder title="Ruang kelas" description="Materi, diskusi, dan presensi sudah tersedia. Modul kuis serta pengaturan anggota lanjutan akan diteruskan pada tahap berikutnya." emptyTitle="Modul ini belum tersedia" /></RequireRole>} />
+          <Route path="teacher/quizzes" element={<RequireRole role="teacher">{teacherPlaceholder.quizzes}</RequireRole>} />
+          <Route path="teacher/attendance" element={<RequireRole role="teacher"><TeacherAttendance /></RequireRole>} />
 
-        <Route path="student" element={<RequireRole role="student"><Navigate to="home" replace /></RequireRole>} />
-        <Route path="student/home" element={<RequireRole role="student"><StudentDashboard /></RequireRole>} />
-        <Route path="student/classes" element={<RequireRole role="student"><StudentClasses /></RequireRole>} />
-        <Route path="student/classes/:classId/overview" element={<RequireRole role="student"><ClassOverview role="student" /></RequireRole>} />
-        <Route path="student/classes/:classId/materials" element={<RequireRole role="student"><ClassMaterials role="student" /></RequireRole>} />
-        <Route path="student/classes/:classId/materials/:materialId/discussions" element={<RequireRole role="student"><MaterialDiscussion role="student" /></RequireRole>} />
-        <Route path="student/classes/:classId/materials/:materialId" element={<RequireRole role="student"><MaterialReader role="student" /></RequireRole>} />
-        <Route path="student/classes/:classId/discussions" element={<RequireRole role="student"><ClassDiscussions role="student" /></RequireRole>} />
-        <Route path="student/classes/:classId/*" element={<RequireRole role="student"><FeaturePlaceholder title="Ruang kelas" description="Materi dan aktivitas kelas akan tersedia setelah data kelas diaktifkan." emptyTitle="Konten kelas belum tersedia" /></RequireRole>} />
-        <Route path="student/progress" element={<RequireRole role="student"><StudentLearningLibrary mode="progress" /></RequireRole>} />
-        <Route path="student/saved" element={<RequireRole role="student"><StudentLearningLibrary mode="saved" /></RequireRole>} />
+          <Route path="student" element={<RequireRole role="student"><Navigate to="home" replace /></RequireRole>} />
+          <Route path="student/home" element={<RequireRole role="student"><StudentDashboard /></RequireRole>} />
+          <Route path="student/classes" element={<RequireRole role="student"><StudentClasses /></RequireRole>} />
+          <Route path="student/classes/:classId/overview" element={<RequireRole role="student"><ClassOverview role="student" /></RequireRole>} />
+          <Route path="student/classes/:classId/materials" element={<RequireRole role="student"><ClassMaterials role="student" /></RequireRole>} />
+          <Route path="student/classes/:classId/materials/:materialId/discussions" element={<RequireRole role="student"><MaterialDiscussion role="student" /></RequireRole>} />
+          <Route path="student/classes/:classId/materials/:materialId" element={<RequireRole role="student"><MaterialReader role="student" /></RequireRole>} />
+          <Route path="student/classes/:classId/discussions" element={<RequireRole role="student"><ClassDiscussions role="student" /></RequireRole>} />
+          <Route path="student/classes/:classId/attendance" element={<RequireRole role="student"><ClassAttendance role="student" /></RequireRole>} />
+          <Route path="student/classes/:classId/*" element={<RequireRole role="student"><FeaturePlaceholder title="Ruang kelas" description="Materi, diskusi, dan presensi kelas tersedia dari navigasi ruang belajar." emptyTitle="Konten kelas belum tersedia" /></RequireRole>} />
+          <Route path="student/progress" element={<RequireRole role="student"><StudentLearningLibrary mode="progress" /></RequireRole>} />
+          <Route path="student/saved" element={<RequireRole role="student"><StudentLearningLibrary mode="saved" /></RequireRole>} />
           <Route path="quiz/join" element={<RequireRole role="student"><QuizJoin /></RequireRole>} />
         </Route>
       </Route>

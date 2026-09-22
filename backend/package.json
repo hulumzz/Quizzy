@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/functions/classes/index.js && node --check src/functions/classes/handler.js && node --check src/functions/materials/handler.js && node --check src/functions/discussions/handler.js && node --check src/middleware/firebase-auth.js && node --check src/repositories/class-repository.js && node --check src/repositories/material-repository.js && node --check src/repositories/discussion-repository.js && node --check src/validation/material.js && node --check src/validation/discussion.js",
+    "check": "node --check src/functions/classes/index.js && node --check src/functions/classes/handler.js && node --check src/functions/materials/handler.js && node --check src/functions/discussions/handler.js && node --check src/functions/attendance/handler.js && node --check src/middleware/firebase-auth.js && node --check src/repositories/class-repository.js && node --check src/repositories/material-repository.js && node --check src/repositories/discussion-repository.js && node --check src/repositories/attendance-repository.js && node --check src/validation/material.js && node --check src/validation/discussion.js && node --check src/validation/attendance.js",
     "sam:validate": "sam validate --lint --template-file infrastructure/template.yaml",
     "sam:build": "sam build --template-file infrastructure/template.yaml"
   },

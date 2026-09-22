@@ -1,0 +1,274 @@
+import { randomUUID } from 'node:crypto';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { conflict, forbidden, HttpError, notFound } from '../http/errors.js';
+
+function sessionKey(classId, attendanceId) {
+  return { PK: `CLASS#${classId}`, SK: `ATTENDANCE#${attendanceId}` };
+}
+
+function checkInKey(classId, attendanceId, uid) {
+  return { PK: `CLASS#${classId}`, SK: `ATTENDANCE#${attendanceId}#CHECKIN#${uid}` };
+}
+
+function publicCheckIn(item) {
+  return item ? {
+    uid: item.uid,
+    name: item.name || 'Siswa Quizzy',
+    status: 'present',
+    distanceMeters: item.distanceMeters,
+    accuracyMeters: item.accuracyMeters ?? null,
+    checkedInAt: item.checkedInAt,
+  } : null;
+}
+
+function publicSession(item, extra = {}, { includeLocation = true } = {}) {
+  return {
+    id: item.id,
+    classId: item.classId,
+    title: item.title,
+    ...(includeLocation ? { latitude: item.latitude, longitude: item.longitude } : {}),
+    radiusMeters: item.radiusMeters,
+    status: item.status,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    startedAt: item.startedAt || null,
+    endedAt: item.endedAt || null,
+    ...extra,
+  };
+}
+
+function transactionConflict(error) {
+  return error?.name === 'TransactionCanceledException' || error?.name === 'ConditionalCheckFailedException';
+}
+
+export function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
+  const radius = 6371e3;
+  const phi1 = lat1 * Math.PI / 180;
+  const phi2 = lat2 * Math.PI / 180;
+  const deltaPhi = (lat2 - lat1) * Math.PI / 180;
+  const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(deltaPhi / 2) ** 2
+    + Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) ** 2;
+  return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+export class AttendanceRepository {
+  constructor({ tableName = process.env.TABLE_NAME, documentClient, classRepository } = {}) {
+    if (!tableName) throw new Error('TABLE_NAME is required');
+    if (!classRepository) throw new Error('classRepository is required');
+    this.tableName = tableName;
+    this.classRepository = classRepository;
+    this.client = documentClient || DynamoDBDocumentClient.from(new DynamoDBClient({}), {
+      marshallOptions: { removeUndefinedValues: true },
+    });
+  }
+
+  async access(classId, uid) {
+    return this.classRepository.getForUser(classId, uid);
+  }
+
+  async requireOwner(classId, uid) {
+    const classItem = await this.access(classId, uid);
+    if (classItem.accessRole !== 'owner') throw forbidden('Hanya pengelola kelas yang dapat mengatur presensi.');
+    return classItem;
+  }
+
+  async getSession(classId, attendanceId) {
+    const result = await this.client.send(new GetCommand({
+      TableName: this.tableName,
+      Key: sessionKey(classId, attendanceId),
+      ConsistentRead: true,
+    }));
+    if (!result.Item || result.Item.entityType !== 'ATTENDANCE') throw notFound('Sesi presensi tidak ditemukan.');
+    return result.Item;
+  }
+
+  async list(classId, uid) {
+    const classItem = await this.access(classId, uid);
+    const result = await this.client.send(new QueryCommand({
+      TableName: this.tableName,
+      KeyConditionExpression: 'PK = :class AND begins_with(SK, :attendance)',
+      ExpressionAttributeValues: { ':class': `CLASS#${classId}`, ':attendance': 'ATTENDANCE#' },
+      ConsistentRead: true,
+      Limit: 250,
+    }));
+    const all = result.Items || [];
+    const sessions = all.filter((item) => item.entityType === 'ATTENDANCE');
+    sessions.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+    if (classItem.accessRole === 'owner') return sessions.map(publicSession);
+
+    const checkIns = new Map(all
+      .filter((item) => item.entityType === 'ATTENDANCE_CHECKIN' && item.uid === uid)
+      .map((item) => [item.attendanceId, item]));
+    return sessions
+      .filter((item) => item.status !== 'draft')
+      .map((item) => publicSession(item, { checkIn: publicCheckIn(checkIns.get(item.id)) }, { includeLocation: false }));
+  }
+
+  async create({ classId, ownerId, title, latitude, longitude, radiusMeters, now = new Date().toISOString() }) {
+    await this.requireOwner(classId, ownerId);
+    const id = randomUUID();
+    const item = {
+      ...sessionKey(classId, id),
+      entityType: 'ATTENDANCE',
+      id,
+      classId,
+      ownerId,
+      title,
+      latitude,
+      longitude,
+      radiusMeters,
+      status: 'draft',
+      createdAt: now,
+      updatedAt: now,
+    };
+    await this.client.send(new PutCommand({
+      TableName: this.tableName,
+      Item: item,
+      ConditionExpression: 'attribute_not_exists(PK)',
+    }));
+    return publicSession(item);
+  }
+
+  async setStatus({ classId, attendanceId, ownerId, status, now = new Date().toISOString() }) {
+    await this.requireOwner(classId, ownerId);
+    const current = await this.getSession(classId, attendanceId);
+    if (status === 'active' && current.status !== 'draft') {
+      throw conflict('ATTENDANCE_ALREADY_STARTED', 'Sesi presensi hanya dapat dimulai dari status draf.');
+    }
+    if (status === 'ended' && current.status !== 'active') {
+      throw conflict('ATTENDANCE_NOT_ACTIVE', 'Hanya sesi presensi aktif yang dapat diakhiri.');
+    }
+    try {
+      const result = await this.client.send(new UpdateCommand({
+        TableName: this.tableName,
+        Key: sessionKey(classId, attendanceId),
+        UpdateExpression: status === 'active'
+          ? 'SET #status = :status, startedAt = :now, updatedAt = :now'
+          : 'SET #status = :status, endedAt = :now, updatedAt = :now',
+        ConditionExpression: 'ownerId = :owner AND #status = :expected',
+        ExpressionAttributeNames: { '#status': 'status' },
+        ExpressionAttributeValues: {
+          ':status': status,
+          ':now': now,
+          ':owner': ownerId,
+          ':expected': status === 'active' ? 'draft' : 'active',
+        },
+        ReturnValues: 'ALL_NEW',
+      }));
+      return publicSession(result.Attributes);
+    } catch (error) {
+      if (!transactionConflict(error)) throw error;
+      throw conflict('ATTENDANCE_STATUS_CONFLICT', 'Status sesi sudah berubah. Muat ulang lalu coba kembali.');
+    }
+  }
+
+  async checkIn({ classId, attendanceId, uid, name, latitude, longitude, accuracyMeters, now = new Date().toISOString() }) {
+    const classItem = await this.access(classId, uid);
+    if (classItem.accessRole !== 'member') throw forbidden('Presensi siswa hanya tersedia untuk anggota kelas.');
+    const session = await this.getSession(classId, attendanceId);
+    if (session.status !== 'active') throw conflict('ATTENDANCE_NOT_ACTIVE', 'Sesi presensi tidak sedang aktif.');
+
+    const existing = await this.client.send(new GetCommand({
+      TableName: this.tableName,
+      Key: checkInKey(classId, attendanceId, uid),
+      ConsistentRead: true,
+    }));
+    if (existing.Item) return publicCheckIn(existing.Item);
+
+    const distanceMeters = Math.round(calculateDistanceMeters(latitude, longitude, session.latitude, session.longitude));
+    if (distanceMeters > session.radiusMeters) {
+      throw new HttpError(422, 'OUTSIDE_RADIUS', 'Lokasi berada di luar radius presensi.', {
+        distanceMeters,
+        radiusMeters: session.radiusMeters,
+      });
+    }
+
+    const item = {
+      ...checkInKey(classId, attendanceId, uid),
+      entityType: 'ATTENDANCE_CHECKIN',
+      attendanceId,
+      classId,
+      uid,
+      name: name || 'Siswa Quizzy',
+      latitude,
+      longitude,
+      accuracyMeters,
+      distanceMeters,
+      checkedInAt: now,
+    };
+    try {
+      await this.client.send(new TransactWriteCommand({
+        TransactItems: [
+          {
+            ConditionCheck: {
+              TableName: this.tableName,
+              Key: sessionKey(classId, attendanceId),
+              ConditionExpression: '#status = :active',
+              ExpressionAttributeNames: { '#status': 'status' },
+              ExpressionAttributeValues: { ':active': 'active' },
+            },
+          },
+          {
+            Put: {
+              TableName: this.tableName,
+              Item: item,
+              ConditionExpression: 'attribute_not_exists(PK)',
+            },
+          },
+        ],
+      }));
+      return publicCheckIn(item);
+    } catch (error) {
+      if (!transactionConflict(error)) throw error;
+      const [refreshedSession, refreshedCheckIn] = await Promise.all([
+        this.getSession(classId, attendanceId),
+        this.client.send(new GetCommand({ TableName: this.tableName, Key: checkInKey(classId, attendanceId, uid), ConsistentRead: true })),
+      ]);
+      if (refreshedCheckIn.Item) return publicCheckIn(refreshedCheckIn.Item);
+      if (refreshedSession.status !== 'active') throw conflict('ATTENDANCE_NOT_ACTIVE', 'Sesi presensi sudah berakhir.');
+      throw conflict('ATTENDANCE_CHECKIN_CONFLICT', 'Presensi belum dapat dicatat. Silakan coba lagi.');
+    }
+  }
+
+  async detail(classId, attendanceId, uid) {
+    const classItem = await this.access(classId, uid);
+    const session = await this.getSession(classId, attendanceId);
+    if (classItem.accessRole === 'member') {
+      if (session.status === 'draft') throw notFound('Sesi presensi tidak ditemukan.');
+      const result = await this.client.send(new GetCommand({
+        TableName: this.tableName,
+        Key: checkInKey(classId, attendanceId, uid),
+        ConsistentRead: true,
+      }));
+      return publicSession(session, { checkIn: publicCheckIn(result.Item) }, { includeLocation: false });
+    }
+
+    const [members, checkIns] = await Promise.all([
+      this.classRepository.listMembers(classId, uid),
+      this.client.send(new QueryCommand({
+        TableName: this.tableName,
+        KeyConditionExpression: 'PK = :class AND begins_with(SK, :checkin)',
+        ExpressionAttributeValues: { ':class': `CLASS#${classId}`, ':checkin': `ATTENDANCE#${attendanceId}#CHECKIN#` },
+        ConsistentRead: true,
+        Limit: 200,
+      })),
+    ]);
+    const byUid = new Map((checkIns.Items || []).filter((item) => item.entityType === 'ATTENDANCE_CHECKIN').map((item) => [item.uid, item]));
+    const recap = members.map((member) => ({
+      uid: member.uid,
+      name: member.name,
+      status: byUid.has(member.uid) ? 'present' : 'absent',
+      checkIn: publicCheckIn(byUid.get(member.uid)),
+    }));
+    return publicSession(session, {
+      recap,
+      summary: {
+        totalMembers: members.length,
+        presentCount: recap.filter((item) => item.status === 'present').length,
+        absentCount: recap.filter((item) => item.status === 'absent').length,
+      },
+    });
+  }
+}

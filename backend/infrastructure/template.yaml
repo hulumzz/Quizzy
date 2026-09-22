@@ -54,7 +54,7 @@ Resources:
   ClassesFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Description: Authenticated class and material workspace API.
+      Description: Authenticated class, material, discussion, and attendance workspace API.
       CodeUri: ../
       Handler: src/functions/classes/index.handler
       Runtime: nodejs22.x
@@ -84,6 +84,7 @@ Resources:
                 - dynamodb:PutItem
                 - dynamodb:UpdateItem
                 - dynamodb:DeleteItem
+                - dynamodb:ConditionCheckItem
               Resource: !GetAtt QuizzyTable.Arn
       FunctionUrlConfig:
         AuthType: NONE
