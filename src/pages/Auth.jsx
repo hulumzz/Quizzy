@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Gamepad2, UserCog, GraduationCap, ArrowRight, Loader2 } from 'lucide-react';
+import { UserCog, GraduationCap, ArrowRight, Loader2, Gamepad2 } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
+import '../styles/landing.css';
 
 export default function Auth({ onAuthComplete, initialStep = 'login' }) {
   const { user, signInWithGoogle, signInAsGuest, saveUserProfile } = useAuth();
@@ -37,7 +38,6 @@ export default function Auth({ onAuthComplete, initialStep = 'login' }) {
     setError('');
     try {
       const result = await signInAsGuest();
-      // Guests are always students joining via PIN
       await saveUserProfile(result.user.uid, {
         uid: result.user.uid,
         name: 'Siswa Tamu',
@@ -75,185 +75,210 @@ export default function Auth({ onAuthComplete, initialStep = 'login' }) {
   };
 
   return (
-    <div className="min-h-screen bg-bg-dark flex items-center justify-center relative overflow-hidden px-4 font-outfit">
-      {/* Background */}
-      <div className="bg-orb orb-1" />
-      <div className="bg-orb orb-2" />
-      <div className="bg-orb orb-3" />
-      <div className="fixed inset-0 grid-bg pointer-events-none z-0" />
+    <div className="nlr-auth">
+      {/* ambient blobs */}
+      <div className="nlr-blob nlr-blob-a" />
+      <div className="nlr-blob nlr-blob-b" />
+      <div className="nlr-blob nlr-blob-c" />
+      <div className="nlr-grid-bg" />
 
-      <AnimatePresence mode="wait">
-        {step === 'login' && (
-          <motion.div
-            key="login"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -24 }}
-            transition={{ duration: 0.4 }}
-            className="w-full max-w-md z-10"
-          >
-            {/* Logo */}
-            <div className="text-center mb-8">
-              <img src="/logo.png" alt="Quizzy" className="h-16 mx-auto mb-3 drop-shadow-[0_0_16px_rgba(168,85,247,0.6)]" />
-              <h1 className="text-3xl font-black tracking-tight">Quizzy</h1>
-              <p className="text-gray-400 text-sm mt-1">Ruang belajar yang terhubung dan menyenangkan</p>
-            </div>
+      {/* ── LEFT BRAND PANEL ── */}
+      <div className="nlr-auth-brand">
+        <div className="nlr-auth-brand-top">
+          <div className="nlr-logo">
+            <div className="nlr-logo-mark">N</div>
+            <span className="nlr-logo-text">Nalaro</span>
+          </div>
 
-            {/* Card */}
-            <div className="glass-card p-8 rounded-3xl border border-white/10 space-y-4">
-              <h2 className="text-xl font-bold text-center mb-2">Masuk ke Platform</h2>
+          <div>
+            <h1 className="nlr-auth-brand-headline">
+              Belajar,{' '}
+              <span className="nlr-gradient-text">Bermain,</span>
+              <br />
+              dan Tumbuh.
+            </h1>
+            <p className="nlr-auth-brand-sub">
+              Platform pembelajaran yang menggabungkan materi, diskusi, kuis interaktif, dan presensi dalam satu ruang kelas digital.
+            </p>
+          </div>
 
-              {error && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm text-center">
-                  {error}
+          <div className="nlr-auth-features">
+            {[
+              { icon: '📚', title: 'Materi & Diskusi', sub: 'Konten tersusun rapi, diskusi melekat di setiap materi.' },
+              { icon: '🎮', title: 'Kuis Interaktif', sub: 'Sesi live bersama atau evaluasi mandiri kapan saja.' },
+              { icon: '✅', title: 'Presensi Mudah', sub: 'Catat kehadiran tanpa kerumitan administrasi.' },
+            ].map((f) => (
+              <div key={f.title} className="nlr-auth-feature">
+                <div className="nlr-auth-feature-icon">{f.icon}</div>
+                <div>
+                  <p className="nlr-auth-feature-title">{f.title}</p>
+                  <p className="nlr-auth-feature-sub">{f.sub}</p>
                 </div>
-              )}
+              </div>
+            ))}
+          </div>
+        </div>
 
-              {/* Google Login */}
+        <p className="nlr-auth-brand-footer">© 2026 Nalaro. Ruang kelas digital untuk semua.</p>
+      </div>
+
+      {/* ── RIGHT FORM PANEL ── */}
+      <div className="nlr-auth-form-panel">
+        <AnimatePresence mode="wait">
+
+          {/* ── LOGIN STEP ── */}
+          {step === 'login' && (
+            <motion.div
+              key="login"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="nlr-auth-card"
+            >
+              <div className="nlr-auth-card-header">
+                <div className="nlr-logo" style={{ justifyContent: 'center', marginBottom: 20 }}>
+                  <div className="nlr-logo-mark">N</div>
+                  <span className="nlr-logo-text">Nalaro</span>
+                </div>
+                <h2 className="nlr-auth-card-title">Masuk ke Nalaro</h2>
+                <p className="nlr-auth-card-sub">Pilih cara masuk yang sesuai denganmu.</p>
+              </div>
+
+              <div className="nlr-auth-box">
+                {error && <div className="nlr-error">{error}</div>}
+
+                {/* Google */}
+                <button
+                  id="btn-google-login"
+                  onClick={handleGoogleLogin}
+                  disabled={isLoading}
+                  className="nlr-google-btn"
+                >
+                  {isLoading ? (
+                    <Loader2 style={{ width: 18, height: 18, animation: 'spin 1s linear infinite' }} />
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                  )}
+                  {isLoading ? 'Menghubungkan...' : 'Masuk dengan Google'}
+                </button>
+
+                <div className="nlr-divider">atau</div>
+
+                {/* Guest */}
+                <button
+                  id="btn-guest-login"
+                  onClick={handleGuestLogin}
+                  disabled={isLoading}
+                  className="nlr-guest-btn"
+                >
+                  <Gamepad2 style={{ width: 16, height: 16, color: '#a78bfa', flexShrink: 0 }} />
+                  Gabung kuis sebagai tamu
+                </button>
+
+                <p className="nlr-hint">
+                  Akun tamu hanya untuk bergabung ke sesi kuis via PIN.<br />
+                  Gunakan Google untuk akses kelas lengkap.
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ── ROLE STEP ── */}
+          {step === 'role' && (
+            <motion.div
+              key="role"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="nlr-auth-card"
+            >
+              <div className="nlr-auth-user-header">
+                <img
+                  src={pendingUser?.photoURL || '/logo.png'}
+                  alt="Avatar"
+                  className="nlr-auth-avatar"
+                  onError={(e) => { e.target.src = '/logo.png'; }}
+                />
+                <h2 className="nlr-auth-welcome-name">
+                  Halo, <span className="nlr-gradient-text">{pendingUser?.displayName?.split(' ')[0]}!</span>
+                </h2>
+                <p className="nlr-auth-welcome-sub">Pilih peranmu untuk mulai.</p>
+              </div>
+
+              {error && <div className="nlr-error" style={{ marginBottom: 12 }}>{error}</div>}
+
+              <div className="nlr-role-grid" style={{ marginBottom: 12 }}>
+                {/* Guru */}
+                <motion.button
+                  id="btn-role-teacher"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setSelectedRole('teacher')}
+                  className={`nlr-role-card${selectedRole === 'teacher' ? ' selected-teacher' : ''}`}
+                >
+                  {selectedRole === 'teacher' && (
+                    <div className="nlr-role-check" style={{ background: '#7c3aed' }}>
+                      <svg width="10" height="10" fill="none" stroke="#fff" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="nlr-role-card-icon" style={{ background: 'rgba(124,58,237,0.15)', color: '#a78bfa' }}>
+                    <UserCog size={20} />
+                  </div>
+                  <p className="nlr-role-card-title">Guru</p>
+                  <p className="nlr-role-card-desc">Buat kelas, materi, kuis, dan kelola presensi.</p>
+                </motion.button>
+
+                {/* Siswa */}
+                <motion.button
+                  id="btn-role-student"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setSelectedRole('student')}
+                  className={`nlr-role-card${selectedRole === 'student' ? ' selected-student' : ''}`}
+                >
+                  {selectedRole === 'student' && (
+                    <div className="nlr-role-check" style={{ background: '#2563eb' }}>
+                      <svg width="10" height="10" fill="none" stroke="#fff" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                  <div className="nlr-role-card-icon" style={{ background: 'rgba(37,99,235,0.15)', color: '#93c5fd' }}>
+                    <GraduationCap size={20} />
+                  </div>
+                  <p className="nlr-role-card-title">Siswa</p>
+                  <p className="nlr-role-card-desc">Belajar, diskusi, presensi, dan ikut kuis.</p>
+                </motion.button>
+              </div>
+
               <button
-                onClick={handleGoogleLogin}
-                disabled={isLoading}
-                className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl bg-white text-gray-900 font-bold hover:bg-gray-100 transition hover:scale-[1.01] active:scale-[0.99] disabled:opacity-60"
+                id="btn-confirm-role"
+                onClick={handleRoleConfirm}
+                disabled={!selectedRole || isLoading}
+                className="nlr-confirm-btn"
               >
                 {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <><Loader2 style={{ width: 18, height: 18, animation: 'spin 1s linear infinite' }} /> Menyimpan...</>
                 ) : (
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
+                  <>Lanjut ke Dashboard <ArrowRight style={{ width: 16, height: 16 }} /></>
                 )}
-                {isLoading ? 'Menghubungkan...' : 'Masuk dengan Google'}
               </button>
+            </motion.div>
+          )}
 
-              <div className="relative flex items-center gap-3">
-                <div className="flex-1 h-px bg-white/10" />
-                <span className="text-xs text-gray-500">atau</span>
-                <div className="flex-1 h-px bg-white/10" />
-              </div>
-
-              {/* Guest Login */}
-              <button
-                onClick={handleGuestLogin}
-                disabled={isLoading}
-                className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl bg-white/5 border border-white/10 text-white font-semibold hover:bg-white/10 transition text-sm disabled:opacity-60"
-              >
-                <Gamepad2 className="w-5 h-5 text-purple-400" />
-                Gabung kuis sebagai tamu
-              </button>
-
-              <p className="text-[11px] text-gray-500 text-center pt-1">
-                Akun tamu digunakan untuk bergabung ke sesi kuis melalui PIN. <br />Gunakan Google untuk mengakses ruang belajar lengkap.
-              </p>
-            </div>
-          </motion.div>
-        )}
-
-        {step === 'role' && (
-          <motion.div
-            key="role"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -24 }}
-            transition={{ duration: 0.4 }}
-            className="w-full max-w-lg z-10"
-          >
-            {/* Welcome Header */}
-            <div className="text-center mb-8">
-              <img
-                src={pendingUser?.photoURL || '/logo.png'}
-                alt="Avatar"
-                className="w-16 h-16 rounded-full mx-auto mb-3 border-2 border-purple-500 shadow-lg object-cover"
-                onError={(e) => { e.target.src = '/logo.png'; }}
-              />
-              <h2 className="text-2xl font-black">
-                Halo, <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">{pendingUser?.displayName?.split(' ')[0]}!</span>
-              </h2>
-              <p className="text-gray-400 text-sm mt-1">Pilih peranmu untuk melanjutkan ke platform</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              {/* Guru Card */}
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setSelectedRole('teacher')}
-                className={`relative p-6 rounded-3xl border-2 transition text-left space-y-3 overflow-hidden ${
-                  selectedRole === 'teacher'
-                    ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20'
-                    : 'border-white/10 bg-white/5 hover:border-white/20'
-                }`}
-              >
-                {selectedRole === 'teacher' && (
-                  <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                )}
-                <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center">
-                  <UserCog className="w-6 h-6 text-purple-400" />
-                </div>
-                <div>
-                  <div className="font-bold text-lg">Guru</div>
-                  <div className="text-xs text-gray-400 mt-0.5 leading-relaxed">
-                    Buat kelas, materi, kuis, & kelola presensi
-                  </div>
-                </div>
-              </motion.button>
-
-              {/* Siswa Card */}
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setSelectedRole('student')}
-                className={`relative p-6 rounded-3xl border-2 transition text-left space-y-3 overflow-hidden ${
-                  selectedRole === 'student'
-                    ? 'border-blue-500 bg-blue-500/10 shadow-lg shadow-blue-500/20'
-                    : 'border-white/10 bg-white/5 hover:border-white/20'
-                }`}
-              >
-                {selectedRole === 'student' && (
-                  <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
-                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                )}
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center">
-                  <GraduationCap className="w-6 h-6 text-blue-400" />
-                </div>
-                <div>
-                  <div className="font-bold text-lg">Siswa</div>
-                  <div className="text-xs text-gray-400 mt-0.5 leading-relaxed">
-                    Belajar, diskusi, presensi & ikuti kuis
-                  </div>
-                </div>
-              </motion.button>
-            </div>
-
-            {error && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm text-center mb-4">
-                {error}
-              </div>
-            )}
-
-            <button
-              onClick={handleRoleConfirm}
-              disabled={!selectedRole || isLoading}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 font-bold text-lg flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed hover:scale-[1.01] transition"
-            >
-              {isLoading ? (
-                <><Loader2 className="w-5 h-5 animate-spin" /> Menyimpan...</>
-              ) : (
-                <>Lanjut ke Dashboard <ArrowRight className="w-5 h-5" /></>
-              )}
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
+
+

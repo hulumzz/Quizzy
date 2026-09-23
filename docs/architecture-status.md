@@ -59,6 +59,7 @@ Current implementation branch: `main`
 - Material images and documents can now be uploaded directly from the browser to Cloudinary through an owner-only signed-upload flow. Existing HTTPS URLs remain supported.
 - Uploads are limited to JPG, PNG, WebP, GIF, PDF, selected Office formats, and TXT. Image size is capped at 8 MB and document size at 15 MB before a signature is issued.
 - The Cloudinary API secret remains backend-only and is referenced from a free Standard SSM SecureString during deployment; no S3 bucket is required for this phase.
+- A local, un-deployed Phase 10 and initial Phase 11 live-session foundation now supports QR/code join without an account or class membership, opaque participant receipts, a server-canonical lobby/question/reveal/finished state machine, and a playful host/player UI. Validated answers are buffered through SQS and atomically aggregated in DynamoDB with duplicate-safe writes; small host/player state still polls every two seconds until Firestore rules are reviewed.
 
 ## Not started
 
@@ -101,4 +102,4 @@ The account is on the AWS Paid plan with no remaining promotional credits. The s
 
 ## Next gate
 
-Phase 9 self-paced quiz and Cloudinary signed-upload flows are now implemented and deployed to the `quizzy-dev` stack. The next step is live authenticated verification in the browser for quiz creation, quiz attempt, and image/document uploads, followed by Phase 10 realtime PIN join and live sessions.
+Phase 9 self-paced quiz and Cloudinary signed-upload flows are now implemented and deployed to the `quizzy-dev` stack. The next step is browser verification for quiz creation, quiz attempt, and image/document uploads, then a reviewed deployment and security hardening of the local Phase 10 live-session foundation. The broader learning roadmap is in `docs/phase-10-and-learning-roadmap.md`.

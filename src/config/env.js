@@ -2,6 +2,7 @@ const read = (key) => (import.meta.env[key] || '').trim();
 
 export const appEnv = Object.freeze({
   apiUrl: read('VITE_API_URL').replace(/\/$/, ''),
+  aiUrl: read('VITE_AI_URL').replace(/\/$/, ''),
   firebase: Object.freeze({
     apiKey: read('VITE_FIREBASE_API_KEY'),
     authDomain: read('VITE_FIREBASE_AUTH_DOMAIN'),

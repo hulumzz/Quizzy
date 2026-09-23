@@ -1,253 +1,313 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Gamepad2, 
-  Wand2, 
-  Timer, 
-  QrCode, 
-  ListOrdered, 
-  Crosshair, 
-  ArrowUpDown, 
+import React, { useRef } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
+import {
+  Gamepad2,
+  Wand2,
+  Timer,
+  QrCode,
+  ListOrdered,
+  Crosshair,
+  ArrowUpDown,
   Image as ImageIcon,
   ChevronRight,
-  Sparkles,
-  UserCheck,
   BookOpen,
-  MessageSquare
+  MessageSquare,
+  UserCheck,
+  Zap,
+  Shield,
+  Users,
+  ArrowRight,
 } from 'lucide-react';
+import '../styles/landing.css';
+
+const FadeUp = ({ children, delay = 0, className = '' }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 28 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, margin: '-60px' }}
+    transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+);
+
+const pillars = [
+  { icon: BookOpen, color: 'indigo', title: 'Ruang Materi', desc: 'Teks, gambar, lampiran, dan video dalam satu halaman materi yang terstruktur.' },
+  { icon: MessageSquare, color: 'sky', title: 'Diskusi Kelas', desc: 'Diskusi melekat langsung di setiap materi — siswa bisa bertanya kapan saja.' },
+  { icon: Gamepad2, color: 'violet', title: 'Kuis Interaktif', desc: 'Sesi evaluasi bersama atau mandiri dengan umpan balik langsung.' },
+  { icon: UserCheck, color: 'emerald', title: 'Presensi', desc: 'Catat kehadiran per sesi kelas dengan riwayat yang mudah diakses.' },
+];
+
+const featureCards = [
+  { icon: Wand2, color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', title: 'Nalaro Assist', desc: 'Bantu guru menyiapkan rangkuman materi dan daftar soal kuis.' },
+  { icon: Gamepad2, color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)', title: 'Kuis Live & Mandiri', desc: 'Ikuti sesi bersama via PIN atau kerjakan evaluasi di waktu sendiri.' },
+  { icon: Timer, color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', title: 'Kontrol Sesi', desc: 'Guru kendalikan timer, kunci jawaban, dan tampilkan hasil kapan saja.' },
+  { icon: QrCode, color: '#10b981', bg: 'rgba(16,185,129,0.12)', title: 'Kode Kelas & PIN', desc: 'Bergabung ke kelas atau sesi kuis hanya dengan satu kode pendek.' },
+];
+
+const questionTypes = [
+  { icon: ListOrdered, color: '#60a5fa', title: 'Pilihan Ganda', desc: 'Format klasik, cepat, dan familiar.' },
+  { icon: Crosshair, color: '#f472b6', title: 'Hotspot Gambar', desc: 'Ketuk titik koordinat jawaban di gambar.' },
+  { icon: ArrowUpDown, color: '#fbbf24', title: 'Susun Urutan', desc: 'Urutkan item sesuai logika soal.' },
+  { icon: ImageIcon, color: '#34d399', title: 'Pilihan Gambar', desc: 'Pilih jawaban dalam bentuk visual.' },
+];
+
+const colorMap = {
+  indigo:  { border: 'rgba(99,102,241,0.35)',  icon: 'rgba(99,102,241,0.15)',  text: '#818cf8' },
+  sky:     { border: 'rgba(56,189,248,0.35)',  icon: 'rgba(56,189,248,0.15)',  text: '#7dd3fc' },
+  violet:  { border: 'rgba(139,92,246,0.35)',  icon: 'rgba(139,92,246,0.15)',  text: '#a78bfa' },
+  emerald: { border: 'rgba(52,211,153,0.35)',  icon: 'rgba(52,211,153,0.15)',  text: '#6ee7b7' },
+};
 
 export default function Landing({ onEnterApp }) {
+  const heroRef = useRef(null);
+  const { scrollY } = useScroll();
+  const heroY = useTransform(scrollY, [0, 500], [0, 80]);
+
   return (
-    <div className="relative min-h-screen selection:bg-purple-500 selection:text-white bg-bg-dark text-white overflow-hidden">
-      {/* Background Orbs & Grid */}
-      <div className="bg-orb orb-1"></div>
-      <div className="bg-orb orb-2"></div>
-      <div className="bg-orb orb-3"></div>
-      <div className="fixed inset-0 grid-bg z-[-1] pointer-events-none"></div>
+    <div className="nlr-landing">
+      {/* ambient blobs */}
+      <div className="nlr-blob nlr-blob-a" />
+      <div className="nlr-blob nlr-blob-b" />
+      <div className="nlr-blob nlr-blob-c" />
+      <div className="nlr-grid-bg" />
 
-      {/* Navigation */}
-      <nav className="fixed w-full z-50 glass-nav top-0">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3 group cursor-pointer">
-            <img 
-              src="/logo.png" 
-              alt="Quizzy Logo" 
-              className="h-10 w-auto group-hover:scale-110 transition duration-300 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" 
-            />
-            <span className="text-xl font-bold tracking-wide group-hover:text-purple-400 transition">Quizzy</span>
+      {/* ── NAV ── */}
+      <nav className="nlr-nav">
+        <div className="nlr-nav-inner">
+          <a href="#hero" className="nlr-logo" aria-label="Nalaro">
+            <div className="nlr-logo-mark">N</div>
+            <span className="nlr-logo-text">Nalaro</span>
+          </a>
+          <div className="nlr-nav-links">
+            <a href="#platform">Platform</a>
+            <a href="#fitur">Fitur</a>
+            <a href="#soal">Tipe Soal</a>
           </div>
-
-          <div className="hidden md:flex items-center gap-1 p-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-md">
-            <a href="#features" className="px-5 py-2 rounded-full text-sm font-medium hover:bg-white/10 hover:text-white text-gray-300 transition">Fitur</a>
-            <a href="#lms" className="px-5 py-2 rounded-full text-sm font-medium hover:bg-white/10 hover:text-white text-gray-300 transition">Workspace</a>
-            <a href="#types" className="px-5 py-2 rounded-full text-sm font-medium hover:bg-white/10 hover:text-white text-gray-300 transition">Tipe Soal</a>
-          </div>
-
-          <div className="flex gap-4 items-center">
-            <button 
-              onClick={onEnterApp}
-              className="px-6 py-2.5 rounded-full bg-white text-black text-sm font-bold shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:shadow-[0_0_30px_rgba(255,255,255,0.5)] hover:scale-105 transition flex items-center gap-2"
-            >
-              <Gamepad2 className="w-4 h-4 text-purple-600" /> Masuk App
-            </button>
-          </div>
+          <button onClick={onEnterApp} className="nlr-btn-primary nlr-btn-sm">
+            Masuk <ArrowRight className="nlr-icon-xs" />
+          </button>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <header id="hero" className="relative min-h-screen flex items-center justify-center pt-28 pb-16 overflow-hidden">
-        <div className="container mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="hero-content text-center lg:text-left"
-          >
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-semibold mb-4">
-              <Sparkles className="w-3.5 h-3.5" /> Ruang belajar modern untuk kelas
-            </span>
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black leading-[1.1] mb-6">
-              Pembelajaran <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 text-glow">
-                Lebih Hidup
-              </span>
-            </h1>
-            
-            <p className="text-gray-300 text-base sm:text-lg mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-              Quizzy dirancang untuk menyatukan <b>materi</b>, <b>diskusi kelas</b>, <b>presensi</b>, dan <b>kuis interaktif</b> dalam satu pengalaman belajar yang ringan.
-            </p>
+      {/* ── HERO ── */}
+      <header id="hero" className="nlr-hero" ref={heroRef}>
+        <motion.div
+          style={{ y: heroY }}
+          className="nlr-hero-content"
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="nlr-hero-badge">
+            <Zap className="nlr-icon-xs" />
+            Platform pembelajaran kelas aktif
+          </div>
+          <h1 className="nlr-hero-title">
+            Belajar,{' '}
+            <span className="nlr-gradient-text">Bermain,</span>
+            <br />
+            dan Tumbuh.
+          </h1>
+          <p className="nlr-hero-sub">
+            Nalaro menyatukan materi, diskusi, kuis interaktif, dan presensi dalam satu ruang kelas digital. Ringan dipakai, mudah diatur.
+          </p>
+          <div className="nlr-hero-actions">
+            <button onClick={onEnterApp} className="nlr-btn-primary nlr-btn-lg">
+              Mulai Sekarang <ChevronRight className="nlr-icon-sm" />
+            </button>
+            <a href="#platform" className="nlr-btn-ghost nlr-btn-lg">
+              Lihat Fitur
+            </a>
+          </div>
+          <div className="nlr-hero-stats">
+            {[
+              { val: '4', label: 'Fitur Utama' },
+              { val: '4+', label: 'Tipe Soal' },
+              { val: '1', label: 'Platform' },
+            ].map((s) => (
+              <div key={s.label} className="nlr-stat">
+                <span className="nlr-stat-val">{s.val}</span>
+                <span className="nlr-stat-label">{s.label}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <button
-                onClick={onEnterApp}
-                className="px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 font-bold text-lg hover:scale-105 transition shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2"
-              >
-                Mulai Pembelajaran <ChevronRight className="w-5 h-5" />
-              </button>
-              <a 
-                href="#features" 
-                className="px-8 py-4 rounded-xl border border-white/20 hover:bg-white/10 font-bold text-lg transition text-center"
-              >
-                Jelajahi Fitur
-              </a>
-            </div>
-          </motion.div>
-
-          {/* Hero Image Showcase */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="relative hero-image"
-          >
-            <div className="relative z-10 transform hover:scale-[1.02] transition duration-700">
-              <div className="absolute inset-0 bg-gradient-to-tr from-purple-600/30 to-blue-600/30 rounded-[3rem] blur-xl transform rotate-6 scale-95 opacity-70 animate-pulse"></div>
-              <img 
-                src="/hero.png" 
-                alt="Quizzy Platform Preview" 
-                className="relative rounded-[2rem] shadow-2xl border border-white/10 w-full object-cover" 
-                onError={(e) => { e.target.style.display = 'none'; }}
-              />
-              
-              <div className="absolute -bottom-6 -left-2 glass-card p-4 rounded-2xl w-60 animate-float border-l-4 border-purple-500 hidden md:block">
-                <div className="flex justify-between text-xs mb-1 font-bold text-purple-300">
-                  <span>Ruang belajar terpadu</span>
+        {/* floating visual mockup */}
+        <motion.div
+          className="nlr-hero-visual"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="nlr-mockup">
+            <div className="nlr-mockup-bar"><span /><span /><span /></div>
+            <div className="nlr-mockup-body">
+              <div className="nlr-mock-sidebar">
+                {['Dashboard', 'Kelas', 'Kuis', 'Presensi'].map((item, i) => (
+                  <div key={item} className={`nlr-mock-nav-item${i === 0 ? ' active' : ''}`}>
+                    <span className="nlr-mock-dot" />{item}
+                  </div>
+                ))}
+              </div>
+              <div className="nlr-mock-main">
+                <div className="nlr-mock-header">Selamat datang di Nalaro 👋</div>
+                <div className="nlr-mock-cards">
+                  {['Kuis Live', 'Materi Baru', 'Presensi'].map((c) => (
+                    <div key={c} className="nlr-mock-card">{c}</div>
+                  ))}
                 </div>
-                <div className="text-xs text-gray-300">Materi, Diskusi & Live Quiz terintegrasi</div>
+                <div className="nlr-mock-quiz-preview">
+                  <div className="nlr-mock-q">Pertanyaan 1 dari 10</div>
+                  <div className="nlr-mock-qtext">Apa ibu kota Indonesia?</div>
+                  <div className="nlr-mock-opts">
+                    {['Jakarta', 'Bandung', 'Surabaya', 'Medan'].map((o, i) => (
+                      <div key={o} className={`nlr-mock-opt${i === 0 ? ' correct' : ''}`}>{o}</div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
-          </motion.div>
-        </div>
+          </div>
+          <div className="nlr-float-badge nlr-float-left">
+            <div className="nlr-float-icon">🎮</div>
+            <div>
+              <div className="nlr-float-title">Kuis Live</div>
+              <div className="nlr-float-sub">32 siswa bergabung</div>
+            </div>
+          </div>
+          <div className="nlr-float-badge nlr-float-right">
+            <div className="nlr-float-icon">📊</div>
+            <div>
+              <div className="nlr-float-title">Hasil Langsung</div>
+              <div className="nlr-float-sub">Skor real-time</div>
+            </div>
+          </div>
+        </motion.div>
       </header>
 
-      {/* Feature Pillar Section */}
-      <section id="lms" className="py-20 relative border-t border-white/5 bg-black/20">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-black mb-4">
-              4 Pilar <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">Quizzy</span>
+      {/* ── PLATFORM PILLARS ── */}
+      <section id="platform" className="nlr-section">
+        <div className="nlr-container">
+          <FadeUp className="nlr-section-head">
+            <div className="nlr-section-label"><Shield className="nlr-icon-xs" /> Platform</div>
+            <h2 className="nlr-section-title">
+              Satu platform, <span className="nlr-gradient-text">empat ruang</span>
             </h2>
-            <p className="text-gray-400 max-w-xl mx-auto">
-              Platform lengkap untuk menciptakan ruang kelas digital yang aktif dan kolaboratif.
+            <p className="nlr-section-sub">
+              Nalaro dibangun di atas empat pilar yang saling terhubung, bukan alat terpisah yang perlu berpindah-pindah.
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="glass-card p-6 rounded-2xl border border-purple-500/20 hover:border-purple-500/50 transition">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 mb-4">
-                <BookOpen className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">1. Ruang Materi</h3>
-              <p className="text-sm text-gray-400">Materi terstruktur yang mendukung teks, gambar, lampiran, dan video.</p>
-            </div>
-
-            <div className="glass-card p-6 rounded-2xl border border-blue-500/20 hover:border-blue-500/50 transition">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 mb-4">
-                <MessageSquare className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">2. Ruang Diskusi</h3>
-              <p className="text-sm text-gray-400">Ruang diskusi terbenam di setiap materi agar siswa aktif bertanya & menjawab.</p>
-            </div>
-
-            <div className="glass-card p-6 rounded-2xl border border-pink-500/20 hover:border-pink-500/50 transition">
-              <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center text-pink-400 mb-4">
-                <Gamepad2 className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">3. Kuis Interaktif</h3>
-              <p className="text-sm text-gray-400">Evaluasi yang dirancang lebih hidup dengan sesi kuis dan umpan balik.</p>
-            </div>
-
-            <div className="glass-card p-6 rounded-2xl border border-green-500/20 hover:border-green-500/50 transition">
-              <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center text-green-400 mb-4">
-                <UserCheck className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold mb-2">4. Presensi</h3>
-              <p className="text-sm text-gray-400">Sesi kehadiran kelas dengan riwayat dan validasi lokasi sederhana.</p>
-            </div>
+          </FadeUp>
+          <div className="nlr-pillars-grid">
+            {pillars.map((p, i) => {
+              const Icon = p.icon;
+              const c = colorMap[p.color];
+              return (
+                <FadeUp key={p.title} delay={i * 0.08}>
+                  <div className="nlr-pillar-card" style={{ '--border-color': c.border }}>
+                    <div className="nlr-pillar-num">{String(i + 1).padStart(2, '0')}</div>
+                    <div className="nlr-pillar-icon" style={{ background: c.icon, color: c.text }}>
+                      <Icon size={22} />
+                    </div>
+                    <h3 className="nlr-pillar-title">{p.title}</h3>
+                    <p className="nlr-pillar-desc">{p.desc}</p>
+                  </div>
+                </FadeUp>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* Interactive Features Grid */}
-      <section id="features" className="py-24 relative">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4">Ruang Belajar yang <span className="text-blue-400">Terhubung</span></h2>
-            <p className="text-gray-400">Kemampuan inti yang sedang dibangun menjadi satu pengalaman kelas digital.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="glass-card p-6 rounded-2xl hover:-translate-y-2 transition duration-300 group">
-              <div className="w-14 h-14 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-400 text-2xl mb-4 group-hover:rotate-12 transition">
-                <Wand2 />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Quizzy Assist</h3>
-              <p className="text-sm text-gray-400">Asisten yang dirancang untuk membantu meringkas materi dan menyiapkan pertanyaan.</p>
-            </div>
-
-            <div className="glass-card p-6 rounded-2xl hover:-translate-y-2 transition duration-300 group">
-              <div className="w-14 h-14 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 text-2xl mb-4 group-hover:rotate-12 transition">
-                <Gamepad2 />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Kuis live & mandiri</h3>
-              <p className="text-sm text-gray-400">Ikuti sesi bersama melalui PIN atau kerjakan evaluasi sesuai waktu belajar.</p>
-            </div>
-
-            <div className="glass-card p-6 rounded-2xl hover:-translate-y-2 transition duration-300 group">
-              <div className="w-14 h-14 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 text-2xl mb-4 group-hover:rotate-12 transition">
-                <Timer />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Kontrol sesi</h3>
-              <p className="text-sm text-gray-400">Guru akan mengendalikan timer, penguncian jawaban, dan momen hasil kuis.</p>
-            </div>
-
-            <div className="glass-card p-6 rounded-2xl hover:-translate-y-2 transition duration-300 group">
-              <div className="w-14 h-14 rounded-xl bg-green-500/20 flex items-center justify-center text-green-400 text-2xl mb-4 group-hover:rotate-12 transition">
-                <QrCode />
-              </div>
-              <h3 className="text-xl font-bold mb-2">Kode kelas & PIN</h3>
-              <p className="text-sm text-gray-400">Alur bergabung dirancang ringkas melalui kode kelas atau PIN kuis.</p>
-            </div>
+      {/* ── FEATURES ── */}
+      <section id="fitur" className="nlr-section nlr-section-alt">
+        <div className="nlr-container">
+          <FadeUp className="nlr-section-head">
+            <div className="nlr-section-label"><Users className="nlr-icon-xs" /> Kemampuan</div>
+            <h2 className="nlr-section-title">
+              Dibuat untuk <span className="nlr-gradient-text">guru dan siswa</span>
+            </h2>
+            <p className="nlr-section-sub">
+              Setiap fitur dirancang agar guru bisa mengajar lebih fokus dan siswa bisa belajar lebih aktif.
+            </p>
+          </FadeUp>
+          <div className="nlr-features-grid">
+            {featureCards.map((f, i) => {
+              const Icon = f.icon;
+              return (
+                <FadeUp key={f.title} delay={i * 0.07}>
+                  <div className="nlr-feature-card">
+                    <div className="nlr-feature-icon" style={{ background: f.bg, color: f.color }}>
+                      <Icon size={24} />
+                    </div>
+                    <h3 className="nlr-feature-title">{f.title}</h3>
+                    <p className="nlr-feature-desc">{f.desc}</p>
+                    <div className="nlr-feature-arrow"><ChevronRight size={16} /></div>
+                  </div>
+                </FadeUp>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* Question Types */}
-      <section id="types" className="py-20 relative bg-black/30">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-bold mb-4">Arah Kuis <span className="text-purple-400">Quizzy</span></h2>
-            <p className="text-gray-400">Format berikut menjadi arah pengembangan pengalaman evaluasi Quizzy.</p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="glass-card p-6 rounded-2xl hover:bg-white/5 transition hover:-translate-y-2 border-t-4 border-blue-500">
-              <ListOrdered className="w-8 h-8 text-blue-400 mb-3" />
-              <h3 className="font-bold text-lg">Pilihan Ganda</h3>
-              <p className="text-xs text-gray-400 mt-1">Format klasik yang cepat & jelas.</p>
-            </div>
-            <div className="glass-card p-6 rounded-2xl hover:bg-white/5 transition hover:-translate-y-2 border-t-4 border-pink-500">
-              <Crosshair className="w-8 h-8 text-pink-400 mb-3" />
-              <h3 className="font-bold text-lg">Hotspot Image</h3>
-              <p className="text-xs text-gray-400 mt-1">Ketuk titik koordinat jawaban pada gambar.</p>
-            </div>
-            <div className="glass-card p-6 rounded-2xl hover:bg-white/5 transition hover:-translate-y-2 border-t-4 border-yellow-500">
-              <ArrowUpDown className="w-8 h-8 text-yellow-400 mb-3" />
-              <h3 className="font-bold text-lg">Menyusun (Sequencing)</h3>
-              <p className="text-xs text-gray-400 mt-1">Urutkan jawaban berdasarkan konteks.</p>
-            </div>
-            <div className="glass-card p-6 rounded-2xl hover:bg-white/5 transition hover:-translate-y-2 border-t-4 border-green-500">
-              <ImageIcon className="w-8 h-8 text-green-400 mb-3" />
-              <h3 className="font-bold text-lg">Pilihan Gambar</h3>
-              <p className="text-xs text-gray-400 mt-1">Pilih gambar jawaban secara visual.</p>
-            </div>
+      {/* ── QUESTION TYPES ── */}
+      <section id="soal" className="nlr-section">
+        <div className="nlr-container">
+          <FadeUp className="nlr-section-head">
+            <div className="nlr-section-label"><Zap className="nlr-icon-xs" /> Format Soal</div>
+            <h2 className="nlr-section-title">
+              Variasi soal yang <span className="nlr-gradient-text">lebih dari pilihan ganda</span>
+            </h2>
+            <p className="nlr-section-sub">
+              Nalaro mendukung berbagai format evaluasi agar pengalaman belajar tidak terasa monoton.
+            </p>
+          </FadeUp>
+          <div className="nlr-types-grid">
+            {questionTypes.map((t, i) => {
+              const Icon = t.icon;
+              return (
+                <FadeUp key={t.title} delay={i * 0.07}>
+                  <div className="nlr-type-card" style={{ '--accent': t.color }}>
+                    <Icon size={32} style={{ color: t.color }} className="nlr-type-icon" />
+                    <h3 className="nlr-type-title">{t.title}</h3>
+                    <p className="nlr-type-desc">{t.desc}</p>
+                  </div>
+                </FadeUp>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 border-t border-white/10 text-center text-gray-500 text-sm">
-        <p>© 2026 Quizzy. Ruang belajar modern untuk guru dan siswa.</p>
+      {/* ── CTA BAND ── */}
+      <section className="nlr-cta-band">
+        <div className="nlr-container">
+          <FadeUp>
+            <div className="nlr-cta-inner">
+              <div className="nlr-cta-blob" />
+              <h2 className="nlr-cta-title">Siap mulai kelas pertama?</h2>
+              <p className="nlr-cta-sub">Daftar gratis dan buat kelas dalam hitungan menit.</p>
+              <button onClick={onEnterApp} className="nlr-btn-primary nlr-btn-lg nlr-cta-btn">
+                Buka Nalaro <ArrowRight className="nlr-icon-sm" />
+              </button>
+            </div>
+          </FadeUp>
+        </div>
+      </section>
+
+      {/* ── FOOTER ── */}
+      <footer className="nlr-footer">
+        <div className="nlr-container nlr-footer-inner">
+          <div className="nlr-logo">
+            <div className="nlr-logo-mark sm">N</div>
+            <span className="nlr-logo-text">Nalaro</span>
+          </div>
+          <p className="nlr-footer-tagline">Belajar, Bermain, dan Tumbuh.</p>
+          <p className="nlr-footer-copy">© 2026 Nalaro. Ruang kelas digital untuk semua.</p>
+        </div>
       </footer>
     </div>
   );

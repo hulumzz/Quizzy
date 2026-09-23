@@ -5,7 +5,31 @@ import { conflict, forbidden, notFound } from '../http/errors.js';
 
 const normalize = (value) => String(value ?? '').trim().toLocaleLowerCase('id-ID');
 const summary = (item) => ({ id: item.id, classId: item.classId, title: item.title, description: item.description || '', status: item.status, mode: item.mode, questionCount: item.questions?.length || 0, totalPoints: (item.questions || []).reduce((sum, q) => sum + q.points, 0), settings: item.settings, createdAt: item.createdAt, updatedAt: item.updatedAt, publishedAt: item.publishedAt || null });
-const safeDetail = (item) => ({ ...summary(item), questions: (item.questions || []).map((question) => ({ id: question.id, type: question.type, prompt: question.prompt, choices: question.choices, points: question.points })) });
+const safeQuestion = (question) => ({
+  id: question.id, type: question.type, prompt: question.prompt, choices: question.choices, points: question.points,
+  ...(question.type === 'arrange' ? { items: question.items } : {}),
+  ...(question.type === 'image_hotspot' ? { imageUrl: question.imageUrl, tolerancePercent: question.tolerancePercent, hotspots: (question.hotspots || []).map(({ id, label, x, y, width, height }) => ({ id, label, x, y, width, height })) } : {}),
+});
+const safeDetail = (item) => ({ ...summary(item), questions: (item.questions || []).map(safeQuestion) });
+
+function equalOrder(supplied, correctOrder) {
+  return Array.isArray(supplied) && supplied.length === correctOrder.length && supplied.every((value, index) => value === correctOrder[index]);
+}
+
+function hotspotHit(supplied, question) {
+  if (!supplied || typeof supplied !== 'object' || !Number.isFinite(supplied.x) || !Number.isFinite(supplied.y)) return false;
+  const area = (question.hotspots || []).find((spot) => spot.correct);
+  if (!area) return false;
+  const margin = Number(question.tolerancePercent || 0);
+  return supplied.x >= area.x - margin && supplied.x <= area.x + area.width + margin && supplied.y >= area.y - margin && supplied.y <= area.y + area.height + margin;
+}
+
+function isCorrectAnswer(question, supplied) {
+  if (question.type === 'true_false') return supplied === question.correctAnswer;
+  if (question.type === 'arrange') return equalOrder(supplied, question.correctOrder);
+  if (question.type === 'image_hotspot') return hotspotHit(supplied, question);
+  return normalize(supplied) === normalize(question.correctAnswer);
+}
 
 export class QuizRepository {
   constructor({ tableName = process.env.TABLE_NAME, documentClient, classRepository } = {}) {
@@ -73,7 +97,7 @@ export class QuizRepository {
     const totalPoints = quiz.questions.reduce((sum, question) => sum + question.points, 0);
     const earnedPoints = quiz.questions.reduce((sum, question) => {
       const supplied = answerMap.get(question.id);
-      const correct = question.type === 'true_false' ? supplied === question.correctAnswer : normalize(supplied) === normalize(question.correctAnswer);
+      const correct = isCorrectAnswer(question, supplied);
       return sum + (correct ? question.points : 0);
     }, 0);
     const score = totalPoints ? Math.round((earnedPoints / totalPoints) * 100) : 0;

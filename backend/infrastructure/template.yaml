@@ -84,6 +84,39 @@ Resources:
             WriteCapacityUnits: 1
       SSESpecification:
         SSEEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+
+  QuizAnswerDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: retains failed live-quiz answer events for bounded operational recovery
+        must:
+          - Do not expose the queue to browsers or public callers
+          - Keep retention bounded to control cost and data lifetime
+        mutable: change-with-constraints
+        trust: { src: authored, conf: high }
+    Properties:
+      MessageRetentionPeriod: 1209600
+
+  QuizAnswerEvents:
+    Type: AWS::SQS::Queue
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: absorbs bursty live-quiz answers before durable aggregation
+        must:
+          - Visibility timeout must remain at least six times the processor timeout
+          - Failed messages must redrive to the dedicated dead-letter queue
+        mutable: change-with-constraints
+        trust: { src: authored, conf: high }
+    Properties:
+      MessageRetentionPeriod: 3600
+      VisibilityTimeout: 60
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt QuizAnswerDeadLetterQueue.Arn
+        maxReceiveCount: 3
 
   ClassesFunction:
     Type: AWS::Serverless::Function
@@ -112,6 +145,7 @@ Resources:
           CLOUDINARY_CLOUD_NAME: !Ref CloudinaryCloudName
           CLOUDINARY_API_KEY: !Ref CloudinaryApiKey
           CLOUDINARY_API_SECRET_PARAMETER: !Ref CloudinaryApiSecretParameter
+          QUIZ_ANSWER_QUEUE_URL: !Ref QuizAnswerEvents
       Policies:
         - Statement:
             - Sid: ReadClassData
@@ -136,6 +170,11 @@ Resources:
               Action:
                 - ssm:GetParameter
               Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CloudinaryApiSecretParameter}'
+            - Sid: SendQuizAnswerEvents
+              Effect: Allow
+              Action:
+                - sqs:SendMessage
+              Resource: !GetAtt QuizAnswerEvents.Arn
       FunctionUrlConfig:
         AuthType: NONE
         InvokeMode: BUFFERED
@@ -152,6 +191,57 @@ Resources:
             - DELETE
           AllowOrigins: !Ref AllowedOrigins
           MaxAge: 300
+
+  LiveQuizAnswerProcessor:
+    Type: AWS::Serverless::Function
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: consumes queued live-quiz answers and atomically aggregates only valid current-question responses
+        must:
+          - Return per-record batch failures so transient messages retry without replaying valid records
+          - Never trust a queued answer without rechecking canonical session state in DynamoDB
+        mutable: change-with-constraints
+        trust: { src: authored, conf: high }
+    Properties:
+      Description: Processes queued live quiz answers with canonical DynamoDB validation.
+      CodeUri: ../
+      Handler: src/functions/live-quiz-answers/index.handler
+      Runtime: nodejs22.x
+      Architectures:
+        - arm64
+      MemorySize: 256
+      Timeout: 10
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref QuizzyTable
+      Policies:
+        - Statement:
+            - Sid: ProcessQueuedQuizAnswers
+              Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:ConditionCheckItem
+              Resource: !GetAtt QuizzyTable.Arn
+            - Sid: ConsumeQuizAnswerEvents
+              Effect: Allow
+              Action:
+                - sqs:ChangeMessageVisibility
+                - sqs:DeleteMessage
+                - sqs:GetQueueAttributes
+                - sqs:ReceiveMessage
+              Resource: !GetAtt QuizAnswerEvents.Arn
+      Events:
+        QuizAnswerEvents:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt QuizAnswerEvents.Arn
+            BatchSize: 10
+            FunctionResponseTypes:
+              - ReportBatchItemFailures
+            ScalingConfig:
+              MaximumConcurrency: 5
 
   ClassesFunctionLogGroup:
     Type: AWS::Logs::LogGroup

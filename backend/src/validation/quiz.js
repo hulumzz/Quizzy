@@ -1,9 +1,34 @@
 import { badRequest } from '../http/errors.js';
 
-const TYPES = new Set(['multiple_choice', 'true_false', 'short_answer']);
+const TYPES = new Set(['multiple_choice', 'true_false', 'short_answer', 'arrange', 'image_hotspot']);
 
 function text(value) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeOrder(value) {
+  return Array.isArray(value) ? value.map(text).filter(Boolean) : [];
+}
+
+function normalizeHotspots(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map((spot, index) => ({
+    id: text(spot?.id) || `area-${index + 1}`,
+    label: text(spot?.label),
+    x: Number(spot?.x), y: Number(spot?.y), width: Number(spot?.width), height: Number(spot?.height),
+    correct: Boolean(spot?.correct),
+  }));
+}
+
+function validateAnswerValue(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return text(value);
+  if (Array.isArray(value)) return value.map(text).filter(Boolean).slice(0, 12);
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    const x = Number(value.x); const y = Number(value.y);
+    if (Number.isFinite(x) && Number.isFinite(y)) return { x, y };
+  }
+  return '';
 }
 
 export function validateQuizId(value) {
@@ -34,6 +59,11 @@ export function validateQuizInput(input) {
     const points = Number(question?.points ?? 1);
     const id = text(question?.id) || `q-${index + 1}`;
     const choices = type === 'multiple_choice' && Array.isArray(question?.choices) ? question.choices.map(text) : [];
+    const items = type === 'arrange' && Array.isArray(question?.items) ? question.items.map((item, itemIndex) => ({ id: text(item?.id) || `item-${itemIndex + 1}`, text: text(item?.text) })) : [];
+    const correctOrder = type === 'arrange' ? normalizeOrder(question?.correctOrder) : [];
+    const hotspots = type === 'image_hotspot' ? normalizeHotspots(question?.hotspots) : [];
+    const imageUrl = type === 'image_hotspot' ? text(question?.imageUrl) : '';
+    const tolerancePercent = type === 'image_hotspot' ? Number(question?.tolerancePercent ?? 2) : 0;
     let correctAnswer = type === 'true_false' ? Boolean(question?.correctAnswer) : text(question?.correctAnswer);
     if (!TYPES.has(type)) errors[`${prefix}.type`] = 'Jenis soal tidak didukung.';
     if (!/^[A-Za-z0-9_-]{1,64}$/.test(id) || questionIds.has(id)) errors[`${prefix}.id`] = 'Identitas soal harus unik dan valid.';
@@ -46,7 +76,18 @@ export function validateQuizInput(input) {
       if (status === 'published' && !choices.includes(correctAnswer)) errors[`${prefix}.correctAnswer`] = 'Jawaban benar harus cocok dengan salah satu pilihan.';
     }
     if (type === 'short_answer' && ((status === 'published' && !correctAnswer) || correctAnswer.length > 300)) errors[`${prefix}.correctAnswer`] = 'Jawaban benar wajib diisi dan maksimal 300 karakter.';
-    return { id, type, prompt, choices, correctAnswer, explanation, points };
+    if (type === 'arrange') {
+      const itemIds = items.map((item) => item.id);
+      const validOrder = correctOrder.length === itemIds.length && new Set(correctOrder).size === itemIds.length && correctOrder.every((itemId) => itemIds.includes(itemId));
+      if ((status === 'published' && (items.length < 3 || !validOrder)) || items.length > 10 || items.some((item) => !/^[A-Za-z0-9_-]{1,64}$/.test(item.id) || !item.text || item.text.length > 300) || new Set(itemIds).size !== itemIds.length) errors[`${prefix}.items`] = 'Susunan harus berisi 3-10 item unik dengan urutan jawaban yang lengkap.';
+    }
+    if (type === 'image_hotspot') {
+      const validImage = /^https:\/\/.{1,2000}$/i.test(imageUrl);
+      const validSpot = (spot) => /^[A-Za-z0-9_-]{1,64}$/.test(spot.id) && spot.label.length <= 80 && [spot.x, spot.y, spot.width, spot.height].every(Number.isFinite) && spot.x >= 0 && spot.y >= 0 && spot.width >= 2 && spot.height >= 2 && spot.x + spot.width <= 100 && spot.y + spot.height <= 100;
+      if ((status === 'published' && (!validImage || hotspots.length < 1 || hotspots.filter((spot) => spot.correct).length !== 1)) || hotspots.length > 8 || hotspots.some((spot) => !validSpot(spot)) || new Set(hotspots.map((spot) => spot.id)).size !== hotspots.length) errors[`${prefix}.hotspots`] = 'Peta klik memerlukan gambar HTTPS, 1 area benar, dan blok area valid.';
+      if (!Number.isFinite(tolerancePercent) || tolerancePercent < 0 || tolerancePercent > 10) errors[`${prefix}.tolerancePercent`] = 'Toleransi area harus 0-10 persen.';
+    }
+    return { id, type, prompt, choices, correctAnswer, items, correctOrder, imageUrl, hotspots, tolerancePercent, explanation, points };
   });
   if (status === 'published' && questions.length < 1) errors.questions = 'Tambahkan minimal satu soal sebelum menerbitkan kuis.';
 
@@ -64,5 +105,7 @@ export function validateQuizInput(input) {
 export function validateAttempt(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input) || !Array.isArray(input.answers)) throw badRequest('INVALID_BODY', 'Jawaban kuis tidak valid.');
   if (input.answers.length > 30) throw badRequest('VALIDATION_ERROR', 'Jawaban melebihi jumlah soal.');
-  return { answers: input.answers.map((answer) => ({ questionId: text(answer?.questionId), answer: typeof answer?.answer === 'boolean' ? answer.answer : text(answer?.answer) })) };
+  const answers = input.answers.map((answer) => ({ questionId: text(answer?.questionId), answer: validateAnswerValue(answer?.answer) }));
+  if (answers.some((answer) => !/^[A-Za-z0-9_-]{1,64}$/.test(answer.questionId))) throw badRequest('VALIDATION_ERROR', 'Identitas soal tidak valid.');
+  return { answers };
 }

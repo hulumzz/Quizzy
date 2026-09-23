@@ -1,19 +1,22 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "quizzy-api",
+  "name": "quizzy",
   "main": "src/index.js",
-  "compatibility_date": "2024-09-25",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
-  "ai": {
-    "binding": "AI"
+  "compatibility_date": "2026-09-23",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "GROQ_DEFAULT_MODEL": "qwen/qwen3.8-27b",
+    "ALLOWED_ORIGINS": "http://localhost:5173"
   },
-  "d1_databases": [
+  "ratelimits": [
     {
-      "binding": "DB",
-      "database_name": "quizzy-d1",
-      "database_id": "local-quizzy-d1"
+      "name": "AI_RATE_LIMITER",
+      "namespace_id": "27123",
+      "simple": { "limit": 12, "period": 60 }
     }
-  ]
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1
+  }
 }
