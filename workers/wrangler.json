@@ -6,7 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "GROQ_DEFAULT_MODEL": "qwen/qwen3.8-27b",
-    "ALLOWED_ORIGINS": "http://localhost:5173"
+    "ALLOWED_ORIGINS": "https://quizzy.pages.dev,https://quizzy.my.id,https://nalaro.web.id,http://localhost:5173"
   },
   "ratelimits": [
     {
