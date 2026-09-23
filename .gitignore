@@ -22,6 +22,7 @@ serviceAccountKey.json
 dist/
 dist-ssr/
 build/
+.aws-sam/
 *.local
 
 # Cloudflare Workers & Wrangler

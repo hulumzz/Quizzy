@@ -48,6 +48,10 @@
 .qz-add-block > div { display: flex; flex-wrap: wrap; gap: 7px; }
 .qz-add-block button { min-height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 11px; border: 1px solid var(--qz-border); border-radius: 10px; color: var(--qz-text-secondary); background: var(--qz-surface); font-size: 0.72rem; font-weight: 650; cursor: pointer; }
 .qz-add-block button:hover { color: var(--qz-primary-hover); border-color: #b6a6db; background: var(--qz-primary-soft); }
+.qz-upload-control { display: grid; gap: 7px; padding: 14px; border: 1px dashed var(--qz-border-strong); border-radius: 12px; background: var(--qz-surface); color: var(--qz-text); font-size: .82rem; font-weight: 700; }
+.qz-upload-control input { width: 100%; color: var(--qz-text-secondary); font-size: .76rem; font-weight: 600; }
+.qz-upload-control input::file-selector-button { margin-right: 10px; padding: 8px 12px; border: 1px solid var(--qz-border); border-radius: 9px; color: var(--qz-primary-hover); background: var(--qz-primary-soft); font: inherit; cursor: pointer; }
+.qz-upload-control small { color: var(--qz-text-muted); font-size: .68rem; font-weight: 600; }
 
 .qz-reader { width: min(100%, 940px); margin: 0 auto; padding: clamp(24px, 5vw, 58px); border: 1px solid var(--qz-border-strong); border-radius: 24px; background: var(--qz-surface); box-shadow: var(--qz-shadow-card); }
 .qz-reader__header { max-width: 760px; margin-bottom: 30px; padding-bottom: 26px; border-bottom: 1px solid var(--qz-border); }

@@ -1,8 +1,8 @@
 # Quizzy Architecture Status
 
 Last updated: 23 September 2026  
-Baseline: `b2a27b9163e9d26b7b0f3a38a81dc9357eb7e78e` (`phase 7`)  
-Current implementation branch: `chatgpt/attendance-phase-8`
+Baseline: `5208284` (`phase 8`)
+Current implementation branch: `main`
 
 ## Implemented
 
@@ -24,7 +24,7 @@ Current implementation branch: `chatgpt/attendance-phase-8`
 - Authenticated create, join, list, overview, and member frontend flows with reusable API and auth-token services.
 - Lambda Function URL class handler with Firebase certificate verification, bounded validation, structured errors, and ownership derived from the verified token.
 - DynamoDB class repository with owner and member access patterns, transactional class-code reservation, and atomic idempotent class joining.
-- Free-first AWS SAM template using provisioned capacity, exact-origin CORS, seven-day log retention, retained table data, and bounded Lambda concurrency.
+- Free-first AWS SAM template using provisioned capacity, exact-origin CORS, seven-day log retention, retained table data, and the account-level Lambda concurrency quota.
 - Student class page with code validation, loading/error/empty states, real joined-class data, and duplicate-safe joins.
 - Shared teacher/student class overview with owner/member authorization and an owner-only member roster.
 - Backend unit coverage for authentication headers, validation, owner/member scoping, anonymous-account rejection, repository access patterns, transactional joining, and class-code reservation.
@@ -44,21 +44,25 @@ Current implementation branch: `chatgpt/attendance-phase-8`
 - Attendance check-in uses a DynamoDB transaction that rechecks the session is active and conditionally creates one check-in per student. Duplicate submissions return the existing record safely.
 - Student attendance responses hide the teacher venue coordinates while still exposing session state, allowed radius, and the student's own check-in result.
 - Teacher attendance recap resolves the current class roster against stored check-ins and reports present versus not-yet-recorded members without adding a new table or index.
-- The AWS SAM IAM policy includes `dynamodb:ConditionCheckItem`, required by the attendance transaction's `ConditionCheck` operation.
+- The AWS SAM IAM policy includes `dynamodb:ConditionCheckItem`, required by the attendance transaction's `ConditionCheck` operation, as well as `ssm:GetParameter` for the `/quizzy/dev/cloudinary-api-secret` parameter.
+- Phase 9 self-paced quizzes are implemented and deployed: teacher CRUD/editor/settings/publish flows, published student list and attempt flow, server-side scoring, optional answer review, and teacher result recap.
+- Quiz documents are class-partitioned `QUIZ#` aggregates capped at 30 questions. Student attempts use a separate `QUIZ#<id>` partition and a conditional write that permits one submission per student.
+- Correct answers are removed from student quiz responses and scoring always reloads the canonical published quiz on the server. Authenticated token identity is authoritative for ownership and attempts.
 
 ## Partially implemented
 
 - Authentication still uses Firebase Auth and the existing Firestore/local cache profile flow. Domain profile ownership will be clarified during backend integration.
 - Landing and authentication retain the expressive prototype visual direction, with misleading infrastructure copy removed.
-- Quiz and live-join routes still show honest empty/unavailable states until their durable APIs exist.
+- Live quiz join remains unavailable until the realtime phase; the class-scoped self-paced quiz flow is now implemented.
 - Class, material, discussion, and attendance data become live when `VITE_API_URL` points to the deployed Function URL; without it, the UI shows an explicit unavailable state.
 - Attendance provides simple GPS/radius validation only. Face recognition and smart attendance verification remain future features as specified in the product blueprint.
-- Attachment support currently accepts existing HTTPS image/file URLs. Direct binary upload and owned object storage remain a later infrastructure step.
+- Material images and documents can now be uploaded directly from the browser to Cloudinary through an owner-only signed-upload flow. Existing HTTPS URLs remain supported.
+- Uploads are limited to JPG, PNG, WebP, GIF, PDF, selected Office formats, and TXT. Image size is capped at 8 MB and document size at 15 MB before a signature is issued.
+- The Cloudinary API secret remains backend-only and is referenced from a free Standard SSM SecureString during deployment; no S3 bucket is required for this phase.
 
 ## Not started
 
-- AWS deployment and real-account end-to-end verification.
-- Quiz CRUD, live quiz runtime, and owned binary attachment uploads.
+- Live quiz runtime.
 
 ## Legacy retained for migration
 
@@ -79,26 +83,22 @@ Current implementation branch: `chatgpt/attendance-phase-8`
 - Attendance adds 13 focused backend tests covering input/status validation, verified identity use, anonymous rejection, Haversine distance, draft visibility, student location privacy, outside-radius rejection, transactional active-session recheck, and teacher recap; all 13 pass in an isolated Node test harness.
 - New attendance backend source files and the updated Lambda dispatcher pass Node syntax parsing in the isolated implementation workspace.
 - New attendance frontend JavaScript/JSX files and route changes pass TypeScript's JavaScript/JSX parser/transpiler in the isolated implementation workspace.
-- Full-repository `npm run lint`, `npm run build`, and the complete backend test suite were not rerun for this attendance batch because the isolated workspace does not contain the repository dependencies. Run `npm run validate` from a normal checkout before merging/deploying.
+- Full-repository `npm run validate` passed from the normal checkout before deployment, including frontend lint/build, all 55 backend tests, and backend syntax checks.
 - Existing Firebase bundle-size warning from the previous batch remains approximately 528 kB minified; the attendance batch adds no frontend dependency.
-- AWS SAM CLI remains unavailable in this session, so `sam validate --lint` and `sam build` were not run.
-- In-app visual browser verification was unavailable in this session; responsive behavior for attendance is parser/static validated, not visually certified yet.
+- AWS SAM CLI `1.166.2` validation and build pass for the Node.js 22 ARM64 function package.
+- The local Phase 9 and Cloudinary upload batch passes frontend lint and production build, all 68 backend tests, backend syntax checks, SAM lint validation, and SAM package build.
+- CloudFormation pre-deployment validation returned no `FAIL` or `WARN` events. AWS Guard Rules reports three accepted free-first hardening exceptions: no customer-managed KMS key for the log group or DynamoDB table, and no DynamoDB point-in-time recovery.
+- The deployed Function URL responds successfully at the transport layer and rejects unauthorized requests to `/classes` and `/classes/:id/uploads/signature` without a Firebase token with `401 Unauthorized`.
+- In-app visual browser verification was unavailable in this session; responsive behavior for attendance and quizzes is parser/static validated, not visually certified yet.
 
 ## Deployment status
 
-The class, material, discussion, and attendance vertical slices are implemented in source but deliberately not deployed. No DynamoDB table, Lambda, Function URL, IAM role, or CloudWatch log group has been created by this implementation batch.
+The `quizzy-dev` CloudFormation stack is deployed in `ap-southeast-1` and is `UPDATE_COMPLETE`. It contains the retained provisioned DynamoDB table and `OwnerIndex`, the Node.js 22 ARM64 Lambda function and least-privilege role with runtime SSM SecureString parameter resolution, a public Function URL protected by application-level Firebase token verification, and a seven-day CloudWatch log group.
 
-Before deployment, confirm region, account Free Tier eligibility, billing alerts, and exact allowed origins, then inspect the CloudFormation change set. Deployment still requires the owner's explicit approval.
+Development CORS currently allows only `http://localhost:5173`. Set the local frontend `VITE_API_URL` to the stack's `ClassesFunctionUrl` output without a trailing slash before authenticated browser verification. Replace the allowed origin through a reviewed stack update before deploying the frontend to a hosted domain.
+
+The account is on the AWS Paid plan with no remaining promotional credits. The stack therefore relies on ongoing monthly free allowances rather than credits. A healthy USD 1 monthly cost budget is active and alerts when actual spend exceeds USD 0.01.
 
 ## Next gate
 
-The attendance implementation completes the next product slice previously defined as:
-
-```text
-attendance create and start/end
-→ teacher location and radius
-→ student geolocation and backend Haversine validation
-→ check-in, recap, and history
-```
-
-The next required step is real-account deployment and end-to-end verification of class, material, discussion, and attendance flows. Keep this local until the owner explicitly approves AWS deployment. Do not introduce realtime quiz infrastructure before that verification gate is complete.
+Phase 9 self-paced quiz and Cloudinary signed-upload flows are now implemented and deployed to the `quizzy-dev` stack. The next step is live authenticated verification in the browser for quiz creation, quiz attempt, and image/document uploads, followed by Phase 10 realtime PIN join and live sessions.

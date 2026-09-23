@@ -5,7 +5,7 @@ This directory contains the authenticated class, learning-material, contextual-d
 ```text
 Firebase ID token
 → Lambda Function URL
-→ class, material, discussion, and attendance handlers
+→ class, material, discussion, attendance, quiz, and upload-signature handlers
 → DynamoDB
 ```
 
@@ -21,7 +21,8 @@ No AWS resource is created by installing dependencies, running tests, or running
 - Join writes the class membership, user membership lookup, and member count in one DynamoDB transaction. Repeated join requests return the existing membership without incrementing the count again.
 - Material create, update, and soft-delete operations are owner-only. Students can only list and read published material in a class they joined.
 - Progress and bookmarks are stored under the verified student identity. Teachers cannot write student learning state through these routes.
-- Material content is bounded to 60 validated blocks and approximately 70 KB after normalization. Image/file attachments are HTTPS references only; this slice does not accept binary uploads.
+- Material content is bounded to 60 validated blocks and approximately 70 KB after normalization. Teachers upload supported assets directly from the browser to Cloudinary using a short-lived server-generated signature, so binary data never passes through Lambda.
+- The Cloudinary API secret is backend-only. The browser receives a signature, timestamp, cloud name, and public API key, but never the API secret.
 - Discussion access inherits material access. Students cannot open discussions for drafts or classes they have not joined.
 - Message authors can edit or soft-delete only their own content. Only the class owner can resolve a thread or select an answer.
 - Discussion content is bounded to 3,000 characters, and user identity, display name, and teacher markers are derived from the verified token and stored class access rather than request claims.
@@ -73,6 +74,7 @@ PUT  /classes/:classId/materials/:materialId/bookmark
 DELETE /classes/:classId/materials/:materialId/bookmark
 GET  /learning/bookmarks
 GET  /learning/progress
+POST /classes/:classId/uploads/signature
 
 GET  /classes/:classId/materials/:materialId/discussions
 POST /classes/:classId/materials/:materialId/discussions
@@ -92,7 +94,7 @@ POST /classes/:classId/attendance/:attendanceId/check-in
 
 `POST /classes/join` accepts `{ "code": "ABC234" }`. Clients should send a UUID-like `x-idempotency-key`; the server also checks the existing membership so retries do not add a student twice.
 
-Material writes accept `{ "title", "summary", "status", "blocks" }`. Supported initial block types are `paragraph`, `heading`, `bullet_list`, `numbered_list`, `quote`, `divider`, `link`, `youtube`, `image`, and `file`. Progress writes accept `{ "percent": 0..100 }`.
+Material writes accept `{ "title", "summary", "status", "blocks" }`. Supported initial block types are `paragraph`, `heading`, `bullet_list`, `numbered_list`, `quote`, `divider`, `link`, `youtube`, `image`, and `file`. Progress writes accept `{ "percent": 0..100 }`. Upload signature requests accept `{ "fileName", "mimeType", "size" }`, are owner-only, and support images up to 8 MB or selected documents up to 15 MB.
 
 Discussion and reply writes accept `{ "content" }`. Status writes accept `{ "status": "open" | "resolved", "answerId": null | "<replyId>" }`; only the class owner can call the status route.
 
@@ -132,8 +134,9 @@ Before any deployment:
 1. Confirm account-specific AWS Free Tier eligibility and regional Function URL support.
 2. Create billing and Free Tier usage alerts.
 3. Choose the exact deployment region.
-4. Pass the real Firebase project ID and exact Cloudflare Pages origin to SAM.
-5. Review the generated CloudFormation change set before applying it.
-6. Put the resulting `ClassesFunctionUrl` output into frontend `VITE_API_URL`.
+4. Store the Cloudinary API secret as a Standard SSM SecureString at `/quizzy/dev/cloudinary-api-secret`; Standard parameters use no additional Parameter Store charge.
+5. Pass the real Firebase project ID, Cloudinary cloud name/API key, and exact Cloudflare Pages origin to SAM.
+6. Review the generated CloudFormation change set before applying it.
+7. Put the resulting `ClassesFunctionUrl` output into frontend `VITE_API_URL`.
 
 Example build/deploy commands are intentionally not automated because deployment creates billable cloud resources and requires an explicit owner decision.

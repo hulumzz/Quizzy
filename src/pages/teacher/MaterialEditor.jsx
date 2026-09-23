@@ -52,12 +52,12 @@ export default function MaterialEditor() {
 
   return (
     <div className="qz-dashboard qz-enter">
-      <PageHeader eyebrow="Workspace materi" title={editing ? 'Edit materi' : 'Materi baru'} description="Susun penjelasan dalam blok. Tautan gambar dan file pada tahap ini harus memakai URL HTTPS yang sudah tersedia." actions={<Link to={`/teacher/classes/${classId}/materials`} className={buttonClassName({ variant: 'secondary' })}>Batal</Link>} />
+      <PageHeader eyebrow="Workspace materi" title={editing ? 'Edit materi' : 'Materi baru'} description="Susun penjelasan dalam blok dan unggah gambar atau dokumen langsung ke Cloudinary." actions={<Link to={`/teacher/classes/${classId}/materials`} className={buttonClassName({ variant: 'secondary' })}>Batal</Link>} />
       <div className="qz-editor-layout">
         <main className="qz-editor-canvas">
           <Input label="Judul materi" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Contoh: Memahami sistem tata surya" maxLength={120} error={fieldErrors.title} autoFocus={!editing} />
           <Textarea label="Ringkasan" value={form.summary} onChange={(event) => setForm((current) => ({ ...current, summary: event.target.value }))} placeholder="Jelaskan secara singkat apa yang akan dipelajari siswa." maxLength={400} error={fieldErrors.summary} hint={`${form.summary.length}/400 karakter`} />
-          <BlockEditor blocks={form.blocks} onChange={(blocks) => setForm((current) => ({ ...current, blocks }))} errors={fieldErrors} />
+          <BlockEditor classId={classId} blocks={form.blocks} onChange={(blocks) => setForm((current) => ({ ...current, blocks }))} errors={fieldErrors} />
         </main>
         <aside className="qz-editor-publish">
           <span className="qz-eyebrow">PUBLIKASI</span><h2>Siap dibagikan?</h2><p>Simpan draf untuk melanjutkan nanti, atau terbitkan agar langsung terlihat oleh siswa.</p>

@@ -23,6 +23,11 @@ const MaterialEditor = lazy(() => import('../pages/teacher/MaterialEditor'));
 const StudentLearningLibrary = lazy(() => import('../pages/student/StudentLearningLibrary'));
 const ClassDiscussions = lazy(() => import('../pages/ClassDiscussions'));
 const MaterialDiscussion = lazy(() => import('../pages/MaterialDiscussion'));
+const ClassQuizzes = lazy(() => import('../pages/ClassQuizzes'));
+const QuizAttempt = lazy(() => import('../pages/QuizAttempt'));
+const QuizEditor = lazy(() => import('../pages/teacher/QuizEditor'));
+const QuizResults = lazy(() => import('../pages/teacher/QuizResults'));
+const TeacherQuizzes = lazy(() => import('../pages/teacher/TeacherQuizzes'));
 
 function RouteLoading() {
   return <div className="qz-app-shell" style={{ display: 'grid', minHeight: '45vh', placeItems: 'center' }} role="status"><div className="qz-status-strip">Menyiapkan halaman...</div></div>;
@@ -40,10 +45,6 @@ function AuthRoute({ onboarding = false }) {
   if (user && userProfile?.role) return <Navigate to={homeForRole(userProfile.role)} replace />;
   return <Auth initialStep={onboarding || user ? 'role' : 'login'} onAuthComplete={(role) => navigate(homeForRole(role), { replace: true })} />;
 }
-
-const teacherPlaceholder = {
-  quizzes: <FeaturePlaceholder title="Kuis" description="Siapkan evaluasi dan sesi kuis untuk siswa." emptyTitle="Belum ada kuis" emptyDescription="Studio kuis akan dibangun setelah fondasi kelas, materi, diskusi, dan presensi tervalidasi end-to-end." />,
-};
 
 export default function AppRoutes() {
   return (
@@ -65,8 +66,12 @@ export default function AppRoutes() {
           <Route path="teacher/classes/:classId/materials/:materialId" element={<RequireRole role="teacher"><MaterialReader role="teacher" /></RequireRole>} />
           <Route path="teacher/classes/:classId/discussions" element={<RequireRole role="teacher"><ClassDiscussions role="teacher" /></RequireRole>} />
           <Route path="teacher/classes/:classId/attendance" element={<RequireRole role="teacher"><ClassAttendance role="teacher" /></RequireRole>} />
+          <Route path="teacher/classes/:classId/quizzes" element={<RequireRole role="teacher"><ClassQuizzes role="teacher" /></RequireRole>} />
+          <Route path="teacher/classes/:classId/quizzes/new" element={<RequireRole role="teacher"><QuizEditor /></RequireRole>} />
+          <Route path="teacher/classes/:classId/quizzes/:quizId/edit" element={<RequireRole role="teacher"><QuizEditor /></RequireRole>} />
+          <Route path="teacher/classes/:classId/quizzes/:quizId/results" element={<RequireRole role="teacher"><QuizResults /></RequireRole>} />
           <Route path="teacher/classes/:classId/*" element={<RequireRole role="teacher"><FeaturePlaceholder title="Ruang kelas" description="Materi, diskusi, dan presensi sudah tersedia. Modul kuis serta pengaturan anggota lanjutan akan diteruskan pada tahap berikutnya." emptyTitle="Modul ini belum tersedia" /></RequireRole>} />
-          <Route path="teacher/quizzes" element={<RequireRole role="teacher">{teacherPlaceholder.quizzes}</RequireRole>} />
+          <Route path="teacher/quizzes" element={<RequireRole role="teacher"><TeacherQuizzes /></RequireRole>} />
           <Route path="teacher/attendance" element={<RequireRole role="teacher"><TeacherAttendance /></RequireRole>} />
 
           <Route path="student" element={<RequireRole role="student"><Navigate to="home" replace /></RequireRole>} />
@@ -78,6 +83,8 @@ export default function AppRoutes() {
           <Route path="student/classes/:classId/materials/:materialId" element={<RequireRole role="student"><MaterialReader role="student" /></RequireRole>} />
           <Route path="student/classes/:classId/discussions" element={<RequireRole role="student"><ClassDiscussions role="student" /></RequireRole>} />
           <Route path="student/classes/:classId/attendance" element={<RequireRole role="student"><ClassAttendance role="student" /></RequireRole>} />
+          <Route path="student/classes/:classId/quizzes" element={<RequireRole role="student"><ClassQuizzes role="student" /></RequireRole>} />
+          <Route path="student/classes/:classId/quizzes/:quizId" element={<RequireRole role="student"><QuizAttempt /></RequireRole>} />
           <Route path="student/classes/:classId/*" element={<RequireRole role="student"><FeaturePlaceholder title="Ruang kelas" description="Materi, diskusi, dan presensi kelas tersedia dari navigasi ruang belajar." emptyTitle="Konten kelas belum tersedia" /></RequireRole>} />
           <Route path="student/progress" element={<RequireRole role="student"><StudentLearningLibrary mode="progress" /></RequireRole>} />
           <Route path="student/saved" element={<RequireRole role="student"><StudentLearningLibrary mode="saved" /></RequireRole>} />

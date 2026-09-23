@@ -1,6 +1,19 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Quizzy authenticated learning workspace API
+Description: Quizzy authenticated learning workspace API - free-first serverless resources for the development environment
+
+Metadata:
+  AWSToolsMetrics:
+    AWSAgentToolkit: aws-cloudformation@3
+  com.aws.cloudformation.Context:
+    arch: Lambda Function URL -> Node.js API -> single-table DynamoDB
+    must:
+      - Keep exact-origin CORS and application-level Firebase token verification
+      - Keep development resources within the account-level concurrency and billing guardrails
+    ref:
+      - at: docs/architecture-status.md
+        has: implementation status and deployment constraints
+        scope: project
 
 Parameters:
   FirebaseProjectId:
@@ -11,12 +24,33 @@ Parameters:
     Type: CommaDelimitedList
     Description: Exact frontend origins allowed to call the Function URL.
     Default: http://localhost:5173
+  CloudinaryCloudName:
+    Type: String
+    Description: Public Cloudinary product environment cloud name.
+    MinLength: 1
+  CloudinaryApiKey:
+    Type: String
+    Description: Public Cloudinary upload API key.
+    MinLength: 1
+  CloudinaryApiSecretParameter:
+    Type: String
+    Description: Name of the Standard SSM SecureString read by Lambda at runtime for the Cloudinary API secret.
+    Default: /quizzy/dev/cloudinary-api-secret
+    AllowedPattern: '^/[a-zA-Z0-9_.\-/]+$'
 
 Resources:
   QuizzyTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
     UpdateReplacePolicy: Retain
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: stores learning workspace entities in one retained table; provisioned minimum capacity keeps the development stack free-first
+        must:
+          - Retain data when the stack is deleted or the resource is replaced
+          - Keep PK, SK, and OwnerIndex key contracts aligned with repository access patterns
+        mutable: change-with-constraints
+        trust: { src: authored, conf: high }
     Properties:
       BillingMode: PROVISIONED
       ProvisionedThroughput:
@@ -53,8 +87,17 @@ Resources:
 
   ClassesFunction:
     Type: AWS::Serverless::Function
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: serves authenticated class, material, discussion, attendance, self-paced quiz, and Cloudinary upload-signature APIs; relies on the new account concurrency quota instead of reserved concurrency
+        must:
+          - Verify Firebase ID tokens in application code because the Function URL uses AuthType NONE
+          - Keep DynamoDB permissions scoped to the Quizzy table and OwnerIndex
+          - Read only the named Cloudinary SecureString at runtime; never expose its value through an API response or environment variable
+        mutable: change-with-constraints
+        trust: { src: authored, conf: high }
     Properties:
-      Description: Authenticated class, material, discussion, and attendance workspace API.
+      Description: Authenticated learning workspace API for classes, content, attendance, and quizzes.
       CodeUri: ../
       Handler: src/functions/classes/index.handler
       Runtime: nodejs22.x
@@ -62,11 +105,13 @@ Resources:
         - arm64
       MemorySize: 256
       Timeout: 10
-      ReservedConcurrentExecutions: 5
       Environment:
         Variables:
           TABLE_NAME: !Ref QuizzyTable
           FIREBASE_PROJECT_ID: !Ref FirebaseProjectId
+          CLOUDINARY_CLOUD_NAME: !Ref CloudinaryCloudName
+          CLOUDINARY_API_KEY: !Ref CloudinaryApiKey
+          CLOUDINARY_API_SECRET_PARAMETER: !Ref CloudinaryApiSecretParameter
       Policies:
         - Statement:
             - Sid: ReadClassData
@@ -86,6 +131,11 @@ Resources:
                 - dynamodb:DeleteItem
                 - dynamodb:ConditionCheckItem
               Resource: !GetAtt QuizzyTable.Arn
+            - Sid: ReadCloudinaryUploadSecret
+              Effect: Allow
+              Action:
+                - ssm:GetParameter
+              Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CloudinaryApiSecretParameter}'
       FunctionUrlConfig:
         AuthType: NONE
         InvokeMode: BUFFERED
@@ -107,6 +157,13 @@ Resources:
     Type: AWS::Logs::LogGroup
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: keeps short-lived development diagnostics; seven-day retention and AWS-managed encryption avoid ongoing CMK cost
+        must:
+          - Keep retention bounded for cost control
+        mutable: free-to-tune
+        trust: { src: authored, conf: high }
     Properties:
       LogGroupName: !Sub '/aws/lambda/${ClassesFunction}'
       RetentionInDays: 7
