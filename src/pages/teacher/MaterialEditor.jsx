@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MaterialIcon } from '../../components/icons';
 import { Button, Card, EmptyState, Input, PageHeader, Skeleton, Textarea, buttonClassName } from '../../components/ui';
 import BlockEditor from '../../features/materials/components/BlockEditor';
 import { createMaterial, getMaterial, materialErrorMessage, updateMaterial } from '../../services/material.service';
 import { askQuizzyAi } from '../../services/ai.service';
+import { listLearningSessions } from '../../services/learning-session.service';
 
-const initial = { title: '', summary: '', blocks: [] };
+const initial = { title: '', summary: '', blocks: [], sessionId: '' };
 
 export default function MaterialEditor() {
   const { classId, materialId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const editing = Boolean(materialId);
-  const [form, setForm] = useState(initial);
+  const requestedSessionId = searchParams.get('sessionId') || '';
+  const [form, setForm] = useState(() => ({ ...initial, sessionId: requestedSessionId }));
+  const [sessions, setSessions] = useState([]);
   const [status, setStatus] = useState(editing ? 'loading' : 'ready');
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState(null);
@@ -20,10 +24,16 @@ export default function MaterialEditor() {
   const [aiBusy, setAiBusy] = useState(false);
 
   useEffect(() => {
+    const controller = new AbortController();
+    listLearningSessions(classId, { signal: controller.signal }).then((items) => setSessions(items.filter((item) => item.status !== 'archived'))).catch(() => {});
+    return () => controller.abort();
+  }, [classId]);
+
+  useEffect(() => {
     if (!editing) return undefined;
     const controller = new AbortController();
     getMaterial(classId, materialId, { signal: controller.signal })
-      .then((material) => { setForm({ title: material.title, summary: material.summary, blocks: material.blocks }); setStatus('ready'); })
+      .then((material) => { setForm({ title: material.title, summary: material.summary, blocks: material.blocks, sessionId: material.sessionId || '' }); setStatus('ready'); })
       .catch((caught) => { if (caught.name !== 'AbortError') { setError(caught); setStatus('error'); } });
     return () => controller.abort();
   }, [classId, editing, materialId]);
@@ -38,7 +48,7 @@ export default function MaterialEditor() {
     setSaving(publishStatus);
     setError(null);
     try {
-      const payload = { title, summary: form.summary.trim(), blocks: form.blocks, status: publishStatus };
+      const payload = { title, summary: form.summary.trim(), blocks: form.blocks, status: publishStatus, sessionId: form.sessionId || null };
       const material = editing ? await updateMaterial(classId, materialId, payload) : await createMaterial(classId, payload);
       navigate(`/teacher/classes/${classId}/materials/${material.id}`, { replace: true });
     } catch (caught) {
@@ -71,6 +81,7 @@ export default function MaterialEditor() {
         <main className="qz-editor-canvas">
           <Input label="Judul materi" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Contoh: Memahami sistem tata surya" maxLength={120} error={fieldErrors.title} autoFocus={!editing} />
           <Textarea label="Ringkasan" value={form.summary} onChange={(event) => setForm((current) => ({ ...current, summary: event.target.value }))} placeholder="Jelaskan secara singkat apa yang akan dipelajari siswa." maxLength={400} error={fieldErrors.summary} hint={`${form.summary.length}/400 karakter`} />
+          <label className="qz-field"><span>Pertemuan (opsional)</span><select value={form.sessionId} onChange={(event) => setForm((current) => ({ ...current, sessionId: event.target.value }))}><option value="">Tanpa pertemuan</option>{sessions.map((session) => <option key={session.id} value={session.id}>{session.meetingDate} · {session.title}{session.status === 'draft' ? ' (Draf)' : ''}</option>)}</select></label>
           <Button variant="secondary" disabled={aiBusy || saving || form.title.trim().length < 3} onClick={generateByAi}>{aiBusy ? 'AI menyusun materi...' : '✦ Buat draf materi dengan AI'}</Button>
           <BlockEditor classId={classId} blocks={form.blocks} onChange={(blocks) => setForm((current) => ({ ...current, blocks }))} errors={fieldErrors} />
         </main>
