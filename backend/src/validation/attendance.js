@@ -1,4 +1,5 @@
 import { badRequest } from '../http/errors.js';
+import { validateOptionalLearningSessionId } from './learning-session.js';
 
 function cleanText(value) {
   return typeof value === 'string' ? value.trim() : '';
@@ -32,8 +33,9 @@ export function validateAttendanceInput(input) {
   if (!Number.isInteger(radiusMeters) || radiusMeters < 10 || radiusMeters > 1000) {
     errors.radiusMeters = 'Radius harus berupa angka bulat 10–1.000 meter.';
   }
+  const sessionId = validateOptionalLearningSessionId(input.sessionId);
   if (Object.keys(errors).length) throw badRequest('VALIDATION_ERROR', 'Periksa kembali sesi presensi.', errors);
-  return { title, latitude, longitude, radiusMeters };
+  return { title, latitude, longitude, radiusMeters, sessionId };
 }
 
 export function validateAttendanceStatus(input) {
