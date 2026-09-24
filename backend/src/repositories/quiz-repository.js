@@ -97,11 +97,11 @@ export class QuizRepository {
   }
   async update({ classId, quizId, ownerId, sessionId = null, now = new Date().toISOString(), ...input }) {
     await this.requireOwner(classId, ownerId);
-    if (sessionId) {
+    const current = await this.getItem(classId, quizId);
+    if (sessionId && sessionId !== current.sessionId) {
       if (!this.learningSessionRepository) throw new Error('learningSessionRepository is required for session-linked quizzes');
       await this.learningSessionRepository.requireAssignable(classId, sessionId, ownerId);
     }
-    const current = await this.getItem(classId, quizId);
     const item = { ...current, ...input, ...(sessionId ? { sessionId } : {}), updatedAt: now, ...(input.status === 'published' ? { publishedAt: current.publishedAt || now } : {}) };
     if (input.status !== 'published') delete item.publishedAt;
     if (!sessionId) delete item.sessionId;
