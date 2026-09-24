@@ -1,0 +1,82 @@
+.qz-page-loader {
+  min-height: 46vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  color: var(--qz-primary);
+  background: var(--qz-bg);
+}
+
+.qz-page-loader--overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 18% 14%, rgba(112,80,220,.11), transparent 28rem),
+    radial-gradient(circle at 82% 84%, rgba(49,93,205,.09), transparent 26rem),
+    rgba(251,252,250,.96);
+  backdrop-filter: blur(9px);
+}
+
+.qz-page-loader__panel {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  padding: 17px 22px 17px 17px;
+  border: 1px solid rgba(112,80,220,.14);
+  border-radius: 22px;
+  background: rgba(255,255,255,.88);
+  box-shadow: 0 18px 55px rgba(31,25,46,.10);
+}
+
+.qz-page-loader__clock {
+  width: 58px;
+  height: 58px;
+  overflow: visible;
+  filter: drop-shadow(0 8px 15px rgba(49,93,205,.15));
+}
+
+.qz-page-loader__ring {
+  fill: rgba(112,80,220,.035);
+  stroke: currentColor;
+  stroke-width: 3.3;
+}
+
+.qz-page-loader__ring--soft {
+  fill: none;
+  stroke: rgba(112,80,220,.15);
+  stroke-width: 7;
+}
+
+.qz-page-loader__hub { fill: currentColor; }
+.qz-page-loader__hand { stroke: currentColor; stroke-width: 4; stroke-linecap: round; }
+.qz-page-loader__hand--slow { opacity: .54; }
+
+.qz-page-loader__copy { display: grid; gap: 2px; }
+.qz-page-loader__copy strong { color: var(--qz-text); font-size: .95rem; letter-spacing: -.02em; }
+.qz-page-loader__copy span { color: var(--qz-text-muted); font-size: .78rem; }
+
+.qz-process-loader {
+  --qz-process-loader-size: 22px;
+  width: var(--qz-process-loader-size);
+  height: var(--qz-process-loader-size);
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: currentColor;
+}
+
+.qz-process-loader svg { width: 100%; height: 100%; overflow: visible; }
+.qz-process-loader circle {
+  stroke: currentColor;
+  stroke-width: 3.1;
+  vector-effect: non-scaling-stroke;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qz-page-loader animateTransform,
+  .qz-process-loader animate { display: none; }
+  .qz-page-loader__clock,
+  .qz-process-loader { opacity: .72; }
+}
