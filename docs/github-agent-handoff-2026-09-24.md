@@ -153,14 +153,17 @@ Sebelum menyatakan beta siap:
 Jalankan dari root repository Windows/PowerShell:
 
 ```powershell
-npm.cmd run lint
-npm.cmd --prefix backend test
-npm.cmd --prefix workers test
-npm.cmd run build
+npm.cmd run validate
 git diff --check
 ```
 
-Untuk perubahan backend AWS, tambah validasi SAM sesuai template aktif. Untuk Worker, gunakan CLI lokal dan dry-run sebelum deploy; jangan membocorkan secret.
+Untuk perubahan backend AWS, jalankan juga:
+
+```powershell
+npm.cmd run validate:infra
+```
+
+`npm.cmd run validate:all` menjalankan lint, frontend build, backend tests, Worker tests, backend syntax checks, SAM lint, dan SAM build. Untuk Worker deployment, gunakan CLI lokal dan dry-run sebelum deploy; jangan membocorkan secret.
 
 ## Catatan workspace lokal
 
