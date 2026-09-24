@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import AppShell from '../components/layout/AppShell';
+import { PageLoader } from '../components/ui';
 import { useAuth } from '../context/useAuth';
 import { homeForRole } from './navigation';
 import { PublicOnly, RequireAuth, RequireRole } from './guards/RouteGuards';
@@ -39,7 +40,7 @@ const TaskDetail = lazy(() => import('../pages/TaskDetail'));
 const TaskEditor = lazy(() => import('../pages/teacher/TaskEditor'));
 
 function RouteLoading() {
-  return <div className="qz-app-shell" style={{ display: 'grid', minHeight: '45vh', placeItems: 'center' }} role="status"><div className="qz-status-strip">Menyiapkan halaman...</div></div>;
+  return <PageLoader label="Memuat halaman..." />;
 }
 
 function LandingRoute() {
