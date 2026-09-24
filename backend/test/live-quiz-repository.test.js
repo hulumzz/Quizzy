@@ -142,6 +142,7 @@ test('queued answer retries without current-question aggregates if the host chan
           error.name = 'TransactionCanceledException';
           throw error;
         }
+        if (calls.length === 3) return { Item: { ...session, currentQuestionIndex: 1, phase: 'question' } };
         return {};
       },
     },
@@ -156,8 +157,8 @@ test('queued answer retries without current-question aggregates if the host chan
     questionEndsAt: '2026-09-23T00:01:00.000Z',
   });
   assert.equal(calls[1].input.TransactItems.length, 3);
-  assert.equal(calls[2].input.TransactItems.length, 2);
-  assert.equal(calls[2].input.TransactItems[0].Put.Item.correct, true);
+  assert.equal(calls[3].input.TransactItems.length, 2);
+  assert.equal(calls[3].input.TransactItems[0].Put.Item.correct, true);
 });
 
 
@@ -179,11 +180,12 @@ test('queued answer keeps transient DynamoDB transaction cancellations retryable
       async send(command) {
         calls.push(command);
         if (calls.length === 1) return { Item: session };
-        if (calls.length === 2 || calls.length === 3) {
+        if (calls.length === 2) {
           const error = new Error('capacity pressure');
           error.name = 'TransactionCanceledException';
           throw error;
         }
+        if (calls.length === 3) return { Item: session };
         return {};
       },
     },
@@ -223,11 +225,12 @@ test('queued answer treats a persisted answer as an idempotent duplicate after a
       async send(command) {
         calls.push(command);
         if (calls.length === 1) return { Item: session };
-        if (calls.length === 2 || calls.length === 3) {
+        if (calls.length === 2) {
           const error = new Error('transaction cancelled');
           error.name = 'TransactionCanceledException';
           throw error;
         }
+        if (calls.length === 3) return { Item: session };
         return { Item: { PK: session.PK, SK: 'ANSWER#q-1#participant-1' } };
       },
     },
