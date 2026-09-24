@@ -16,10 +16,15 @@ import {
   updateLearningSession,
 } from '../services/learning-session.service';
 
+function localDateValue() {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
 const emptyForm = () => ({
   title: '',
   description: '',
-  meetingDate: new Date().toISOString().slice(0, 10),
+  meetingDate: localDateValue(),
   status: 'draft',
 });
 
