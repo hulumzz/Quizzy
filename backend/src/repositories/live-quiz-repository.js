@@ -221,6 +221,7 @@ export class LiveQuizRepository {
     const correct = correctAnswer(question, answer);
     const earnedPoints = correct ? Number(question.points || 0) : 0;
     const canAggregateCurrentQuestion = session.currentQuestionIndex === questionIndex && ['question', 'reveal'].includes(session.phase);
+    const answerKey = { PK: session.PK, SK: `ANSWER#${questionId}#${participantId}` };
     const transactionItems = (includeAggregate) => [
       ...(includeAggregate ? [{
         Update: {
@@ -232,7 +233,7 @@ export class LiveQuizRepository {
           ExpressionAttributeValues: { ':now': acceptedAt, ':zero': 0, ':one': 1, ':correct': correct ? 1 : 0, ':question': 'question', ':reveal': 'reveal', ':index': questionIndex },
         },
       }] : []),
-      { Put: { TableName: this.tableName, Item: { PK: session.PK, SK: `ANSWER#${questionId}#${participantId}`, entityType: 'LIVE_QUIZ_ANSWER', participantId, questionId, answer, correct, earnedPoints, expiresAt: session.expiresAt, answeredAt: acceptedAt }, ConditionExpression: 'attribute_not_exists(PK)' } },
+      { Put: { TableName: this.tableName, Item: { ...answerKey, entityType: 'LIVE_QUIZ_ANSWER', participantId, questionId, answer, correct, earnedPoints, expiresAt: session.expiresAt, answeredAt: acceptedAt }, ConditionExpression: 'attribute_not_exists(PK)' } },
       { Update: { TableName: this.tableName, Key: { PK: session.PK, SK: `PARTICIPANT#${participantId}` }, UpdateExpression: 'SET answeredQuestionId = :questionId, answeredAt = :now ADD score :points, correctCount :correct', ConditionExpression: 'attribute_exists(PK)', ExpressionAttributeValues: { ':questionId': questionId, ':now': acceptedAt, ':points': earnedPoints, ':correct': correct ? 1 : 0 } } },
     ];
 
@@ -240,15 +241,19 @@ export class LiveQuizRepository {
       await this.client.send(new TransactWriteCommand({ TransactItems: transactionItems(canAggregateCurrentQuestion) }));
     } catch (error) {
       if (!['TransactionCanceledException', 'ConditionalCheckFailedException'].includes(error?.name)) throw error;
+      let lastError = error;
       if (canAggregateCurrentQuestion) {
         try {
           await this.client.send(new TransactWriteCommand({ TransactItems: transactionItems(false) }));
           return { accepted: true, questionId, answeredAt: acceptedAt };
         } catch (retryError) {
           if (!['TransactionCanceledException', 'ConditionalCheckFailedException'].includes(retryError?.name)) throw retryError;
+          lastError = retryError;
         }
       }
-      throw conflict('LIVE_ANSWER_ALREADY_RECEIVED', 'Jawaban untuk soal ini sudah diterima atau peserta tidak lagi valid.');
+      const existingAnswer = await this.client.send(new GetCommand({ TableName: this.tableName, Key: answerKey, ConsistentRead: true }));
+      if (existingAnswer.Item) throw conflict('LIVE_ANSWER_ALREADY_RECEIVED', 'Jawaban untuk soal ini sudah diterima.');
+      throw lastError;
     }
     return { accepted: true, questionId, answeredAt: acceptedAt };
   }
