@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { MaterialIcon } from '../../components/icons';
-import { Button, Card, EmptyState, Input, PageHeader, Skeleton, Textarea, buttonClassName } from '../../components/ui';
+import { Button, Card, EmptyState, Input, PageHeader, ProcessLoader, Skeleton, Textarea, buttonClassName } from '../../components/ui';
 import BlockEditor from '../../features/materials/components/BlockEditor';
 import { createMaterial, getMaterial, materialErrorMessage, updateMaterial } from '../../services/material.service';
 import { askQuizzyAi } from '../../services/ai.service';
@@ -82,13 +82,13 @@ export default function MaterialEditor() {
           <Input label="Judul materi" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Contoh: Memahami sistem tata surya" maxLength={120} error={fieldErrors.title} autoFocus={!editing} />
           <Textarea label="Ringkasan" value={form.summary} onChange={(event) => setForm((current) => ({ ...current, summary: event.target.value }))} placeholder="Jelaskan secara singkat apa yang akan dipelajari siswa." maxLength={400} error={fieldErrors.summary} hint={`${form.summary.length}/400 karakter`} />
           <label className="qz-field"><span>Pertemuan (opsional)</span><select value={form.sessionId} onChange={(event) => setForm((current) => ({ ...current, sessionId: event.target.value }))}><option value="">Tanpa pertemuan</option>{sessions.map((session) => <option key={session.id} value={session.id} disabled={session.status === 'archived' && session.id !== form.sessionId}>{session.meetingDate} · {session.title}{session.status === 'draft' ? ' (Draf)' : session.status === 'archived' ? ' (Arsip)' : ''}</option>)}</select></label>
-          <Button variant="secondary" disabled={aiBusy || saving || form.title.trim().length < 3} onClick={generateByAi}>{aiBusy ? 'AI menyusun materi...' : '✦ Buat draf materi dengan AI'}</Button>
+          <Button variant="secondary" disabled={aiBusy || saving || form.title.trim().length < 3} onClick={generateByAi}>{aiBusy ? <><ProcessLoader size={18} label="AI menyusun materi" /> AI menyusun materi...</> : '✦ Buat draf materi dengan AI'}</Button>
           <BlockEditor classId={classId} blocks={form.blocks} onChange={(blocks) => setForm((current) => ({ ...current, blocks }))} errors={fieldErrors} />
         </main>
         <aside className="qz-editor-publish">
           <span className="qz-eyebrow">PUBLIKASI</span><h2>Siap dibagikan?</h2><p>Simpan draf untuk melanjutkan nanti, atau terbitkan agar langsung terlihat oleh siswa.</p>
-          <Button block disabled={Boolean(saving)} onClick={() => save('published')}>{saving === 'published' ? 'Menerbitkan...' : 'Terbitkan materi'}</Button>
-          <Button block variant="secondary" disabled={Boolean(saving)} onClick={() => save('draft')}>{saving === 'draft' ? 'Menyimpan...' : 'Simpan sebagai draf'}</Button>
+          <Button block disabled={Boolean(saving)} onClick={() => save('published')}>{saving === 'published' ? <><ProcessLoader size={18} label="Menerbitkan materi" /> Menerbitkan...</> : 'Terbitkan materi'}</Button>
+          <Button block variant="secondary" disabled={Boolean(saving)} onClick={() => save('draft')}>{saving === 'draft' ? <><ProcessLoader size={18} label="Menyimpan materi" /> Menyimpan...</> : 'Simpan sebagai draf'}</Button>
           {error ? <div className="qz-inline-state qz-inline-state--error" role="alert">{materialErrorMessage(error)}</div> : null}
         </aside>
       </div>
