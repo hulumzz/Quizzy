@@ -84,3 +84,37 @@ test('AI endpoint accepts a correctly signed Firebase token using Google JWKS fo
     globalThis.fetch = originalFetch;
   }
 });
+
+
+test('AI endpoint reports Firebase key lookup outages as 503 instead of invalid user auth', async () => {
+  const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const now = Math.floor(Date.now() / 1000);
+  const encode = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  const encodedHeader = encode({ alg: 'RS256', kid: 'unavailable-key', typ: 'JWT' });
+  const encodedPayload = encode({
+    aud: 'quizzy-test',
+    iss: 'https://securetoken.google.com/quizzy-test',
+    sub: 'teacher-2',
+    exp: now + 3600,
+    iat: now - 30,
+    auth_time: now - 60,
+  });
+  const unsigned = `${encodedHeader}.${encodedPayload}`;
+  const token = `${unsigned}.${sign('RSA-SHA256', Buffer.from(unsigned), privateKey).toString('base64url')}`;
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (String(url).includes('/service_accounts/v1/jwk/')) return new Response('unavailable', { status: 503 });
+    throw new Error('Provider should not be called');
+  };
+  try {
+    const response = await app.fetch(request('/api/ai/assist', {
+      method: 'POST',
+      headers: { origin: 'https://app.quizzy.test', authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ task: 'quiz_draft', context: 'Materi IPA' }),
+    }), environment);
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).error.code, 'AUTH_KEYS_UNAVAILABLE');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
