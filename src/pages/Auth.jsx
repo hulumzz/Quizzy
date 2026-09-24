@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, Gamepad2, GraduationCap, Loader2, MessageSquare, School } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Gamepad2, GraduationCap, MessageSquare, School, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Brand from '../components/Brand';
+import { ProcessLoader } from '../components/ui';
 import { useAuth } from '../context/useAuth';
 import '../styles/landing.css';
 
@@ -71,7 +72,7 @@ export default function Auth({ onAuthComplete }) {
     <main className="nlr-auth">
       <aside className="nlr-auth__aside">
         <Link to="/" aria-label="Kembali ke Nalaro Class"><Brand /></Link>
-        <div className="nlr-auth__story"><h1>Kelas yang hidup<br />dimulai <em>di sini.</em></h1><p>Ruang belajar yang menyatukan hal-hal penting, supaya guru bisa fokus mengajar dan siswa lebih leluasa mencoba.</p><ul><li><BookOpen size={19} /> Materi tertata dan mudah dibuka</li><li><MessageSquare size={19} /> Percakapan tetap dekat dengan pelajaran</li><li><Gamepad2 size={19} /> Kuis membuat belajar terasa lebih seru</li></ul></div>
+        <div className="nlr-auth__story"><span className="nlr-auth__eyebrow"><Sparkles size={15} /> Ruang belajar yang terasa hidup</span><h1>Kelas yang hidup<br />dimulai <em>di sini.</em></h1><p>Ruang belajar yang menyatukan hal-hal penting, supaya guru bisa fokus mengajar dan siswa lebih leluasa mencoba.</p><ul><li><BookOpen size={19} /> Materi tertata dan mudah dibuka</li><li><MessageSquare size={19} /> Percakapan tetap dekat dengan pelajaran</li><li><Gamepad2 size={19} /> Kuis membuat belajar terasa lebih seru</li></ul><div className="nlr-auth__trust"><div><strong>1 ruang</strong><span>untuk materi, diskusi, kuis, dan presensi</span></div><div><strong>2 peran</strong><span>pengalaman khusus guru dan siswa</span></div></div></div>
         <small>© {new Date().getFullYear()} Nalaro Class</small>
       </aside>
       <div className="nlr-auth__main">
@@ -88,15 +89,15 @@ export default function Auth({ onAuthComplete }) {
             {Object.entries(roleCopy).map(([value, copy]) => { const Icon = copy.icon; return <button key={value} type="button" aria-pressed={role === value} onClick={() => { setRole(value); setError(''); }}><Icon size={20} /><span><strong>{copy.label}</strong><small>{copy.description}</small></span></button>; })}
           </div>
           {error ? <div className="nlr-auth__error" role="alert">{error}</div> : null}
-          <button type="button" className="nlr-auth__google" disabled={busy} onClick={google}>{busy ? <Loader2 className="qz-spin" size={18} /> : <span className="nlr-auth__google-mark" aria-hidden="true">G</span>} Lanjutkan dengan Google</button>
+          <button type="button" className="nlr-auth__google" disabled={busy} onClick={google}>{busy ? <ProcessLoader size={19} label="Memproses login Google" /> : <span className="nlr-auth__google-mark" aria-hidden="true">G</span>} Lanjutkan dengan Google</button>
           <div className="nlr-auth__divider">atau dengan email</div>
           <form className="nlr-auth__form" onSubmit={emailAuth}>
             <label>Email<input type="email" autoComplete="email" placeholder="nama@email.com" value={email} required onChange={(event) => setEmail(event.target.value)} /></label>
             <label>Kata sandi<input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder="Minimal 6 karakter" minLength={6} value={password} required onChange={(event) => setPassword(event.target.value)} /></label>
             {mode === 'register' ? <label>Ulangi kata sandi<input type="password" autoComplete="new-password" placeholder="Ketik ulang kata sandi" minLength={6} value={confirmPassword} required onChange={(event) => setConfirmPassword(event.target.value)} /></label> : null}
-            <button className="nlr-auth__submit" disabled={busy} type="submit">{busy ? <><Loader2 className="qz-spin" size={18} /> Memproses...</> : <>{mode === 'login' ? `Masuk sebagai ${roleCopy[role].label}` : `Daftar sebagai ${roleCopy[role].label}`} <ArrowRight size={18} /></>}</button>
+            <button className="nlr-auth__submit" disabled={busy} type="submit">{busy ? <><ProcessLoader size={20} label={mode === 'login' ? 'Memproses login' : 'Memproses pendaftaran'} /> Memproses...</> : <>{mode === 'login' ? `Masuk sebagai ${roleCopy[role].label}` : `Daftar sebagai ${roleCopy[role].label}`} <ArrowRight size={18} /></>}</button>
           </form>
-          {role === 'student' ? <><div className="nlr-auth__divider">atau</div><button type="button" className="nlr-auth__guest" disabled={busy} onClick={guest}><Gamepad2 size={17} /> Gabung kuis sebagai tamu</button></> : null}
+          {role === 'student' ? <><div className="nlr-auth__divider">atau</div><button type="button" className="nlr-auth__guest" disabled={busy} onClick={guest}>{busy ? <ProcessLoader size={18} label="Membuat akun tamu" /> : <Gamepad2 size={17} />} Gabung kuis sebagai tamu</button></> : null}
           <p className="nlr-auth__fineprint">Pilih peran yang sesuai. Peran akun yang sudah terdaftar tidak berubah saat masuk kembali.</p>
         </section>
       </div>
