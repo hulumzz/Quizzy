@@ -137,11 +137,11 @@ export class MaterialRepository {
 
   async update({ classId, materialId, ownerId, title, summary: materialSummary, status, blocks, sessionId = null, now = new Date().toISOString() }) {
     await this.requireOwner(classId, ownerId);
-    if (sessionId) {
+    const current = await this.getItem(classId, materialId);
+    if (sessionId && sessionId !== current.sessionId) {
       if (!this.learningSessionRepository) throw new Error('learningSessionRepository is required for session-linked materials');
       await this.learningSessionRepository.requireAssignable(classId, sessionId, ownerId);
     }
-    const current = await this.getItem(classId, materialId);
     const item = {
       ...current,
       title,
