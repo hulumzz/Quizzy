@@ -56,7 +56,7 @@ export default function ClassOverview({ role }) {
       <ClassWorkspaceNav role={role} classId={classId} />
 
       <div className="qz-class-summary">
-        <div><span className="qz-class-summary__label">Pengajar</span><strong>{classItem.teacherName || 'Guru Quizzy'}</strong></div>
+        <div><span className="qz-class-summary__label">Pengajar</span><strong>{classItem.teacherName || 'Guru Nalaro'}</strong></div>
         <div><span className="qz-class-summary__label">Anggota</span><strong>{classItem.studentsCount || 0} siswa</strong></div>
         <div><span className="qz-class-summary__label">Status</span><Badge tone={classItem.status === 'active' ? 'success' : 'neutral'}>{classItem.status === 'active' ? 'Aktif' : 'Tidak aktif'}</Badge></div>
         {role === 'teacher' ? <div><span className="qz-class-summary__label">Undang siswa</span><div className="qz-code-copy"><strong className="qz-class-summary__code">{classItem.code}</strong><Button variant="ghost" size="sm" onClick={copyCode}>Salin</Button></div></div> : null}

@@ -67,7 +67,7 @@ export default function Dashboard({ onBackToLanding }) {
               body: JSON.stringify({
                 attendanceId: 'session_demo_1',
                 studentId: 'std_001',
-                studentName: 'Siswa Quizzy',
+                studentName: 'Siswa Nalaro',
                 lat,
                 lng,
                 venueLat,
@@ -152,9 +152,9 @@ export default function Dashboard({ onBackToLanding }) {
       <header className="glass-nav sticky top-0 z-40 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 cursor-pointer" onClick={onBackToLanding}>
-            <img src="/logo.png" alt="Quizzy Logo" className="h-8 w-auto drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]" />
+            <img src="/android-chrome-192x192.png" alt="Logo Nalaro Class" className="h-8 w-auto" />
             <span className="font-extrabold text-lg tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-              Quizzy LMS
+              Nalaro Class
             </span>
           </div>
           <span className="text-xs px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-300 font-medium border border-purple-500/30">

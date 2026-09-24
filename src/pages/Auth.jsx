@@ -1,24 +1,96 @@
 import { useState } from 'react';
-import { Gamepad2, GraduationCap, Loader2, Mail, School, UserCog } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Gamepad2, GraduationCap, Loader2, MessageSquare, School } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import Brand from '../components/Brand';
 import { useAuth } from '../context/useAuth';
 import '../styles/landing.css';
 
-const roleCopy = { teacher: { label: 'Guru', description: 'Kelola kelas, materi, kuis, dan penilaian.', icon: UserCog }, student: { label: 'Siswa', description: 'Masuk kelas, belajar, dan ikut kuis.', icon: GraduationCap } };
+const roleCopy = {
+  teacher: { label: 'Guru', description: 'Buat dan kelola kelas', icon: School },
+  student: { label: 'Siswa', description: 'Belajar dan ikut kuis', icon: GraduationCap },
+};
 const profileSeed = (user, role) => ({ uid: user.uid, name: user.displayName || '', nickname: '', email: user.email || '', role, subject: 'Umum', gender: '', avatar: user.photoURL || null, isAnonymous: false, profileCompleted: false, createdAt: new Date().toISOString() });
 
 export default function Auth({ onAuthComplete }) {
   const { signInWithGoogle, signInAsGuest, signInWithEmailAndPassword, createAccountWithEmail, signOut, saveUserProfile, readUserProfile } = useAuth();
-  const [role, setRole] = useState('teacher'); const [mode, setMode] = useState('login'); const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [confirmPassword, setConfirmPassword] = useState(''); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
-  const RoleIcon = roleCopy[role].icon;
+  const [role, setRole] = useState('teacher');
+  const [mode, setMode] = useState('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
   const finish = async (firebaseUser, requestedRole, isNew = false) => {
     const existing = await readUserProfile(firebaseUser.uid);
-    if (existing?.role && existing.role !== requestedRole) { await signOut(); throw new Error(`Akun ini sudah terdaftar sebagai ${existing.role === 'teacher' ? 'guru' : 'siswa'}. Gunakan pintasan masuk ${existing.role === 'teacher' ? 'Guru' : 'Siswa'}.`); }
+    if (existing?.role && existing.role !== requestedRole) {
+      await signOut();
+      throw new Error(`Akun ini sudah terdaftar sebagai ${existing.role === 'teacher' ? 'guru' : 'siswa'}. Gunakan pilihan masuk ${existing.role === 'teacher' ? 'Guru' : 'Siswa'}.`);
+    }
     const profile = existing || profileSeed(firebaseUser, requestedRole);
     if (!existing || isNew) await saveUserProfile(firebaseUser.uid, profile);
     onAuthComplete(profile.role);
   };
-  const google = async () => { setBusy(true); setError(''); try { const result = await signInWithGoogle(); await finish(result.user, role); } catch (caught) { setError(caught.message?.includes('terdaftar') ? caught.message : 'Login Google belum berhasil. Pastikan popup tidak diblokir.'); } finally { setBusy(false); } };
-  const emailAuth = async (event) => { event.preventDefault(); setError(''); if (password.length < 6) return setError('Kata sandi minimal 6 karakter.'); if (mode === 'register' && password !== confirmPassword) return setError('Konfirmasi kata sandi belum sama.'); setBusy(true); try { const result = mode === 'register' ? await createAccountWithEmail(email.trim(), password) : await signInWithEmailAndPassword(email.trim(), password); await finish(result.user, role, mode === 'register'); } catch (caught) { setError(caught.message?.includes('terdaftar') ? caught.message : 'Email atau kata sandi belum tepat.'); } finally { setBusy(false); } };
-  const guest = async () => { setBusy(true); setError(''); try { const result = await signInAsGuest(); await saveUserProfile(result.user.uid, { uid: result.user.uid, name: 'Siswa Tamu', nickname: 'Tamu', email: '', role: 'student', subject: 'Umum', gender: '', avatar: null, isAnonymous: true, profileCompleted: true }); onAuthComplete('student'); } catch { setError('Akun tamu belum dapat dibuat. Coba lagi.'); } finally { setBusy(false); } };
-  return <div className="nlr-auth"><div className="nlr-blob nlr-blob-a" /><div className="nlr-blob nlr-blob-b" /><div className="nlr-grid-bg" /><div className="nlr-auth-brand"><div className="nlr-auth-brand-top"><div className="nlr-logo"><div className="nlr-logo-mark">Q</div><span className="nlr-logo-text">Quizzy</span></div><div><h1 className="nlr-auth-brand-headline">Belajar, <span className="nlr-gradient-text">bermain,</span><br />dan bertumbuh.</h1><p className="nlr-auth-brand-sub">Ruang belajar interaktif untuk guru dan siswa.</p></div></div></div><div className="nlr-auth-form-panel"><section className="nlr-auth-card qz-auth-card"><div className="nlr-auth-card-header"><div className="nlr-logo" style={{ justifyContent: 'center', marginBottom: 16 }}><div className="nlr-logo-mark">Q</div><span className="nlr-logo-text">Quizzy</span></div><h2 className="nlr-auth-card-title">Masuk ke ruang belajar</h2><p className="nlr-auth-card-sub">Pilih ruang yang sesuai dengan peran Anda.</p></div><div className="qz-auth-role-tabs" role="tablist"><button type="button" role="tab" aria-selected={role === 'teacher'} className={role === 'teacher' ? 'is-active' : ''} onClick={() => setRole('teacher')}><School size={18} /> Guru</button><button type="button" role="tab" aria-selected={role === 'student'} className={role === 'student' ? 'is-active' : ''} onClick={() => setRole('student')}><GraduationCap size={18} /> Siswa</button></div><div className="qz-auth-role-note"><RoleIcon size={19} /><span><b>Masuk sebagai {roleCopy[role].label}.</b> {roleCopy[role].description}</span></div>{error ? <div className="nlr-error">{error}</div> : null}<button type="button" className="nlr-google-btn" disabled={busy} onClick={google}>{busy ? <Loader2 className="qz-spin" size={18} /> : <span className="qz-google-mark">G</span>} Lanjutkan dengan Google</button><div className="nlr-divider">atau dengan email</div><form className="qz-auth-form" onSubmit={emailAuth}><label>Email<input type="email" autoComplete="email" value={email} required onChange={(event) => setEmail(event.target.value)} /></label><label>Kata sandi<input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} required onChange={(event) => setPassword(event.target.value)} /></label>{mode === 'register' ? <label>Ulangi kata sandi<input type="password" autoComplete="new-password" value={confirmPassword} required onChange={(event) => setConfirmPassword(event.target.value)} /></label> : null}<button className="nlr-confirm-btn" disabled={busy} type="submit">{busy ? <><Loader2 className="qz-spin" size={18} /> Memproses...</> : <><Mail size={17} /> {mode === 'login' ? `Masuk sebagai ${roleCopy[role].label}` : `Daftar sebagai ${roleCopy[role].label}`}</>}</button></form><button type="button" className="qz-auth-switch" onClick={() => { setMode((current) => current === 'login' ? 'register' : 'login'); setError(''); }}>{mode === 'login' ? 'Belum punya akun? Daftar dengan email' : 'Sudah punya akun? Masuk'}</button>{role === 'student' ? <><div className="nlr-divider">atau</div><button type="button" className="nlr-guest-btn" disabled={busy} onClick={guest}><Gamepad2 size={17} /> Gabung kuis sebagai tamu</button></> : null}</section></div></div>;
+  const google = async () => {
+    setBusy(true); setError('');
+    try { const result = await signInWithGoogle(); await finish(result.user, role); }
+    catch (caught) { setError(caught.message?.includes('terdaftar') ? caught.message : 'Login Google belum berhasil. Pastikan popup tidak diblokir.'); }
+    finally { setBusy(false); }
+  };
+  const emailAuth = async (event) => {
+    event.preventDefault(); setError('');
+    if (password.length < 6) return setError('Kata sandi minimal 6 karakter.');
+    if (mode === 'register' && password !== confirmPassword) return setError('Konfirmasi kata sandi belum sama.');
+    setBusy(true);
+    try {
+      const result = mode === 'register' ? await createAccountWithEmail(email.trim(), password) : await signInWithEmailAndPassword(email.trim(), password);
+      await finish(result.user, role, mode === 'register');
+    } catch (caught) { setError(caught.message?.includes('terdaftar') ? caught.message : 'Email atau kata sandi belum tepat.'); }
+    finally { setBusy(false); }
+  };
+  const guest = async () => {
+    setBusy(true); setError('');
+    try {
+      const result = await signInAsGuest();
+      await saveUserProfile(result.user.uid, { uid: result.user.uid, name: 'Siswa Tamu', nickname: 'Tamu', email: '', role: 'student', subject: 'Umum', gender: '', avatar: null, isAnonymous: true, profileCompleted: true });
+      onAuthComplete('student');
+    } catch { setError('Akun tamu belum dapat dibuat. Coba lagi.'); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <main className="nlr-auth">
+      <aside className="nlr-auth__aside">
+        <Link to="/" aria-label="Kembali ke Nalaro Class"><Brand /></Link>
+        <div className="nlr-auth__story"><h1>Kelas yang hidup<br />dimulai <em>di sini.</em></h1><p>Ruang belajar yang menyatukan hal-hal penting, supaya guru bisa fokus mengajar dan siswa lebih leluasa mencoba.</p><ul><li><BookOpen size={19} /> Materi tertata dan mudah dibuka</li><li><MessageSquare size={19} /> Percakapan tetap dekat dengan pelajaran</li><li><Gamepad2 size={19} /> Kuis membuat belajar terasa lebih seru</li></ul></div>
+        <small>© {new Date().getFullYear()} Nalaro Class</small>
+      </aside>
+      <div className="nlr-auth__main">
+        <section className="nlr-auth__card" aria-labelledby="nlr-auth-title">
+          <Link className="nlr-auth__back" to="/"><ArrowLeft size={16} /> Kembali ke beranda</Link>
+          <h2 id="nlr-auth-title">{mode === 'login' ? 'Selamat datang kembali.' : 'Mulai belajar bersama.'}</h2>
+          <p className="nlr-auth__lead">{mode === 'login' ? 'Masuk ke ruang belajarmu di Nalaro Class.' : 'Buat akun untuk membuka ruang belajarmu.'}</p>
+          <div className="nlr-auth__mode" role="tablist" aria-label="Masuk atau daftar">
+            <button type="button" role="tab" aria-selected={mode === 'login'} onClick={() => { setMode('login'); setError(''); }}>Masuk</button>
+            <button type="button" role="tab" aria-selected={mode === 'register'} onClick={() => { setMode('register'); setError(''); }}>Daftar</button>
+          </div>
+          <p className="nlr-auth__role-title">Saya menggunakan Nalaro sebagai</p>
+          <div className="nlr-auth__roles" role="group" aria-label="Pilih peran akun">
+            {Object.entries(roleCopy).map(([value, copy]) => { const Icon = copy.icon; return <button key={value} type="button" aria-pressed={role === value} onClick={() => { setRole(value); setError(''); }}><Icon size={20} /><span><strong>{copy.label}</strong><small>{copy.description}</small></span></button>; })}
+          </div>
+          {error ? <div className="nlr-auth__error" role="alert">{error}</div> : null}
+          <button type="button" className="nlr-auth__google" disabled={busy} onClick={google}>{busy ? <Loader2 className="qz-spin" size={18} /> : <span className="nlr-auth__google-mark" aria-hidden="true">G</span>} Lanjutkan dengan Google</button>
+          <div className="nlr-auth__divider">atau dengan email</div>
+          <form className="nlr-auth__form" onSubmit={emailAuth}>
+            <label>Email<input type="email" autoComplete="email" placeholder="nama@email.com" value={email} required onChange={(event) => setEmail(event.target.value)} /></label>
+            <label>Kata sandi<input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} placeholder="Minimal 6 karakter" minLength={6} value={password} required onChange={(event) => setPassword(event.target.value)} /></label>
+            {mode === 'register' ? <label>Ulangi kata sandi<input type="password" autoComplete="new-password" placeholder="Ketik ulang kata sandi" minLength={6} value={confirmPassword} required onChange={(event) => setConfirmPassword(event.target.value)} /></label> : null}
+            <button className="nlr-auth__submit" disabled={busy} type="submit">{busy ? <><Loader2 className="qz-spin" size={18} /> Memproses...</> : <>{mode === 'login' ? `Masuk sebagai ${roleCopy[role].label}` : `Daftar sebagai ${roleCopy[role].label}`} <ArrowRight size={18} /></>}</button>
+          </form>
+          {role === 'student' ? <><div className="nlr-auth__divider">atau</div><button type="button" className="nlr-auth__guest" disabled={busy} onClick={guest}><Gamepad2 size={17} /> Gabung kuis sebagai tamu</button></> : null}
+          <p className="nlr-auth__fineprint">Pilih peran yang sesuai. Peran akun yang sudah terdaftar tidak berubah saat masuk kembali.</p>
+        </section>
+      </div>
+    </main>
+  );
 }

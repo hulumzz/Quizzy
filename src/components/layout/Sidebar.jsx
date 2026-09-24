@@ -3,15 +3,15 @@ import { ArrowRightIcon, ClassesIcon, CloseIcon } from '../icons';
 import { Avatar, IconButton } from '../ui';
 
 export default function Sidebar({ role, items, profile, user, open, onNavigate }) {
-  const displayName = profile?.name || user?.displayName || (role === 'teacher' ? 'Guru Quizzy' : 'Siswa Quizzy');
+  const displayName = profile?.name || user?.displayName || (role === 'teacher' ? 'Guru Nalaro' : 'Siswa Nalaro');
   const avatar = profile?.avatar || user?.photoURL;
   return (
     <aside id="app-sidebar" className={`qz-sidebar${open ? ' is-open' : ''}`} aria-label="Navigasi utama">
       <IconButton className="qz-sidebar__close" label="Tutup menu" onClick={onNavigate}><CloseIcon size={20} /></IconButton>
       <NavLink className="qz-brand" to={role === 'teacher' ? '/teacher/home' : '/student/home'} onClick={onNavigate}>
-        <img src="/logo.png" alt="" />
+        <img src="/android-chrome-192x192.png" alt="" />
         <span>
-          <span className="qz-brand__name">Quizzy</span>
+          <span className="qz-brand__name">Nalaro Class</span>
           <span className="qz-brand__role">{role === 'teacher' ? 'Ruang guru' : 'Ruang belajar'}</span>
         </span>
       </NavLink>

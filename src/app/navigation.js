@@ -35,5 +35,5 @@ export function pageMeta(pathname, role) {
   if (exact) return { title: exact.label, subtitle: role === 'teacher' ? 'Ruang guru' : 'Ruang belajar' };
   if (pathname.startsWith('/quiz/join')) return { title: 'Gabung kuis', subtitle: 'Masukkan PIN dari guru' };
   if (pathname.includes('/classes/')) return { title: 'Ruang kelas', subtitle: 'Materi dan aktivitas kelas' };
-  return { title: 'Quizzy', subtitle: role === 'teacher' ? 'Ruang guru' : 'Ruang belajar' };
+  return { title: 'Nalaro Class', subtitle: role === 'teacher' ? 'Ruang guru' : 'Ruang belajar' };
 }

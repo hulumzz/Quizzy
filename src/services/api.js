@@ -14,7 +14,7 @@ export class ApiError extends Error {
 
 export async function apiRequest(path, { method = 'GET', body, signal, headers = {} } = {}) {
   if (!appEnv.apiUrl) {
-    throw new ApiError('Layanan Quizzy belum dikonfigurasi.', { code: 'API_NOT_CONFIGURED' });
+    throw new ApiError('Layanan Nalaro Class belum dikonfigurasi.', { code: 'API_NOT_CONFIGURED' });
   }
 
   let token;
@@ -38,7 +38,7 @@ export async function apiRequest(path, { method = 'GET', body, signal, headers =
     });
   } catch (error) {
     if (error.name === 'AbortError') throw error;
-    throw new ApiError('Tidak dapat terhubung ke layanan Quizzy.', { code: 'NETWORK_ERROR' });
+    throw new ApiError('Tidak dapat terhubung ke layanan Nalaro Class.', { code: 'NETWORK_ERROR' });
   }
 
   const payload = await response.json().catch(() => ({}));
@@ -54,13 +54,13 @@ export async function apiRequest(path, { method = 'GET', body, signal, headers =
 }
 
 export async function publicApiRequest(path, { method = 'GET', body, signal } = {}) {
-  if (!appEnv.apiUrl) throw new ApiError('Layanan Quizzy belum dikonfigurasi.', { code: 'API_NOT_CONFIGURED' });
+  if (!appEnv.apiUrl) throw new ApiError('Layanan Nalaro Class belum dikonfigurasi.', { code: 'API_NOT_CONFIGURED' });
   let response;
   try {
     response = await fetch(`${appEnv.apiUrl}${path}`, { method, headers: body ? { 'content-type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined, signal });
   } catch (error) {
     if (error.name === 'AbortError') throw error;
-    throw new ApiError('Tidak dapat terhubung ke layanan Quizzy.', { code: 'NETWORK_ERROR' });
+    throw new ApiError('Tidak dapat terhubung ke layanan Nalaro Class.', { code: 'NETWORK_ERROR' });
   }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new ApiError(payload.error?.message || 'Permintaan belum dapat diproses.', { code: payload.error?.code || 'API_ERROR', status: response.status, details: payload.error?.details, requestId: response.headers.get('x-request-id') });

@@ -6,8 +6,8 @@ import { Avatar } from '../ui';
 export default function UserMenu({ role, profile, user, onLogout, onProfile }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
-  const displayName = profile?.name || user?.displayName || (role === 'teacher' ? 'Guru Quizzy' : 'Siswa Quizzy');
-  const email = profile?.email || user?.email || (user?.isAnonymous ? 'Akun tamu' : 'Akun Quizzy');
+  const displayName = profile?.name || user?.displayName || (role === 'teacher' ? 'Guru Nalaro' : 'Siswa Nalaro');
+  const email = profile?.email || user?.email || (user?.isAnonymous ? 'Akun tamu' : 'Akun Nalaro');
   const avatar = profile?.avatar || user?.photoURL;
 
   useEffect(() => {

@@ -23,7 +23,7 @@ export default function ClassCollection({ classes, status, configured, role = 't
         <Card className="qz-class-empty"><EmptyState
           icon={classes.length ? SearchIcon : ClassesIcon}
           title={classes.length ? 'Kelas belum ditemukan' : !configured ? 'Ruang kelas sedang disiapkan' : teacher ? 'Kelas pertama, banyak kemungkinan.' : 'Temukan kelas pertamamu'}
-          description={classes.length ? 'Coba kata kunci lain atau tampilkan semua kelas.' : !configured ? 'Layanan kelas belum tersedia. Hubungi pengelola Quizzy untuk mulai menggunakan kelas.' : teacher ? 'Buat ruang belajar, bagikan kodenya, dan undang siswa untuk bergabung.' : 'Minta kode kelas dari guru untuk mulai belajar bersama teman-temanmu.'}
+          description={classes.length ? 'Coba kata kunci lain atau tampilkan semua kelas.' : !configured ? 'Layanan kelas belum tersedia. Hubungi pengelola Nalaro Class untuk mulai menggunakan kelas.' : teacher ? 'Buat ruang belajar, bagikan kodenya, dan undang siswa untuk bergabung.' : 'Minta kode kelas dari guru untuk mulai belajar bersama teman-temanmu.'}
           action={classes.length ? <Button variant="secondary" onClick={() => { setQuery(''); setFilter('all'); }}>Reset pencarian</Button> : configured ? <Button onClick={onCreate}>{teacher ? 'Buat kelas pertama' : 'Masukkan kode kelas'}</Button> : null}
         /></Card>
       ) : null}

@@ -54,7 +54,7 @@ export default function StudentClasses() {
     <div className="qz-dashboard qz-enter">
       <PageHeader eyebrow="Ruang siswa" title="Kelas saya" description="Buka ruang belajar yang kamu ikuti atau masukkan kode kelas baru." actions={<Button onClick={openDialog} disabled={!configured}><AddIcon size={18} /> Gabung kelas</Button>} />
 
-      {!configured ? <div className="qz-status-strip"><ErrorIcon size={19} /> Layanan kelas belum tersedia. Hubungi pengelola Quizzy.</div> : null}
+      {!configured ? <div className="qz-status-strip"><ErrorIcon size={19} /> Layanan kelas belum tersedia. Hubungi pengelola Nalaro Class.</div> : null}
       {status === 'error' ? <div className="qz-inline-state qz-inline-state--error" role="alert">{classErrorMessage(error)} <Button variant="ghost" size="sm" onClick={reload}>Coba lagi</Button></div> : null}
 
       <ClassCollection classes={classes} status={status} configured={configured} role="student" onCreate={openDialog} />

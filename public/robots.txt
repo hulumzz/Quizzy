@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /teacher/
+Disallow: /student/
+Disallow: /profile
+Disallow: /onboarding
+Disallow: /quiz/play/
+Sitemap: https://quizzy-f01.pages.dev/sitemap.xml

@@ -15,7 +15,7 @@ export default function ClassCard({ classItem, role = 'teacher' }) {
       <div className="qz-class-card__body">
         <h3>{classItem.name}</h3>
         <p>{classItem.description || 'Belum ada deskripsi kelas.'}</p>
-        {role === 'student' ? <p>{classItem.teacherName || 'Guru Quizzy'}</p> : <p>Kode kelas · {classItem.code}</p>}
+        {role === 'student' ? <p>{classItem.teacherName || 'Guru Nalaro'}</p> : <p>Kode kelas · {classItem.code}</p>}
       </div>
       <div className="qz-class-card__footer">
         <span><MembersIcon size={15} /> {classItem.studentsCount || 0} siswa</span>
