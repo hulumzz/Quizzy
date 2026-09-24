@@ -39,28 +39,40 @@ async function verifyFirebaseToken(authorization, projectId) {
   if (!token) return null;
   const [encodedHeader, encodedPayload, encodedSignature, ...rest] = token.split('.');
   if (rest.length || !encodedHeader || !encodedPayload || !encodedSignature) return null;
+
+  let header; let payload;
   try {
-    const header = jsonPart(encodedHeader); const payload = jsonPart(encodedPayload);
-    const nowSeconds = Math.floor(Date.now() / 1000);
-    if (
-      header.alg !== 'RS256'
-      || !header.kid
-      || payload.aud !== projectId
-      || payload.iss !== `https://securetoken.google.com/${projectId}`
-      || typeof payload.sub !== 'string'
-      || !payload.sub
-      || payload.sub.length > 128
-      || !Number.isFinite(payload.exp)
-      || payload.exp <= nowSeconds
-      || !Number.isFinite(payload.iat)
-      || payload.iat > nowSeconds
-      || !Number.isFinite(payload.auth_time)
-      || payload.auth_time > nowSeconds
-    ) return null;
-    const key = (await getSigningKeys()).get(header.kid);
-    const valid = key && await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, base64Url(encodedSignature), encoder.encode(`${encodedHeader}.${encodedPayload}`));
+    header = jsonPart(encodedHeader);
+    payload = jsonPart(encodedPayload);
+  } catch {
+    return null;
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (
+    header.alg !== 'RS256'
+    || !header.kid
+    || payload.aud !== projectId
+    || payload.iss !== `https://securetoken.google.com/${projectId}`
+    || typeof payload.sub !== 'string'
+    || !payload.sub
+    || payload.sub.length > 128
+    || !Number.isFinite(payload.exp)
+    || payload.exp <= nowSeconds
+    || !Number.isFinite(payload.iat)
+    || payload.iat > nowSeconds
+    || !Number.isFinite(payload.auth_time)
+    || payload.auth_time > nowSeconds
+  ) return null;
+
+  const key = (await getSigningKeys()).get(header.kid);
+  if (!key) return null;
+  try {
+    const valid = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, base64Url(encodedSignature), encoder.encode(`${encodedHeader}.${encodedPayload}`));
     return valid ? { uid: payload.sub, signInProvider: payload.firebase?.sign_in_provider || '' } : null;
-  } catch { return null; }
+  } catch {
+    return null;
+  }
 }
 
 function origins(env) { return String(env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',').map((item) => item.trim()).filter(Boolean); }
@@ -75,7 +87,9 @@ app.use('*', async (c, next) => {
 app.get('/', (c) => c.json({ name: 'Quizzy AI Gateway', status: 'online' }));
 app.post('/api/ai/assist', async (c) => {
   if (!c.env.FIREBASE_PROJECT_ID) return bad('Asisten AI belum dikonfigurasi.', 503, 'AI_NOT_CONFIGURED');
-  const user = await verifyFirebaseToken(c.req.header('authorization'), c.env.FIREBASE_PROJECT_ID);
+  let user;
+  try { user = await verifyFirebaseToken(c.req.header('authorization'), c.env.FIREBASE_PROJECT_ID); }
+  catch { return bad('Layanan autentikasi sedang tidak tersedia.', 503, 'AUTH_KEYS_UNAVAILABLE'); }
   if (!user) return bad('Masuk diperlukan untuk menggunakan asisten AI.', 401, 'AUTH_REQUIRED');
   const rate = await c.env.AI_RATE_LIMITER.limit({ key: user.uid });
   if (!rate.success) return bad('Batas penggunaan AI tercapai. Coba lagi dalam satu menit.', 429, 'AI_RATE_LIMITED');
