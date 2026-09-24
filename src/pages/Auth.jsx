@@ -10,6 +10,15 @@ const roleCopy = {
   student: { label: 'Siswa', description: 'Belajar dan ikut kuis', icon: GraduationCap },
 };
 const profileSeed = (user, role) => ({ uid: user.uid, name: user.displayName || '', nickname: '', email: user.email || '', role, subject: 'Umum', gender: '', avatar: user.photoURL || null, isAnonymous: false, profileCompleted: false, createdAt: new Date().toISOString() });
+function authErrorMessage(error, mode) {
+  if (error.message?.includes('terdaftar sebagai')) return error.message;
+  if (error.code === 'auth/email-already-in-use') return 'Email ini sudah terdaftar. Pilih Masuk untuk melanjutkan.';
+  if (error.code === 'auth/invalid-email') return 'Format email belum tepat.';
+  if (error.code === 'auth/weak-password') return 'Kata sandi terlalu lemah. Gunakan minimal 6 karakter.';
+  if (error.code === 'auth/too-many-requests') return 'Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.';
+  if (error.code === 'auth/network-request-failed') return 'Koneksi terputus. Periksa internet lalu coba lagi.';
+  return mode === 'register' ? 'Pendaftaran belum berhasil. Coba lagi.' : 'Email atau kata sandi belum tepat.';
+}
 
 export default function Auth({ onAuthComplete }) {
   const { signInWithGoogle, signInAsGuest, signInWithEmailAndPassword, createAccountWithEmail, signOut, saveUserProfile, readUserProfile } = useAuth();
@@ -34,7 +43,7 @@ export default function Auth({ onAuthComplete }) {
   const google = async () => {
     setBusy(true); setError('');
     try { const result = await signInWithGoogle(); await finish(result.user, role); }
-    catch (caught) { setError(caught.message?.includes('terdaftar') ? caught.message : 'Login Google belum berhasil. Pastikan popup tidak diblokir.'); }
+    catch (caught) { setError(caught.message?.includes('terdaftar sebagai') ? caught.message : 'Login Google belum berhasil. Pastikan popup tidak diblokir.'); }
     finally { setBusy(false); }
   };
   const emailAuth = async (event) => {
@@ -45,7 +54,7 @@ export default function Auth({ onAuthComplete }) {
     try {
       const result = mode === 'register' ? await createAccountWithEmail(email.trim(), password) : await signInWithEmailAndPassword(email.trim(), password);
       await finish(result.user, role, mode === 'register');
-    } catch (caught) { setError(caught.message?.includes('terdaftar') ? caught.message : 'Email atau kata sandi belum tepat.'); }
+    } catch (caught) { setError(authErrorMessage(caught, mode)); }
     finally { setBusy(false); }
   };
   const guest = async () => {
