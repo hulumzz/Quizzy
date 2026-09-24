@@ -159,3 +159,91 @@ test('queued answer retries without current-question aggregates if the host chan
   assert.equal(calls[2].input.TransactItems.length, 2);
   assert.equal(calls[2].input.TransactItems[0].Put.Item.correct, true);
 });
+
+
+test('queued answer keeps transient DynamoDB transaction cancellations retryable for SQS', async () => {
+  const calls = [];
+  const session = {
+    PK: 'LIVE_SESSION#session-1',
+    id: 'session-1',
+    expiresAt: 2000000000,
+    phase: 'question',
+    currentQuestionIndex: 0,
+    endsAt: '2026-09-23T00:01:00.000Z',
+    questions: [{ id: 'q-1', type: 'multiple_choice', choices: ['A', 'B'], correctAnswer: 'A', points: 5 }],
+  };
+  const repository = new LiveQuizRepository({
+    tableName: 'QuizzyTable',
+    quizRepository: {},
+    documentClient: {
+      async send(command) {
+        calls.push(command);
+        if (calls.length === 1) return { Item: session };
+        if (calls.length === 2 || calls.length === 3) {
+          const error = new Error('capacity pressure');
+          error.name = 'TransactionCanceledException';
+          throw error;
+        }
+        return {};
+      },
+    },
+  });
+
+  await assert.rejects(
+    repository.processQueuedAnswer({
+      sessionId: 'session-1',
+      participantId: 'participant-1',
+      questionId: 'q-1',
+      questionIndex: 0,
+      answer: 'A',
+      acceptedAt: '2026-09-23T00:00:30.000Z',
+      questionEndsAt: '2026-09-23T00:01:00.000Z',
+    }),
+    (error) => error?.name === 'TransactionCanceledException',
+  );
+  assert.equal(calls.length, 4);
+  assert.equal(calls[3].input.Key.SK, 'ANSWER#q-1#participant-1');
+});
+
+test('queued answer treats a persisted answer as an idempotent duplicate after a cancelled transaction', async () => {
+  const calls = [];
+  const session = {
+    PK: 'LIVE_SESSION#session-1',
+    id: 'session-1',
+    expiresAt: 2000000000,
+    phase: 'question',
+    currentQuestionIndex: 0,
+    endsAt: '2026-09-23T00:01:00.000Z',
+    questions: [{ id: 'q-1', type: 'multiple_choice', choices: ['A', 'B'], correctAnswer: 'A', points: 5 }],
+  };
+  const repository = new LiveQuizRepository({
+    tableName: 'QuizzyTable',
+    quizRepository: {},
+    documentClient: {
+      async send(command) {
+        calls.push(command);
+        if (calls.length === 1) return { Item: session };
+        if (calls.length === 2 || calls.length === 3) {
+          const error = new Error('transaction cancelled');
+          error.name = 'TransactionCanceledException';
+          throw error;
+        }
+        return { Item: { PK: session.PK, SK: 'ANSWER#q-1#participant-1' } };
+      },
+    },
+  });
+
+  await assert.rejects(
+    repository.processQueuedAnswer({
+      sessionId: 'session-1',
+      participantId: 'participant-1',
+      questionId: 'q-1',
+      questionIndex: 0,
+      answer: 'A',
+      acceptedAt: '2026-09-23T00:00:30.000Z',
+      questionEndsAt: '2026-09-23T00:01:00.000Z',
+    }),
+    (error) => error?.code === 'LIVE_ANSWER_ALREADY_RECEIVED',
+  );
+  assert.equal(calls.length, 4);
+});
