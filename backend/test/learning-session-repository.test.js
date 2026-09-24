@@ -98,3 +98,26 @@ test('reorder writes deterministic positions after verifying current sessions', 
   assert.equal(transaction[1].Update.ExpressionAttributeValues[':order'], 2000);
   assert.deepEqual(sessions.map((item) => item.id), ['session-b', 'session-a']);
 });
+
+
+test('reorder rejects stale or partial learning session lists', async () => {
+  const repository = new LearningSessionRepository({
+    tableName: 'QuizzyTable',
+    classRepository,
+    documentClient: {
+      async send() {
+        return {
+          Items: [
+            { entityType: 'LEARNING_SESSION', id: 'session-a', classId: 'class-1', ownerId: 'teacher-1', title: 'A', description: '', meetingDate: '2026-09-25', status: 'draft', sortOrder: 1000, createdAt: '2026-09-20T00:00:00.000Z', updatedAt: '2026-09-20T00:00:00.000Z' },
+            { entityType: 'LEARNING_SESSION', id: 'session-b', classId: 'class-1', ownerId: 'teacher-1', title: 'B', description: '', meetingDate: '2026-09-26', status: 'published', sortOrder: 2000, createdAt: '2026-09-21T00:00:00.000Z', updatedAt: '2026-09-21T00:00:00.000Z' },
+          ],
+        };
+      },
+    },
+  });
+
+  await assert.rejects(
+    repository.reorder({ classId: 'class-1', ownerId: 'teacher-1', sessionIds: ['session-a'] }),
+    (error) => error?.code === 'SESSION_ORDER_CHANGED',
+  );
+});
