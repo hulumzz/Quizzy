@@ -8,6 +8,7 @@ test('attendance input normalizes title, coordinates, and radius', () => {
     latitude: -6.98,
     longitude: 109.64,
     radiusMeters: 120,
+    sessionId: null,
   });
 });
 

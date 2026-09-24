@@ -43,7 +43,7 @@ export default function ClassAttendance({ role }) {
       .then(([item, sessionItems]) => { setClassName(item.name); setSessions(sessionItems.filter((session) => session.status !== 'archived')); })
       .catch(() => {});
     return () => controller.abort();
-  }, [classId, configured]);
+  }, [classId, configured, role]);
 
   const setField = (field) => (event) => setForm((current) => ({ ...current, [field]: event.target.value }));
   const useTeacherLocation = async () => {

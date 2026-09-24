@@ -85,6 +85,72 @@ test('AI endpoint accepts a correctly signed Firebase token using Google JWKS fo
   }
 });
 
+test('AI endpoint refreshes Firebase JWKS from origin when a rotated key ID is not cached', async () => {
+  const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const { privateKey: stalePrivateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const publicJwk = publicKey.export({ format: 'jwk' });
+  const now = Math.floor(Date.now() / 1000);
+  const encode = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  const tokenFor = (kid, signingKey) => {
+    const header = encode({ alg: 'RS256', kid, typ: 'JWT' });
+    const payload = encode({
+      aud: 'quizzy-test',
+      iss: 'https://securetoken.google.com/quizzy-test',
+      sub: 'teacher-rotated',
+      exp: now + 3600,
+      iat: now - 30,
+      auth_time: now - 60,
+    });
+    const unsigned = `${header}.${payload}`;
+    return `${unsigned}.${sign('RSA-SHA256', Buffer.from(unsigned), signingKey).toString('base64url')}`;
+  };
+  const fetchOptions = [];
+  const originalFetch = globalThis.fetch;
+  let jwksRequest = 0;
+  globalThis.fetch = async (url, options) => {
+    const target = String(url);
+    if (target.includes('/service_accounts/v1/jwk/')) {
+      jwksRequest += 1;
+      fetchOptions.push(options);
+      const key = jwksRequest === 1
+        ? { ...publicJwk, kid: 'previous-key', alg: 'RS256', use: 'sig' }
+        : { ...publicJwk, kid: 'rotated-key', alg: 'RS256', use: 'sig' };
+      return new Response(JSON.stringify({ keys: [key] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=3600' },
+      });
+    }
+    if (target === 'https://api.groq.com/openai/v1/chat/completions') {
+      return new Response(JSON.stringify({ choices: [{ message: { content: '{"questions":[]}' } }] }), { status: 200 });
+    }
+    throw new Error(`Unexpected fetch: ${target}`);
+  };
+  const env = {
+    ...environment,
+    GROQ_API_KEY: 'test-key',
+    AI_RATE_LIMITER: { async limit() { return { success: true }; } },
+  };
+  try {
+    const stale = await app.fetch(request('/api/ai/assist', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${tokenFor('previous-key', stalePrivateKey)}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ task: 'quiz_draft', context: 'Materi IPA' }),
+    }), env);
+    assert.equal(stale.status, 401);
+
+    const response = await app.fetch(request('/api/ai/assist', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${tokenFor('rotated-key', privateKey)}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ task: 'quiz_draft', context: 'Materi IPA' }),
+    }), env);
+    assert.equal(response.status, 200);
+    assert.equal(jwksRequest, 2);
+    assert.equal(fetchOptions[1].cache, 'no-store');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 
 test('AI endpoint reports Firebase key lookup outages as 503 instead of invalid user auth', async () => {
   const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });

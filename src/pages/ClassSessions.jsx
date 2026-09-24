@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, ChevronDown, ChevronUp, FileText, Plus, Archive, Pencil, Radio } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import ClassWorkspaceNav from '../components/classroom/ClassWorkspaceNav';
@@ -79,7 +79,7 @@ export default function ClassSessions({ role }) {
   const [saving, setSaving] = useState(false);
   const [actionError, setActionError] = useState('');
 
-  const load = async ({ signal } = {}) => {
+  const load = useCallback(async ({ signal } = {}) => {
     try {
       const [classItem, sessions, materials, quizzes, attendance] = await Promise.all([
         getClass(classId, { signal }),
@@ -93,13 +93,13 @@ export default function ClassSessions({ role }) {
     } catch (error) {
       if (error?.name !== 'AbortError') setState((current) => ({ ...current, loading: false, error }));
     }
-  };
+  }, [classId]);
 
   useEffect(() => {
     const controller = new AbortController();
     load({ signal: controller.signal });
     return () => controller.abort();
-  }, [classId]);
+  }, [load]);
 
   const materialMap = useMemo(() => groupBySession(state.materials), [state.materials]);
   const quizMap = useMemo(() => groupBySession(state.quizzes), [state.quizzes]);

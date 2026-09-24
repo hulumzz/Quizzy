@@ -19,7 +19,12 @@ function cacheLifetime(headers) {
 
 async function getSigningKeys({ forceRefresh = false } = {}) {
   if (!forceRefresh && signingKeys.expiresAt > Date.now()) return signingKeys.values;
-  const response = await fetch(FIREBASE_JWKS_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
+  const response = await fetch(
+    FIREBASE_JWKS_URL,
+    forceRefresh
+      ? { cache: 'no-store' }
+      : { cf: { cacheTtl: 3600, cacheEverything: true } },
+  );
   if (!response.ok) throw new Error('Firebase signing keys unavailable');
   const payload = await response.json();
   const jwks = Array.isArray(payload?.keys) ? payload.keys : [];
