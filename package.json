@@ -10,7 +10,10 @@
     "preview": "vite preview",
     "test:backend": "npm --prefix backend test",
     "check:backend": "npm --prefix backend run check",
-    "validate": "npm run lint && npm run build && npm run test:backend && npm run check:backend"
+    "validate": "npm run lint && npm run build && npm run test:backend && npm run test:workers && npm run check:backend",
+    "test:workers": "npm --prefix workers test",
+    "validate:infra": "npm --prefix backend run sam:validate && npm --prefix backend run sam:build",
+    "validate:all": "npm run validate && npm run validate:infra"
   },
   "dependencies": {
     "@fontsource-variable/nunito-sans": "^5.3.0",

@@ -37,6 +37,24 @@ Parameters:
     Description: Name of the Standard SSM SecureString read by Lambda at runtime for the Cloudinary API secret.
     Default: /quizzy/dev/cloudinary-api-secret
     AllowedPattern: '^/[a-zA-Z0-9_.\-/]+$'
+  DynamoReadCapacityUnits:
+    Type: Number
+    Description: Provisioned read capacity for the Quizzy table and OwnerIndex. Keep the development default unless load testing justifies a higher value.
+    Default: 1
+    MinValue: 1
+    MaxValue: 100
+  DynamoWriteCapacityUnits:
+    Type: Number
+    Description: Provisioned write capacity for the Quizzy table and OwnerIndex. Keep the development default unless load testing justifies a higher value.
+    Default: 1
+    MinValue: 1
+    MaxValue: 100
+  QuizAnswerProcessorMaxConcurrency:
+    Type: Number
+    Description: Maximum concurrent Lambda invocations consuming live-quiz answer events.
+    Default: 5
+    MinValue: 2
+    MaxValue: 100
 
 Resources:
   QuizzyTable:
@@ -54,8 +72,8 @@ Resources:
     Properties:
       BillingMode: PROVISIONED
       ProvisionedThroughput:
-        ReadCapacityUnits: 1
-        WriteCapacityUnits: 1
+        ReadCapacityUnits: !Ref DynamoReadCapacityUnits
+        WriteCapacityUnits: !Ref DynamoWriteCapacityUnits
       AttributeDefinitions:
         - AttributeName: PK
           AttributeType: S
@@ -80,8 +98,8 @@ Resources:
           Projection:
             ProjectionType: ALL
           ProvisionedThroughput:
-            ReadCapacityUnits: 1
-            WriteCapacityUnits: 1
+            ReadCapacityUnits: !Ref DynamoReadCapacityUnits
+            WriteCapacityUnits: !Ref DynamoWriteCapacityUnits
       SSESpecification:
         SSEEnabled: true
       TimeToLiveSpecification:
@@ -241,7 +259,22 @@ Resources:
             FunctionResponseTypes:
               - ReportBatchItemFailures
             ScalingConfig:
-              MaximumConcurrency: 5
+              MaximumConcurrency: !Ref QuizAnswerProcessorMaxConcurrency
+
+  LiveQuizAnswerProcessorLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Metadata:
+      com.aws.cloudformation.Context:
+        why: bounds live-quiz queue processor diagnostics so retry and DLQ investigations do not create unbounded log retention
+        must:
+          - Keep retention bounded for cost control
+        mutable: free-to-tune
+        trust: { src: authored, conf: high }
+    Properties:
+      LogGroupName: !Sub '/aws/lambda/${LiveQuizAnswerProcessor}'
+      RetentionInDays: 7
 
   ClassesFunctionLogGroup:
     Type: AWS::Logs::LogGroup
@@ -265,3 +298,9 @@ Outputs:
   TableName:
     Description: DynamoDB table used by Quizzy.
     Value: !Ref QuizzyTable
+  QuizAnswerQueueUrl:
+    Description: SQS queue URL used for live-quiz answer buffering and operational inspection.
+    Value: !Ref QuizAnswerEvents
+  QuizAnswerDeadLetterQueueUrl:
+    Description: Dead-letter queue URL used to inspect live-quiz answers that exhausted retries.
+    Value: !Ref QuizAnswerDeadLetterQueue
