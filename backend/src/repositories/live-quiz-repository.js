@@ -200,27 +200,55 @@ export class LiveQuizRepository {
     if (question.id !== questionId) throw conflict('LIVE_QUESTION_CHANGED', 'Soal sudah berganti.');
     const participant = await this.client.send(new GetCommand({ TableName: this.tableName, Key: { PK: session.PK, SK: `PARTICIPANT#${participantId}` }, ConsistentRead: true }));
     if (!participant.Item || !safeEqual(participant.Item.participantToken, participantToken)) throw forbidden('Sesi peserta tidak valid.');
-    return { sessionId: session.id, participantId, questionId, questionIndex: session.currentQuestionIndex, answer, acceptedAt: now };
+    return { sessionId: session.id, participantId, questionId, questionIndex: session.currentQuestionIndex, answer, acceptedAt: now, questionEndsAt: session.endsAt };
   }
 
-  async processQueuedAnswer({ sessionId, participantId, questionId, questionIndex, answer, acceptedAt }) {
+  async processQueuedAnswer({ sessionId, participantId, questionId, questionIndex, answer, acceptedAt, questionEndsAt }) {
     if (typeof sessionId !== 'string' || typeof participantId !== 'string' || typeof questionId !== 'string' || !Number.isInteger(questionIndex)) throw notFound('Pesan jawaban tidak valid.');
     const session = await this.getSession(sessionId);
-    if (session.phase !== 'question' || session.currentQuestionIndex !== questionIndex || session.questions[questionIndex]?.id !== questionId) throw conflict('LIVE_QUESTION_CHANGED', 'Soal sudah berganti.');
-    if (new Date(session.endsAt).getTime() < new Date(acceptedAt).getTime()) throw conflict('LIVE_QUESTION_LOCKED', 'Waktu untuk menjawab sudah habis.');
     const question = session.questions[questionIndex];
+    if (!question || question.id !== questionId) throw conflict('LIVE_QUESTION_CHANGED', 'Soal sudah berganti.');
+
+    const deadline = typeof questionEndsAt === 'string' && questionEndsAt
+      ? questionEndsAt
+      : session.currentQuestionIndex === questionIndex ? session.endsAt : null;
+    const acceptedTime = new Date(acceptedAt).getTime();
+    const deadlineTime = deadline ? new Date(deadline).getTime() : Number.NaN;
+    if (!Number.isFinite(acceptedTime) || !Number.isFinite(deadlineTime)) throw notFound('Pesan jawaban tidak valid.');
+    if (acceptedTime > deadlineTime) throw conflict('LIVE_QUESTION_LOCKED', 'Waktu untuk menjawab sudah habis.');
+
     const choiceKey = answerChoiceKey(question, answer);
     const correct = correctAnswer(question, answer);
     const earnedPoints = correct ? Number(question.points || 0) : 0;
+    const canAggregateCurrentQuestion = session.currentQuestionIndex === questionIndex && ['question', 'reveal'].includes(session.phase);
+    const transactionItems = (includeAggregate) => [
+      ...(includeAggregate ? [{
+        Update: {
+          TableName: this.tableName,
+          Key: { PK: session.PK, SK: 'META' },
+          UpdateExpression: 'SET updatedAt = :now, currentOptionCounts.#choice = if_not_exists(currentOptionCounts.#choice, :zero) + :one ADD currentAnsweredCount :one, currentCorrectCount :correct',
+          ConditionExpression: 'currentQuestionIndex = :index AND #phase IN (:question, :reveal)',
+          ExpressionAttributeNames: { '#phase': 'phase', '#choice': choiceKey },
+          ExpressionAttributeValues: { ':now': acceptedAt, ':zero': 0, ':one': 1, ':correct': correct ? 1 : 0, ':question': 'question', ':reveal': 'reveal', ':index': questionIndex },
+        },
+      }] : []),
+      { Put: { TableName: this.tableName, Item: { PK: session.PK, SK: `ANSWER#${questionId}#${participantId}`, entityType: 'LIVE_QUIZ_ANSWER', participantId, questionId, answer, correct, earnedPoints, expiresAt: session.expiresAt, answeredAt: acceptedAt }, ConditionExpression: 'attribute_not_exists(PK)' } },
+      { Update: { TableName: this.tableName, Key: { PK: session.PK, SK: `PARTICIPANT#${participantId}` }, UpdateExpression: 'SET answeredQuestionId = :questionId, answeredAt = :now ADD score :points, correctCount :correct', ConditionExpression: 'attribute_exists(PK)', ExpressionAttributeValues: { ':questionId': questionId, ':now': acceptedAt, ':points': earnedPoints, ':correct': correct ? 1 : 0 } } },
+    ];
+
     try {
-      await this.client.send(new TransactWriteCommand({ TransactItems: [
-        { Update: { TableName: this.tableName, Key: { PK: session.PK, SK: 'META' }, UpdateExpression: 'SET updatedAt = :now, currentOptionCounts.#choice = if_not_exists(currentOptionCounts.#choice, :zero) + :one ADD currentAnsweredCount :one, currentCorrectCount :correct', ConditionExpression: '#phase = :phase AND currentQuestionIndex = :index AND endsAt >= :now', ExpressionAttributeNames: { '#phase': 'phase', '#choice': choiceKey }, ExpressionAttributeValues: { ':now': acceptedAt, ':zero': 0, ':one': 1, ':correct': correct ? 1 : 0, ':phase': 'question', ':index': questionIndex } } },
-        { Put: { TableName: this.tableName, Item: { PK: session.PK, SK: `ANSWER#${questionId}#${participantId}`, entityType: 'LIVE_QUIZ_ANSWER', participantId, questionId, answer, correct, earnedPoints, expiresAt: session.expiresAt, answeredAt: acceptedAt }, ConditionExpression: 'attribute_not_exists(PK)' } },
-        { Update: { TableName: this.tableName, Key: { PK: session.PK, SK: `PARTICIPANT#${participantId}` }, UpdateExpression: 'SET answeredQuestionId = :questionId, answeredAt = :now ADD score :points, correctCount :correct', ConditionExpression: 'attribute_exists(PK)', ExpressionAttributeValues: { ':questionId': questionId, ':now': acceptedAt, ':points': earnedPoints, ':correct': correct ? 1 : 0 } } },
-      ] }));
+      await this.client.send(new TransactWriteCommand({ TransactItems: transactionItems(canAggregateCurrentQuestion) }));
     } catch (error) {
-      if (['TransactionCanceledException', 'ConditionalCheckFailedException'].includes(error?.name)) throw conflict('LIVE_ANSWER_ALREADY_RECEIVED', 'Jawaban untuk soal ini sudah diterima atau sudah terkunci.');
-      throw error;
+      if (!['TransactionCanceledException', 'ConditionalCheckFailedException'].includes(error?.name)) throw error;
+      if (canAggregateCurrentQuestion) {
+        try {
+          await this.client.send(new TransactWriteCommand({ TransactItems: transactionItems(false) }));
+          return { accepted: true, questionId, answeredAt: acceptedAt };
+        } catch (retryError) {
+          if (!['TransactionCanceledException', 'ConditionalCheckFailedException'].includes(retryError?.name)) throw retryError;
+        }
+      }
+      throw conflict('LIVE_ANSWER_ALREADY_RECEIVED', 'Jawaban untuk soal ini sudah diterima atau peserta tidak lagi valid.');
     }
     return { accepted: true, questionId, answeredAt: acceptedAt };
   }
