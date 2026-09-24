@@ -156,20 +156,31 @@ Keduanya masih tercantum sebagai model Groq yang aktif pada audit 23 September 2
 
 ## Learning Sessions
 
-Belum diimplementasikan.
+Implementasi kode tersedia.
 
-Tujuannya adalah mengelompokkan aktivitas satu kelas berdasarkan pertemuan/tanggal:
+Model saat ini:
 
 ```text
 Class
 └─ LearningSession
-   ├─ materials
-   ├─ tasks
-   ├─ quizzes
-   └─ attendance reference
+   ├─ materials (sessionId opsional)
+   ├─ tasks (belum diimplementasikan)
+   ├─ quizzes (sessionId opsional)
+   └─ attendance (sessionId opsional)
 ```
 
-Dengan model ini, materi hari ini dan materi pertemuan berikutnya tetap berada pada kelas yang sama tanpa bercampur.
+Perilaku yang sudah ada:
+
+- guru membuat, mengubah, menerbitkan, mengarsipkan, memulihkan, dan mengurutkan pertemuan;
+- siswa hanya melihat pertemuan published;
+- pertemuan memiliki tanggal dan `sortOrder` eksplisit;
+- assignment resource diverifikasi server-side agar hanya mengarah ke pertemuan kelas yang sama dan bukan archived;
+- konten lama tanpa `sessionId` tidak dimigrasikan dan tetap tampil pada blok `Tanpa pertemuan`;
+- batas saat ini 100 pertemuan per kelas agar reorder dapat dilakukan atomik dalam satu transaksi;
+- halaman Pertemuan tersedia untuk guru dan siswa, dengan resource materi, kuis, dan presensi dikelompokkan dalam satu alur responsif;
+- editor materi/kuis serta form presensi dapat memilih pertemuan.
+
+Yang masih diperlukan sebelum production: deployment backend/frontend terbaru dan E2E browser untuk create/edit/reorder/archive/publish, visibility siswa, assignment resource, serta legacy unassigned content.
 
 ## Tugas dan submission
 
