@@ -18,6 +18,34 @@ test('join rate limit stores only a hashed network key with a TTL', async () => 
   assert.equal(input.ExpressionAttributeValues[':expiresAt'], Math.floor(new Date('2026-09-23T00:00:00.000Z').getTime() / 1000) + 3600);
 });
 
+
+test('authorized live answer captures the original question deadline for asynchronous processing', async () => {
+  const session = {
+    PK: 'LIVE_SESSION#session-1',
+    id: 'session-1',
+    phase: 'question',
+    currentQuestionIndex: 0,
+    endsAt: '2026-09-23T00:01:00.000Z',
+    questions: [{ id: 'q-1' }],
+  };
+  const repository = new LiveQuizRepository({
+    tableName: 'QuizzyTable',
+    quizRepository: {},
+    documentClient: { async send() { return { Item: { participantToken: 'secret' } }; } },
+  });
+  repository.getByCode = async () => session;
+  const accepted = await repository.authorizeAnswer({
+    joinCode: 'AB2CDE',
+    participantId: 'participant-1',
+    participantToken: 'secret',
+    questionId: 'q-1',
+    answer: 'A',
+    now: '2026-09-23T00:00:30.000Z',
+  });
+  assert.equal(accepted.questionEndsAt, '2026-09-23T00:01:00.000Z');
+  assert.equal(accepted.acceptedAt, '2026-09-23T00:00:30.000Z');
+});
+
 test('queued answer aggregates against the same active or reveal question before storing an answer', async () => {
   const calls = [];
   const session = { PK: 'LIVE_SESSION#session-1', id: 'session-1', joinCode: 'AB2CDE', expiresAt: 2000000000, phase: 'question', currentQuestionIndex: 0, endsAt: '2026-09-23T00:01:00.000Z', questions: [{ id: 'q-1' }] };
