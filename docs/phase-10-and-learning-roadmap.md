@@ -92,7 +92,9 @@ Masih perlu pengujian usability mobile/touch dan aksesibilitas.
 
 ## Fase 13 - scoring live dan hasil permanen
 
-Belum lengkap dan menjadi fitur berikutnya setelah Production Beta Gate.
+Implementasi lokal tersedia. Processor antrean menilai jawaban terhadap soal kanonik di server, lalu menulis jawaban, poin, jawaban benar, dan agregat sesi secara atomik. Hasil individu memerlukan participant token dan hanya tersedia setelah host mengakhiri sesi; layar host menampilkan papan skor akhir.
+
+Masih diperlukan deployment AWS, load test, dan E2E multi-perangkat sebelum fitur ini dapat dianggap siap produksi.
 
 Target:
 
@@ -146,7 +148,7 @@ Keduanya masih tercantum sebagai model Groq yang aktif pada audit 23 September 2
 
 ### Pekerjaan AI berikutnya
 
-- deploy Worker dengan environment produksi;
+- sambungkan `VITE_AI_URL` pada deployment frontend ke Worker produksi;
 - masukkan Worker tests ke validation/CI utama;
 - gunakan `material_draft` di editor materi;
 - gunakan `assessment_feedback` hanya setelah modul tugas/submission tersedia;
@@ -195,17 +197,16 @@ Signed upload Cloudinary yang sudah ada dapat dipakai ulang, tetapi metadata sub
 
 ## Bank Kuis guru
 
-Belum diimplementasikan.
+Implementasi lokal sudah tersedia dengan desain **catalog + copy**, bukan dokumen kuis bersama yang diedit lintas guru.
 
-Desain tetap menggunakan **catalog + copy**, bukan dokumen kuis bersama yang diedit lintas guru.
+1. Guru menerbitkan kuis kelas yang sudah published menjadi snapshot katalog.
+2. Katalog memuat jenjang, mata pelajaran sistematis, tag, lisensi, ID pembuat, dan ringkasan soal.
+3. Guru lain memilih `Gunakan sebagai draf`; server membuat salinan baru di kelas tujuan tanpa akses edit ke kuis sumber.
+4. Pemilik dapat menarik publikasi tanpa memengaruhi salinan yang sudah dibuat guru lain.
+5. Kuis dapat diunduh oleh pemilik sebagai JSON Quizzy dan diimpor ulang sebagai draf tervalidasi.
+6. Listing DynamoDB menggunakan empat partition-key filter (`all`, jenjang, mata pelajaran, kombinasi), sehingga tidak memakai full-table scan.
 
-1. Guru memiliki kuis sumbernya.
-2. Publish ke bank membuat snapshot katalog.
-3. Guru lain memilih `Gunakan` dan mendapatkan copy baru miliknya.
-4. Import membuat draft.
-5. Catalog public memerlukan taxonomy, moderation, dan access pattern/index sendiri.
-
-Jangan membangun bank kuis dengan full-table scan DynamoDB.
+Belum ada moderation queue, pencarian teks, rating, ataupun analytics penggunaan. Fitur tersebut hanya ditambahkan setelah deployment backend dan E2E Bank Kuis selesai.
 
 ## Dokumen dan preview
 
@@ -247,7 +248,7 @@ Setelah gate ini lulus, urutan pengembangan yang direkomendasikan:
 13. Live scoring + leaderboard + result
 14. Learning Sessions
 15. Tasks + submissions + grading
-16. Quiz Bank / catalog
+16. Quiz Bank / catalog - implementasi lokal selesai, deployment dan E2E masih diperlukan
 17. Progress analytics + teacher reports
 18. Notifications / schedules
 19. Accessibility, performance, security, and release hardening

@@ -11,6 +11,7 @@ export const teacherNavigation = [
   { label: 'Beranda', path: '/teacher/home', icon: HomeIcon, end: true },
   { label: 'Kelas', path: '/teacher/classes', icon: ClassesIcon },
   { label: 'Kuis', path: '/teacher/quizzes', icon: QuizIcon },
+  { label: 'Bank Kuis', path: '/teacher/quiz-bank', icon: QuizIcon },
   { label: 'Presensi', path: '/teacher/attendance', icon: AttendanceIcon },
 ];
 

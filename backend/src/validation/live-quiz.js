@@ -65,6 +65,17 @@ export function validateLiveAnswer(input) {
   return { participantId, participantToken, questionId, answer };
 }
 
+export function validateLiveParticipantSession(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw badRequest('INVALID_BODY', 'Sesi peserta tidak valid.');
+  const participantId = clean(input.participantId);
+  const participantToken = clean(input.participantToken);
+  const errors = {};
+  if (!/^[A-Za-z0-9-]{1,64}$/.test(participantId)) errors.participantId = 'Peserta tidak valid.';
+  if (!/^[a-f0-9]{64}$/.test(participantToken)) errors.participantToken = 'Sesi peserta tidak valid.';
+  if (Object.keys(errors).length) throw badRequest('VALIDATION_ERROR', 'Sesi peserta tidak valid.', errors);
+  return { participantId, participantToken };
+}
+
 export function validateLiveAction(input) {
   const action = clean(input?.action);
   if (!['advance', 'finish'].includes(action)) throw badRequest('INVALID_LIVE_ACTION', 'Aksi sesi tidak valid.');

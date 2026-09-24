@@ -13,6 +13,7 @@ function setup(identity = { uid: 'teacher-1', signInProvider: 'google.com' }) {
     async join(input) { calls.push(['join', input]); return { participant: { id: 'participant-1' } }; },
     async answer(input) { calls.push(['answer', input]); return { accepted: true }; },
     async authorizeAnswer(input) { calls.push(['authorize', input]); return { sessionId: 'session-1', participantId: input.participantId, questionId: input.questionId, questionIndex: 0, answer: input.answer, acceptedAt: '2026-09-23T00:00:00.000Z' }; },
+    async participantResult(input) { calls.push(['result', input]); return { participant: { id: input.participantId, score: 10, rank: 1 } }; },
     async create(input) { calls.push(['create', input]); return { id: 'session-1' }; },
     async hostStateById(id, ownerId) { calls.push(['host', id, ownerId]); return { id }; },
     async advance(input) { calls.push(['advance', input]); return { id: input.sessionId }; },
@@ -44,4 +45,11 @@ test('public answers are authorized before being queued', async () => {
   assert.equal(calls[0][0], 'authorize');
   assert.equal(calls[1][0], 'enqueue');
   assert.equal(calls[1][1].participantToken, undefined);
+});
+
+test('participant result is private to the holder of a valid participant session', async () => {
+  const { calls, handler } = setup();
+  const token = 'a'.repeat(64);
+  assert.equal((await handler(request('POST', '/live-quizzes/ab2cde/result', { participantId: 'participant-1', participantToken: token }))).statusCode, 200);
+  assert.deepEqual(calls[0], ['result', { joinCode: 'AB2CDE', participantId: 'participant-1', participantToken: token }]);
 });

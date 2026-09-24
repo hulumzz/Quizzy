@@ -28,6 +28,7 @@ const QuizAttempt = lazy(() => import('../pages/QuizAttempt'));
 const QuizEditor = lazy(() => import('../pages/teacher/QuizEditor'));
 const QuizResults = lazy(() => import('../pages/teacher/QuizResults'));
 const TeacherQuizzes = lazy(() => import('../pages/teacher/TeacherQuizzes'));
+const QuizBank = lazy(() => import('../pages/teacher/QuizBank'));
 const LiveQuizHost = lazy(() => import('../pages/LiveQuizHost'));
 const LiveQuizPlayer = lazy(() => import('../pages/LiveQuizPlayer'));
 
@@ -78,6 +79,7 @@ export default function AppRoutes() {
           <Route path="teacher/classes/:classId/quizzes/:quizId/live" element={<RequireRole role="teacher"><LiveQuizHost /></RequireRole>} />
           <Route path="teacher/classes/:classId/*" element={<RequireRole role="teacher"><FeaturePlaceholder title="Ruang kelas" description="Materi, diskusi, dan presensi sudah tersedia. Modul kuis serta pengaturan anggota lanjutan akan diteruskan pada tahap berikutnya." emptyTitle="Modul ini belum tersedia" /></RequireRole>} />
           <Route path="teacher/quizzes" element={<RequireRole role="teacher"><TeacherQuizzes /></RequireRole>} />
+          <Route path="teacher/quiz-bank" element={<RequireRole role="teacher"><QuizBank /></RequireRole>} />
           <Route path="teacher/attendance" element={<RequireRole role="teacher"><TeacherAttendance /></RequireRole>} />
 
           <Route path="student" element={<RequireRole role="student"><Navigate to="home" replace /></RequireRole>} />

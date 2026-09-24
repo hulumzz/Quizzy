@@ -9,6 +9,7 @@ function setup(identity = { uid: 'teacher-1', signInProvider: 'google.com' }) {
   const repository = {
     async list(classId, uid) { calls.push(['list', classId, uid]); return []; },
     async create(input) { calls.push(['create', input]); return { id: 'quiz-1', ...input }; },
+    async exportForOwner(classId, quizId, uid) { calls.push(['export', classId, quizId, uid]); return { format: 'quizzy-quiz/v1', quiz: quizInput }; },
     async get(classId, quizId, uid) { calls.push(['get', classId, quizId, uid]); return { id: quizId }; },
     async update(input) { calls.push(['update', input]); return input; },
     async remove(classId, quizId, uid) { calls.push(['remove', classId, quizId, uid]); },
@@ -37,4 +38,14 @@ test('student submission ignores browser identity and maps results route', async
 test('anonymous quiz access is rejected', async () => {
   const { handler } = setup({ uid: 'guest', signInProvider: 'anonymous' });
   assert.equal((await handler(request('GET', '/classes/class-1/quizzes'))).statusCode, 403);
+});
+
+test('quiz export and import use a verified teacher identity and force imported drafts', async () => {
+  const { calls, handler } = setup();
+  assert.equal((await handler(request('GET', '/classes/class-1/quizzes/quiz-1/export'))).statusCode, 200);
+  assert.equal((await handler(request('POST', '/classes/class-1/quizzes/import', { quiz: { ...quizInput, status: 'published' } }))).statusCode, 201);
+  assert.deepEqual(calls[0], ['export', 'class-1', 'quiz-1', 'teacher-1']);
+  assert.equal(calls[1][0], 'create');
+  assert.equal(calls[1][1].ownerId, 'teacher-1');
+  assert.equal(calls[1][1].status, 'draft');
 });

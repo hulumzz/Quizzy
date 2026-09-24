@@ -188,7 +188,7 @@ The previously verified `quizzy-dev` stack in `ap-southeast-1` contained the ret
 
 The current `main` branch adds SQS, a dead-letter queue, DynamoDB TTL, and the live-answer processor. Their presence in source control does not prove that the running stack has been updated. Verify CloudFormation outputs and resources after deploying the current template.
 
-The Cloudflare AI Worker source is ready for deployment configuration, but production readiness still depends on the real `FIREBASE_PROJECT_ID`, exact production origin(s), and `GROQ_API_KEY` Worker secret.
+Cloudflare AI Worker sudah dideploy dengan `FIREBASE_PROJECT_ID`, exact-origin CORS, dan `GROQ_API_KEY` sebagai Worker secret. Frontend tetap harus dikonfigurasi dengan `VITE_AI_URL` yang menunjuk ke URL Worker produksi sebelum fitur Assist dapat digunakan pengguna.
 
 ## Recommended next gate
 

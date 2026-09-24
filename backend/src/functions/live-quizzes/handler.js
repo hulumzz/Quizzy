@@ -3,7 +3,7 @@ import { HttpError, badRequest, forbidden } from '../../http/errors.js';
 import { emptyResponse, jsonResponse } from '../../http/response.js';
 import { validateClassId } from '../../validation/class.js';
 import { validateQuizId } from '../../validation/quiz.js';
-import { validateLiveAction, validateLiveAnswer, validateLiveCode, validateLiveJoin, validateLiveSessionInput } from '../../validation/live-quiz.js';
+import { validateLiveAction, validateLiveAnswer, validateLiveCode, validateLiveJoin, validateLiveParticipantSession, validateLiveSessionInput } from '../../validation/live-quiz.js';
 
 const methodOf = (event) => (event?.requestContext?.http?.method || event?.httpMethod || 'GET').toUpperCase();
 const pathOf = (event) => (event?.rawPath || event?.path || '/').replace(/\/+$/, '') || '/';
@@ -24,9 +24,10 @@ export function createLiveQuizzesHandler({ authenticate, repository, answerQueue
     const publicSession = path.match(/^\/live-quizzes\/([^/]+)$/);
     const join = path.match(/^\/live-quizzes\/([^/]+)\/join$/);
     const answer = path.match(/^\/live-quizzes\/([^/]+)\/answer$/);
+    const result = path.match(/^\/live-quizzes\/([^/]+)\/result$/);
     try {
       if (method === 'OPTIONS') return emptyResponse(204, requestId);
-      if (!create && !host && !action && !publicSession && !join && !answer) return jsonResponse(404, { error: { code: 'NOT_FOUND', message: 'Endpoint tidak ditemukan.' } }, requestId);
+      if (!create && !host && !action && !publicSession && !join && !answer && !result) return jsonResponse(404, { error: { code: 'NOT_FOUND', message: 'Endpoint tidak ditemukan.' } }, requestId);
       if (publicSession && method === 'GET') return jsonResponse(200, { data: { session: await repository.publicStateByCode(validateLiveCode(publicSession[1])) } }, requestId);
       if (join && method === 'POST') return jsonResponse(201, { data: await repository.join({ joinCode: validateLiveCode(join[1]), sourceIp: sourceIpOf(event), ...validateLiveJoin(bodyOf(event)) }) }, requestId);
       if (answer && method === 'POST') {
@@ -34,6 +35,7 @@ export function createLiveQuizzesHandler({ authenticate, repository, answerQueue
         const accepted = await repository.authorizeAnswer({ joinCode: validateLiveCode(answer[1]), ...validateLiveAnswer(bodyOf(event)) });
         return jsonResponse(202, { data: { receipt: await answerQueue.enqueue(accepted) } }, requestId);
       }
+      if (result && method === 'POST') return jsonResponse(200, { data: { result: await repository.participantResult({ joinCode: validateLiveCode(result[1]), ...validateLiveParticipantSession(bodyOf(event)) }) } }, requestId);
       const identity = await authenticate(event);
       if (identity.signInProvider === 'anonymous') throw forbidden('Akun tamu tidak dapat menjadi host kuis.');
       if (create && method === 'POST') return jsonResponse(201, { data: { session: await repository.create({ classId: validateClassId(create[1]), quizId: validateQuizId(create[2]), ownerId: identity.uid, ...validateLiveSessionInput(event.body ? bodyOf(event) : {}) }) } }, requestId);

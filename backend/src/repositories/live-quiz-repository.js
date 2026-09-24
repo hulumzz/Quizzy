@@ -21,7 +21,8 @@ function answerChoiceKey(question, answer) {
   if (question.type === 'image_hotspot') return 'HOTSPOT';
   return 'OPEN';
 }
-const participantSummary = (item) => ({ id: item.id, name: item.name, joinedAt: item.joinedAt, answeredQuestionId: item.answeredQuestionId || null });
+const normalize = (value) => String(value ?? '').trim().toLocaleLowerCase('id-ID');
+const participantSummary = (item) => ({ id: item.id, name: item.name, joinedAt: item.joinedAt, answeredQuestionId: item.answeredQuestionId || null, score: Number(item.score || 0), correctCount: Number(item.correctCount || 0) });
 const LIVE_SESSION_TTL_SECONDS = 12 * 60 * 60;
 const JOIN_LIMIT_PER_MINUTE = 30;
 
@@ -29,6 +30,22 @@ function safeEqual(left, right) {
   const leftValue = Buffer.from(String(left));
   const rightValue = Buffer.from(String(right));
   return leftValue.length === rightValue.length && timingSafeEqual(leftValue, rightValue);
+}
+
+function correctAnswer(question, supplied) {
+  if (question.type === 'true_false') return supplied === question.correctAnswer;
+  if (question.type === 'arrange') return Array.isArray(supplied) && supplied.length === question.correctOrder.length && supplied.every((value, index) => value === question.correctOrder[index]);
+  if (question.type === 'image_hotspot') {
+    if (!supplied || typeof supplied !== 'object' || !Number.isFinite(supplied.x) || !Number.isFinite(supplied.y)) return false;
+    const area = (question.hotspots || []).find((spot) => spot.correct);
+    const margin = Number(question.tolerancePercent || 0);
+    return Boolean(area) && supplied.x >= area.x - margin && supplied.x <= area.x + area.width + margin && supplied.y >= area.y - margin && supplied.y <= area.y + area.height + margin;
+  }
+  return normalize(supplied) === normalize(question.correctAnswer);
+}
+
+function leaderboard(participants) {
+  return participants.map(participantSummary).sort((left, right) => right.score - left.score || right.correctCount - left.correctCount || left.joinedAt.localeCompare(right.joinedAt)).map((item, index) => ({ ...item, rank: index + 1 }));
 }
 
 export class LiveQuizRepository {
@@ -83,7 +100,7 @@ export class LiveQuizRepository {
       const item = {
         PK: `LIVE_SESSION#${id}`, SK: 'META', entityType: 'LIVE_QUIZ_SESSION', id, joinCode, classId, quizId, ownerId,
         title: quiz.title, questionDurationSeconds, questions: quiz.questions, phase: 'lobby', currentQuestionIndex: -1,
-        stateVersion: 1, participantsCount: 0, currentAnsweredCount: 0, currentOptionCounts: {}, expiresAt, createdAt: now, updatedAt: now,
+        stateVersion: 1, participantsCount: 0, currentAnsweredCount: 0, currentCorrectCount: 0, currentOptionCounts: {}, expiresAt, createdAt: now, updatedAt: now,
       };
       try {
         await this.client.send(new TransactWriteCommand({ TransactItems: [
@@ -105,7 +122,8 @@ export class LiveQuizRepository {
   }
 
   hostState(item, participants) {
-    return { ...this.publicState(item), questionDurationSeconds: item.questionDurationSeconds, optionCounts: item.currentOptionCounts || {}, participants: participants.map(participantSummary) };
+    const participantList = participants.map(participantSummary);
+    return { ...this.publicState(item), questionDurationSeconds: item.questionDurationSeconds, optionCounts: item.currentOptionCounts || {}, correctCount: item.currentCorrectCount || 0, participants: participantList, ...(item.phase === 'finished' ? { leaderboard: leaderboard(participants) } : {}) };
   }
 
   async publicStateByCode(joinCode) { return this.publicState(await this.getByCode(joinCode)); }
@@ -113,8 +131,12 @@ export class LiveQuizRepository {
   async hostStateById(sessionId, ownerId) {
     const item = await this.getSession(sessionId);
     if (item.ownerId !== ownerId) throw forbidden('Hanya host yang dapat melihat sesi ini.');
-    const result = await this.client.send(new QueryCommand({ TableName: this.tableName, KeyConditionExpression: 'PK = :pk AND begins_with(SK, :participant)', ExpressionAttributeValues: { ':pk': item.PK, ':participant': 'PARTICIPANT#' }, Limit: 100 }));
-    return this.hostState(item, result.Items || []);
+    return this.hostState(item, await this.listParticipants(item));
+  }
+
+  async listParticipants(session) {
+    const result = await this.client.send(new QueryCommand({ TableName: this.tableName, KeyConditionExpression: 'PK = :pk AND begins_with(SK, :participant)', ExpressionAttributeValues: { ':pk': session.PK, ':participant': 'PARTICIPANT#' }, Limit: 100 }));
+    return result.Items || [];
   }
 
   async join({ joinCode, name, sourceIp, now = new Date().toISOString() }) {
@@ -123,7 +145,7 @@ export class LiveQuizRepository {
     if (!['lobby', 'countdown'].includes(item.phase)) throw conflict('LIVE_JOIN_CLOSED', 'Sesi sudah dimulai atau telah berakhir.');
     const id = randomUUID();
     const participantToken = randomBytes(32).toString('hex');
-    const participant = { PK: item.PK, SK: `PARTICIPANT#${id}`, entityType: 'LIVE_QUIZ_PARTICIPANT', id, name, participantToken, expiresAt: item.expiresAt, joinedAt: now };
+    const participant = { PK: item.PK, SK: `PARTICIPANT#${id}`, entityType: 'LIVE_QUIZ_PARTICIPANT', id, name, participantToken, score: 0, correctCount: 0, expiresAt: item.expiresAt, joinedAt: now };
     try {
       await this.client.send(new TransactWriteCommand({ TransactItems: [
         { Put: { TableName: this.tableName, Item: participant, ConditionExpression: 'attribute_not_exists(PK)' } },
@@ -142,23 +164,24 @@ export class LiveQuizRepository {
     let phase = current.phase;
     let currentQuestionIndex = current.currentQuestionIndex;
     let currentAnsweredCount = current.currentAnsweredCount || 0;
+    let currentCorrectCount = current.currentCorrectCount || 0;
     let currentOptionCounts = current.currentOptionCounts || {};
     let startedAt = current.startedAt || null;
     let endsAt = current.endsAt || null;
     if (action === 'finish') phase = 'finished';
     else if (phase === 'lobby' || phase === 'countdown' || phase === 'reveal') {
       if (currentQuestionIndex >= current.questions.length - 1 && phase === 'reveal') phase = 'finished';
-      else { phase = 'question'; currentQuestionIndex += 1; currentAnsweredCount = 0; currentOptionCounts = {}; startedAt = now; endsAt = new Date(new Date(now).getTime() + current.questionDurationSeconds * 1000).toISOString(); }
+      else { phase = 'question'; currentQuestionIndex += 1; currentAnsweredCount = 0; currentCorrectCount = 0; currentOptionCounts = {}; startedAt = now; endsAt = new Date(new Date(now).getTime() + current.questionDurationSeconds * 1000).toISOString(); }
     } else if (phase === 'question') { phase = 'reveal'; endsAt = now; }
     else throw conflict('LIVE_SESSION_FINISHED', 'Sesi ini sudah selesai.');
-    const item = { ...current, phase, currentQuestionIndex, currentAnsweredCount, currentOptionCounts, startedAt, endsAt, stateVersion: (current.stateVersion || 0) + 1, updatedAt: now };
+    const item = { ...current, phase, currentQuestionIndex, currentAnsweredCount, currentCorrectCount, currentOptionCounts, startedAt, endsAt, stateVersion: (current.stateVersion || 0) + 1, updatedAt: now };
     try {
       await this.client.send(new PutCommand({ TableName: this.tableName, Item: item, ConditionExpression: 'ownerId = :owner AND stateVersion = :version', ExpressionAttributeValues: { ':owner': ownerId, ':version': current.stateVersion } }));
     } catch (error) {
       if (error?.name === 'ConditionalCheckFailedException') throw conflict('LIVE_STATE_CHANGED', 'Status sesi baru saja berubah. Coba lagi.');
       throw error;
     }
-    return this.hostState(item, []);
+    return this.hostState(item, phase === 'finished' ? await this.listParticipants(item) : []);
   }
 
   async authorizeAnswer({ joinCode, participantId, participantToken, questionId, answer, now = new Date().toISOString() }) {
@@ -177,17 +200,32 @@ export class LiveQuizRepository {
     const session = await this.getSession(sessionId);
     if (session.phase !== 'question' || session.currentQuestionIndex !== questionIndex || session.questions[questionIndex]?.id !== questionId) throw conflict('LIVE_QUESTION_CHANGED', 'Soal sudah berganti.');
     if (new Date(session.endsAt).getTime() < new Date(acceptedAt).getTime()) throw conflict('LIVE_QUESTION_LOCKED', 'Waktu untuk menjawab sudah habis.');
-    const choiceKey = answerChoiceKey(session.questions[questionIndex], answer);
+    const question = session.questions[questionIndex];
+    const choiceKey = answerChoiceKey(question, answer);
+    const correct = correctAnswer(question, answer);
+    const earnedPoints = correct ? Number(question.points || 0) : 0;
     try {
       await this.client.send(new TransactWriteCommand({ TransactItems: [
-        { Update: { TableName: this.tableName, Key: { PK: session.PK, SK: 'META' }, UpdateExpression: 'SET updatedAt = :now, currentOptionCounts.#choice = if_not_exists(currentOptionCounts.#choice, :zero) + :one ADD currentAnsweredCount :one', ConditionExpression: '#phase = :phase AND currentQuestionIndex = :index AND endsAt >= :now', ExpressionAttributeNames: { '#phase': 'phase', '#choice': choiceKey }, ExpressionAttributeValues: { ':now': acceptedAt, ':zero': 0, ':one': 1, ':phase': 'question', ':index': questionIndex } } },
-        { Put: { TableName: this.tableName, Item: { PK: session.PK, SK: `ANSWER#${questionId}#${participantId}`, entityType: 'LIVE_QUIZ_ANSWER', participantId, questionId, answer, expiresAt: session.expiresAt, answeredAt: acceptedAt }, ConditionExpression: 'attribute_not_exists(PK)' } },
-        { Update: { TableName: this.tableName, Key: { PK: session.PK, SK: `PARTICIPANT#${participantId}` }, UpdateExpression: 'SET answeredQuestionId = :questionId, answeredAt = :now', ConditionExpression: 'attribute_exists(PK)', ExpressionAttributeValues: { ':questionId': questionId, ':now': acceptedAt } } },
+        { Update: { TableName: this.tableName, Key: { PK: session.PK, SK: 'META' }, UpdateExpression: 'SET updatedAt = :now, currentOptionCounts.#choice = if_not_exists(currentOptionCounts.#choice, :zero) + :one ADD currentAnsweredCount :one, currentCorrectCount :correct', ConditionExpression: '#phase = :phase AND currentQuestionIndex = :index AND endsAt >= :now', ExpressionAttributeNames: { '#phase': 'phase', '#choice': choiceKey }, ExpressionAttributeValues: { ':now': acceptedAt, ':zero': 0, ':one': 1, ':correct': correct ? 1 : 0, ':phase': 'question', ':index': questionIndex } } },
+        { Put: { TableName: this.tableName, Item: { PK: session.PK, SK: `ANSWER#${questionId}#${participantId}`, entityType: 'LIVE_QUIZ_ANSWER', participantId, questionId, answer, correct, earnedPoints, expiresAt: session.expiresAt, answeredAt: acceptedAt }, ConditionExpression: 'attribute_not_exists(PK)' } },
+        { Update: { TableName: this.tableName, Key: { PK: session.PK, SK: `PARTICIPANT#${participantId}` }, UpdateExpression: 'SET answeredQuestionId = :questionId, answeredAt = :now ADD score :points, correctCount :correct', ConditionExpression: 'attribute_exists(PK)', ExpressionAttributeValues: { ':questionId': questionId, ':now': acceptedAt, ':points': earnedPoints, ':correct': correct ? 1 : 0 } } },
       ] }));
     } catch (error) {
       if (['TransactionCanceledException', 'ConditionalCheckFailedException'].includes(error?.name)) throw conflict('LIVE_ANSWER_ALREADY_RECEIVED', 'Jawaban untuk soal ini sudah diterima atau sudah terkunci.');
       throw error;
     }
     return { accepted: true, questionId, answeredAt: acceptedAt };
+  }
+
+  async participantResult({ joinCode, participantId, participantToken }) {
+    const session = await this.getByCode(joinCode);
+    if (session.phase !== 'finished') throw conflict('LIVE_RESULT_NOT_READY', 'Hasil tersedia setelah host mengakhiri sesi.');
+    const found = await this.client.send(new GetCommand({ TableName: this.tableName, Key: { PK: session.PK, SK: `PARTICIPANT#${participantId}` }, ConsistentRead: true }));
+    if (!found.Item || !safeEqual(found.Item.participantToken, participantToken)) throw forbidden('Sesi peserta tidak valid.');
+    const ranking = leaderboard(await this.listParticipants(session));
+    const participant = ranking.find((item) => item.id === participantId);
+    if (!participant) throw notFound('Peserta tidak ditemukan.');
+    const totalPoints = session.questions.reduce((total, question) => total + Number(question.points || 0), 0);
+    return { sessionId: session.id, title: session.title, participant, totalPoints, questionCount: session.questions.length };
   }
 }

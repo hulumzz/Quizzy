@@ -6,6 +6,8 @@ export async function getQuiz(classId, quizId, options = {}) { const data = awai
 export async function createQuiz(classId, input) { const data = await apiRequest(base(classId), { method: 'POST', body: input }); return data.quiz; }
 export async function updateQuiz(classId, quizId, input) { const data = await apiRequest(`${base(classId)}/${encodeURIComponent(quizId)}`, { method: 'PUT', body: input }); return data.quiz; }
 export async function deleteQuiz(classId, quizId) { await apiRequest(`${base(classId)}/${encodeURIComponent(quizId)}`, { method: 'DELETE' }); }
+export async function exportQuiz(classId, quizId) { return apiRequest(`${base(classId)}/${encodeURIComponent(quizId)}/export`); }
+export async function importQuiz(classId, payload) { const data = await apiRequest(`${base(classId)}/import`, { method: 'POST', body: payload }); return data.quiz; }
 export async function submitQuiz(classId, quizId, answers) { const data = await apiRequest(`${base(classId)}/${encodeURIComponent(quizId)}/attempts`, { method: 'POST', body: { answers } }); return data.result; }
 export async function getQuizResults(classId, quizId, options = {}) { const data = await apiRequest(`${base(classId)}/${encodeURIComponent(quizId)}/results`, options); return data.results; }
 export function quizErrorMessage(error) {

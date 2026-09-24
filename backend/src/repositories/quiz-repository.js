@@ -62,6 +62,23 @@ export class QuizRepository {
     if (access.accessRole !== 'owner' && item.status !== 'published') throw notFound('Kuis tidak ditemukan.');
     return access.accessRole === 'owner' ? { ...summary(item), questions: item.questions, accessRole: 'owner' } : { ...safeDetail(item), accessRole: 'member' };
   }
+  async exportForOwner(classId, quizId, ownerId, exportedAt = new Date().toISOString()) {
+    await this.requireOwner(classId, ownerId);
+    const quiz = await this.getItem(classId, quizId);
+    if (quiz.ownerId !== ownerId) throw forbidden('Hanya pembuat kuis yang dapat mengunduhnya.');
+    return {
+      format: 'quizzy-quiz/v1',
+      exportedAt,
+      quiz: {
+        title: quiz.title,
+        description: quiz.description || '',
+        status: 'draft',
+        mode: 'self_paced',
+        questions: quiz.questions,
+        settings: quiz.settings,
+      },
+    };
+  }
   async create({ classId, ownerId, now = new Date().toISOString(), ...input }) {
     await this.requireOwner(classId, ownerId);
     const id = randomUUID();

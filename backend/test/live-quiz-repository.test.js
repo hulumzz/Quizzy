@@ -30,6 +30,21 @@ test('queued answer transaction rechecks the active server state before storing 
   const transaction = calls[1].input.TransactItems;
   assert.equal(transaction[0].Update.ConditionExpression, '#phase = :phase AND currentQuestionIndex = :index AND endsAt >= :now');
   assert.equal(transaction[1].Put.Item.expiresAt, 2000000000);
+  assert.equal(transaction[1].Put.Item.correct, false);
+  assert.equal(transaction[1].Put.Item.earnedPoints, 0);
+  assert.match(transaction[2].Update.UpdateExpression, /ADD score :points, correctCount :correct/);
+});
+
+test('queued answer scores a correct answer on the server before it is persisted', async () => {
+  const calls = [];
+  const session = { PK: 'LIVE_SESSION#session-1', id: 'session-1', joinCode: 'AB2CDE', expiresAt: 2000000000, phase: 'question', currentQuestionIndex: 0, endsAt: '2026-09-23T00:01:00.000Z', questions: [{ id: 'q-1', type: 'multiple_choice', choices: ['A', 'B'], correctAnswer: 'B', points: 25 }] };
+  const repository = new LiveQuizRepository({ tableName: 'QuizzyTable', quizRepository: {}, documentClient: { async send(command) { calls.push(command); if (calls.length === 1) return { Item: session }; return {}; } } });
+  await repository.processQueuedAnswer({ sessionId: 'session-1', participantId: 'participant-1', questionId: 'q-1', questionIndex: 0, answer: 'B', acceptedAt: '2026-09-23T00:00:30.000Z' });
+  const transaction = calls[1].input.TransactItems;
+  assert.equal(transaction[0].Update.ExpressionAttributeValues[':correct'], 1);
+  assert.equal(transaction[1].Put.Item.correct, true);
+  assert.equal(transaction[1].Put.Item.earnedPoints, 25);
+  assert.equal(transaction[2].Update.ExpressionAttributeValues[':points'], 25);
 });
 
 test('only the reveal state exposes the correct answer to public quiz players', () => {

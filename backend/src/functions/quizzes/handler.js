@@ -20,18 +20,26 @@ export function createQuizzesHandler({ authenticate, repository, logger = consol
     const requestId = context.awsRequestId || event?.requestContext?.requestId || randomUUID();
     const startedAt = Date.now();
     const collection = path.match(/^\/classes\/([^/]+)\/quizzes$/);
+    const importQuiz = path.match(/^\/classes\/([^/]+)\/quizzes\/import$/);
     const attempts = path.match(/^\/classes\/([^/]+)\/quizzes\/([^/]+)\/attempts$/);
     const results = path.match(/^\/classes\/([^/]+)\/quizzes\/([^/]+)\/results$/);
+    const exportQuiz = path.match(/^\/classes\/([^/]+)\/quizzes\/([^/]+)\/export$/);
     const quiz = path.match(/^\/classes\/([^/]+)\/quizzes\/([^/]+)$/);
     try {
       if (method === 'OPTIONS') return emptyResponse(204, requestId);
-      if (!collection && !attempts && !results && !quiz) return jsonResponse(404, { error: { code: 'NOT_FOUND', message: 'Endpoint tidak ditemukan.' } }, requestId);
+      if (!collection && !importQuiz && !attempts && !results && !exportQuiz && !quiz) return jsonResponse(404, { error: { code: 'NOT_FOUND', message: 'Endpoint tidak ditemukan.' } }, requestId);
       const identity = await authenticate(event);
       if (identity.signInProvider === 'anonymous') throw forbidden('Akun tamu tidak dapat menggunakan ruang kuis.');
       if (collection && method === 'GET') return jsonResponse(200, { data: { quizzes: await repository.list(validateClassId(collection[1]), identity.uid) } }, requestId);
       if (collection && method === 'POST') return jsonResponse(201, { data: { quiz: await repository.create({ classId: validateClassId(collection[1]), ownerId: identity.uid, ...validateQuizInput(bodyOf(event)) }) } }, requestId);
+      if (importQuiz && method === 'POST') {
+        const payload = bodyOf(event);
+        const source = payload?.quiz && typeof payload.quiz === 'object' && !Array.isArray(payload.quiz) ? payload.quiz : payload;
+        return jsonResponse(201, { data: { quiz: await repository.create({ classId: validateClassId(importQuiz[1]), ownerId: identity.uid, ...validateQuizInput({ ...source, status: 'draft' }) }) } }, requestId);
+      }
       if (attempts && method === 'POST') return jsonResponse(201, { data: { result: await repository.submit({ classId: validateClassId(attempts[1]), quizId: validateQuizId(attempts[2]), uid: identity.uid, ...validateAttempt(bodyOf(event)) }) } }, requestId);
       if (results && method === 'GET') return jsonResponse(200, { data: { results: await repository.getResult(validateClassId(results[1]), validateQuizId(results[2]), identity.uid) } }, requestId);
+      if (exportQuiz && method === 'GET') return jsonResponse(200, { data: await repository.exportForOwner(validateClassId(exportQuiz[1]), validateQuizId(exportQuiz[2]), identity.uid) }, requestId);
       if (quiz && method === 'GET') return jsonResponse(200, { data: { quiz: await repository.get(validateClassId(quiz[1]), validateQuizId(quiz[2]), identity.uid) } }, requestId);
       if (quiz && method === 'PUT') return jsonResponse(200, { data: { quiz: await repository.update({ classId: validateClassId(quiz[1]), quizId: validateQuizId(quiz[2]), ownerId: identity.uid, ...validateQuizInput(bodyOf(event)) }) } }, requestId);
       if (quiz && method === 'DELETE') { await repository.remove(validateClassId(quiz[1]), validateQuizId(quiz[2]), identity.uid); return emptyResponse(204, requestId); }
