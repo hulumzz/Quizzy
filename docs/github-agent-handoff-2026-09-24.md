@@ -112,14 +112,25 @@ Jangan mengubah model Bank Kuis dari snapshot + copy ke collaborative edit tanpa
 
 ### Prioritas 6 - Production hardening dan bukti operasional
 
-Kode lokal belum sama dengan production. Sebelum menyatakan beta siap:
+Kode lokal belum sama dengan production. Hardening kode yang sudah tersedia:
+
+- pembacaan peserta live mengikuti pagination DynamoDB sehingga leaderboard tidak berhenti di page pertama 100 peserta;
+- kapasitas read/write DynamoDB dan maximum concurrency processor SQS dapat ditentukan lewat parameter SAM tanpa mengubah default development;
+- log group processor jawaban live dibatasi retensi 7 hari;
+- queue utama dan DLQ diekspos sebagai CloudFormation output untuk inspeksi operasional;
+- root validation mencakup Worker tests, dan backend syntax check mencakup seluruh modul backend yang aktif.
+
+Default tetap free-first/development: DynamoDB 1 RCU/1 WCU dan processor concurrency 5. Jangan menaikkan nilai deployment tanpa target peserta dan load test. Template belum membuat CloudWatch alarm berbayar secara otomatis.
+
+Sebelum menyatakan beta siap:
 
 1. Deploy backend SAM terbaru agar endpoint `/general-quizzes`, live kuis umum, dan signature upload kuis umum aktif.
 2. Deploy frontend Pages terbaru dengan `VITE_API_URL` dan `VITE_AI_URL` yang benar.
 3. Pastikan AI Worker memiliki `FIREBASE_PROJECT_ID` dan `GROQ_API_KEY`, CORS hanya menerima origin resmi, serta deployment memakai `--keep-vars`.
 4. Jalankan E2E browser nyata: onboarding, Cloudinary upload, YouTube, self-paced quiz, hotspot touch, arrange touch, Bank Kuis, live QR/kode, dan AI.
-5. Tetapkan kapasitas DynamoDB/SQS untuk target peserta live, tambahkan alarm queue age/depth dan DLQ, lalu load test.
-6. Dokumentasikan limit peserta dan fallback ketika queue, AI, atau Cloudinary gagal.
+5. Tentukan target peserta live, jalankan load test, lalu set parameter kapasitas DynamoDB dan concurrency processor dari hasil pengujian.
+6. Setelah pemilik menyetujui biaya observability, tambahkan alarm queue age/depth dan DLQ.
+7. Dokumentasikan limit peserta dan fallback ketika queue, AI, atau Cloudinary gagal.
 
 ## Endpoint dan file penting
 
