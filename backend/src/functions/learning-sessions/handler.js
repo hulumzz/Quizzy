@@ -25,7 +25,7 @@ export function createLearningSessionsHandler({ authenticate, repository, logger
     const startedAt = Date.now();
     const collection = path.match(/^\/classes\/([^/]+)\/sessions$/);
     const reorder = path.match(/^\/classes\/([^/]+)\/sessions\/reorder$/);
-    const detail = path.match(/^\/classes\/([^/]+)\/sessions\/([^/]+)$/);
+    const detail = reorder ? null : path.match(/^\/classes\/([^/]+)\/sessions\/([^/]+)$/);
 
     try {
       if (method === 'OPTIONS') return emptyResponse(204, requestId);
