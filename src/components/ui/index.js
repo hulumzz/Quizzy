@@ -15,3 +15,5 @@ export { default as Skeleton, CardSkeleton } from './Skeleton';
 export { default as Tabs } from './Tabs';
 export { default as Textarea } from './Textarea';
 export { default as Toast } from './Toast';
+
+export { PageLoader, ProcessLoader } from './Loaders';
