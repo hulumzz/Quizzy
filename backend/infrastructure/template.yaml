@@ -36,7 +36,26 @@ Parameters:
     Type: String
     Description: Name of the Standard SSM SecureString read by Lambda at runtime for the Cloudinary API secret.
     Default: /quizzy/dev/cloudinary-api-secret
-    AllowedPattern: '^/[a-zA-Z0-9_.\-/]+
+    AllowedPattern: '^/[a-zA-Z0-9_.\-/]+$'
+  DynamoReadCapacityUnits:
+    Type: Number
+    Description: Provisioned read capacity for the Quizzy table and OwnerIndex. Keep the development default unless load testing justifies a higher value.
+    Default: 1
+    MinValue: 1
+    MaxValue: 100
+  DynamoWriteCapacityUnits:
+    Type: Number
+    Description: Provisioned write capacity for the Quizzy table and OwnerIndex. Keep the development default unless load testing justifies a higher value.
+    Default: 1
+    MinValue: 1
+    MaxValue: 100
+  QuizAnswerProcessorMaxConcurrency:
+    Type: Number
+    Description: Maximum concurrent Lambda invocations consuming live-quiz answer events.
+    Default: 5
+    MinValue: 2
+    MaxValue: 100
+
 Resources:
   QuizzyTable:
     Type: AWS::DynamoDB::Table
@@ -285,250 +304,3 @@ Outputs:
   QuizAnswerDeadLetterQueueUrl:
     Description: Dead-letter queue URL used to inspect live-quiz answers that exhausted retries.
     Value: !Ref QuizAnswerDeadLetterQueue
-
-  DynamoReadCapacityUnits:
-    Type: Number
-    Description: Provisioned read capacity for the Quizzy table and OwnerIndex. Keep the development default unless load testing justifies a higher value.
-    Default: 1
-    MinValue: 1
-    MaxValue: 100
-  DynamoWriteCapacityUnits:
-    Type: Number
-    Description: Provisioned write capacity for the Quizzy table and OwnerIndex. Keep the development default unless load testing justifies a higher value.
-    Default: 1
-    MinValue: 1
-    MaxValue: 100
-  QuizAnswerProcessorMaxConcurrency:
-    Type: Number
-    Description: Maximum concurrent Lambda invocations consuming live-quiz answer events.
-    Default: 5
-    MinValue: 2
-    MaxValue: 100
-
-Resources:
-  QuizzyTable:
-    Type: AWS::DynamoDB::Table
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Metadata:
-      com.aws.cloudformation.Context:
-        why: stores learning workspace entities in one retained table; provisioned minimum capacity keeps the development stack free-first
-        must:
-          - Retain data when the stack is deleted or the resource is replaced
-          - Keep PK, SK, and OwnerIndex key contracts aligned with repository access patterns
-        mutable: change-with-constraints
-        trust: { src: authored, conf: high }
-    Properties:
-      BillingMode: PROVISIONED
-      ProvisionedThroughput:
-        ReadCapacityUnits: 1
-        WriteCapacityUnits: 1
-      AttributeDefinitions:
-        - AttributeName: PK
-          AttributeType: S
-        - AttributeName: SK
-          AttributeType: S
-        - AttributeName: GSI1PK
-          AttributeType: S
-        - AttributeName: GSI1SK
-          AttributeType: S
-      KeySchema:
-        - AttributeName: PK
-          KeyType: HASH
-        - AttributeName: SK
-          KeyType: RANGE
-      GlobalSecondaryIndexes:
-        - IndexName: OwnerIndex
-          KeySchema:
-            - AttributeName: GSI1PK
-              KeyType: HASH
-            - AttributeName: GSI1SK
-              KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
-          ProvisionedThroughput:
-            ReadCapacityUnits: 1
-            WriteCapacityUnits: 1
-      SSESpecification:
-        SSEEnabled: true
-      TimeToLiveSpecification:
-        AttributeName: expiresAt
-        Enabled: true
-
-  QuizAnswerDeadLetterQueue:
-    Type: AWS::SQS::Queue
-    Metadata:
-      com.aws.cloudformation.Context:
-        why: retains failed live-quiz answer events for bounded operational recovery
-        must:
-          - Do not expose the queue to browsers or public callers
-          - Keep retention bounded to control cost and data lifetime
-        mutable: change-with-constraints
-        trust: { src: authored, conf: high }
-    Properties:
-      MessageRetentionPeriod: 1209600
-
-  QuizAnswerEvents:
-    Type: AWS::SQS::Queue
-    Metadata:
-      com.aws.cloudformation.Context:
-        why: absorbs bursty live-quiz answers before durable aggregation
-        must:
-          - Visibility timeout must remain at least six times the processor timeout
-          - Failed messages must redrive to the dedicated dead-letter queue
-        mutable: change-with-constraints
-        trust: { src: authored, conf: high }
-    Properties:
-      MessageRetentionPeriod: 3600
-      VisibilityTimeout: 60
-      RedrivePolicy:
-        deadLetterTargetArn: !GetAtt QuizAnswerDeadLetterQueue.Arn
-        maxReceiveCount: 3
-
-  ClassesFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      com.aws.cloudformation.Context:
-        why: serves authenticated class, material, discussion, attendance, self-paced quiz, and Cloudinary upload-signature APIs; relies on the new account concurrency quota instead of reserved concurrency
-        must:
-          - Verify Firebase ID tokens in application code because the Function URL uses AuthType NONE
-          - Keep DynamoDB permissions scoped to the Quizzy table and OwnerIndex
-          - Read only the named Cloudinary SecureString at runtime; never expose its value through an API response or environment variable
-        mutable: change-with-constraints
-        trust: { src: authored, conf: high }
-    Properties:
-      Description: Authenticated learning workspace API for classes, content, attendance, and quizzes.
-      CodeUri: ../
-      Handler: src/functions/classes/index.handler
-      Runtime: nodejs22.x
-      Architectures:
-        - arm64
-      MemorySize: 256
-      Timeout: 10
-      Environment:
-        Variables:
-          TABLE_NAME: !Ref QuizzyTable
-          FIREBASE_PROJECT_ID: !Ref FirebaseProjectId
-          CLOUDINARY_CLOUD_NAME: !Ref CloudinaryCloudName
-          CLOUDINARY_API_KEY: !Ref CloudinaryApiKey
-          CLOUDINARY_API_SECRET_PARAMETER: !Ref CloudinaryApiSecretParameter
-          QUIZ_ANSWER_QUEUE_URL: !Ref QuizAnswerEvents
-      Policies:
-        - Statement:
-            - Sid: ReadClassData
-              Effect: Allow
-              Action:
-                - dynamodb:Query
-                - dynamodb:GetItem
-                - dynamodb:BatchGetItem
-              Resource:
-                - !GetAtt QuizzyTable.Arn
-                - !Sub '${QuizzyTable.Arn}/index/OwnerIndex'
-            - Sid: WriteLearningData
-              Effect: Allow
-              Action:
-                - dynamodb:PutItem
-                - dynamodb:UpdateItem
-                - dynamodb:DeleteItem
-                - dynamodb:ConditionCheckItem
-              Resource: !GetAtt QuizzyTable.Arn
-            - Sid: ReadCloudinaryUploadSecret
-              Effect: Allow
-              Action:
-                - ssm:GetParameter
-              Resource: !Sub 'arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter${CloudinaryApiSecretParameter}'
-            - Sid: SendQuizAnswerEvents
-              Effect: Allow
-              Action:
-                - sqs:SendMessage
-              Resource: !GetAtt QuizAnswerEvents.Arn
-      FunctionUrlConfig:
-        AuthType: NONE
-        InvokeMode: BUFFERED
-        Cors:
-          AllowCredentials: false
-          AllowHeaders:
-            - authorization
-            - content-type
-            - x-idempotency-key
-          AllowMethods:
-            - GET
-            - POST
-            - PUT
-            - DELETE
-          AllowOrigins: !Ref AllowedOrigins
-          MaxAge: 300
-
-  LiveQuizAnswerProcessor:
-    Type: AWS::Serverless::Function
-    Metadata:
-      com.aws.cloudformation.Context:
-        why: consumes queued live-quiz answers and atomically aggregates only valid current-question responses
-        must:
-          - Return per-record batch failures so transient messages retry without replaying valid records
-          - Never trust a queued answer without rechecking canonical session state in DynamoDB
-        mutable: change-with-constraints
-        trust: { src: authored, conf: high }
-    Properties:
-      Description: Processes queued live quiz answers with canonical DynamoDB validation.
-      CodeUri: ../
-      Handler: src/functions/live-quiz-answers/index.handler
-      Runtime: nodejs22.x
-      Architectures:
-        - arm64
-      MemorySize: 256
-      Timeout: 10
-      Environment:
-        Variables:
-          TABLE_NAME: !Ref QuizzyTable
-      Policies:
-        - Statement:
-            - Sid: ProcessQueuedQuizAnswers
-              Effect: Allow
-              Action:
-                - dynamodb:GetItem
-                - dynamodb:PutItem
-                - dynamodb:UpdateItem
-                - dynamodb:ConditionCheckItem
-              Resource: !GetAtt QuizzyTable.Arn
-            - Sid: ConsumeQuizAnswerEvents
-              Effect: Allow
-              Action:
-                - sqs:ChangeMessageVisibility
-                - sqs:DeleteMessage
-                - sqs:GetQueueAttributes
-                - sqs:ReceiveMessage
-              Resource: !GetAtt QuizAnswerEvents.Arn
-      Events:
-        QuizAnswerEvents:
-          Type: SQS
-          Properties:
-            Queue: !GetAtt QuizAnswerEvents.Arn
-            BatchSize: 10
-            FunctionResponseTypes:
-              - ReportBatchItemFailures
-            ScalingConfig:
-              MaximumConcurrency: 5
-
-  ClassesFunctionLogGroup:
-    Type: AWS::Logs::LogGroup
-    DeletionPolicy: Delete
-    UpdateReplacePolicy: Delete
-    Metadata:
-      com.aws.cloudformation.Context:
-        why: keeps short-lived development diagnostics; seven-day retention and AWS-managed encryption avoid ongoing CMK cost
-        must:
-          - Keep retention bounded for cost control
-        mutable: free-to-tune
-        trust: { src: authored, conf: high }
-    Properties:
-      LogGroupName: !Sub '/aws/lambda/${ClassesFunction}'
-      RetentionInDays: 7
-
-Outputs:
-  ClassesFunctionUrl:
-    Description: Set this value as VITE_API_URL without the trailing slash.
-    Value: !GetAtt ClassesFunctionUrl.FunctionUrl
-  TableName:
-    Description: DynamoDB table used by Quizzy.
-    Value: !Ref QuizzyTable
