@@ -250,3 +250,28 @@ test('queued answer treats a persisted answer as an idempotent duplicate after a
   );
   assert.equal(calls.length, 4);
 });
+
+
+test('live participant listing follows DynamoDB pagination so leaderboard is not capped at 100', async () => {
+  const calls = [];
+  const firstPage = Array.from({ length: 100 }, (_, index) => ({ id: `p-${index + 1}`, name: `P${index + 1}`, joinedAt: '2026-09-23T00:00:00.000Z' }));
+  const secondPage = [{ id: 'p-101', name: 'P101', joinedAt: '2026-09-23T00:00:01.000Z' }];
+  const repository = new LiveQuizRepository({
+    tableName: 'QuizzyTable',
+    quizRepository: {},
+    documentClient: {
+      async send(command) {
+        calls.push(command);
+        if (calls.length === 1) return { Items: firstPage, LastEvaluatedKey: { PK: 'LIVE_SESSION#session-1', SK: 'PARTICIPANT#p-100' } };
+        return { Items: secondPage };
+      },
+    },
+  });
+
+  const participants = await repository.listParticipants({ PK: 'LIVE_SESSION#session-1' });
+  assert.equal(participants.length, 101);
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].input.Limit, 100);
+  assert.equal(calls[0].input.ExclusiveStartKey, undefined);
+  assert.deepEqual(calls[1].input.ExclusiveStartKey, { PK: 'LIVE_SESSION#session-1', SK: 'PARTICIPANT#p-100' });
+});
