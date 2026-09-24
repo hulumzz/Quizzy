@@ -147,7 +147,7 @@ export class LearningSessionRepository {
     await this.requireOwner(classId, ownerId);
     const existing = await this.listItems(classId);
     const byId = new Map(existing.map((item) => [item.id, item]));
-    if (sessionIds.some((id) => !byId.has(id))) {
+    if (sessionIds.length !== existing.length || sessionIds.some((id) => !byId.has(id))) {
       throw conflict('SESSION_ORDER_CHANGED', 'Daftar pertemuan sudah berubah. Muat ulang lalu coba lagi.');
     }
     await this.client.send(new TransactWriteCommand({
