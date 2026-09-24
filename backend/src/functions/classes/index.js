@@ -3,6 +3,7 @@ import { AttendanceRepository } from '../../repositories/attendance-repository.j
 import { ClassRepository } from '../../repositories/class-repository.js';
 import { DiscussionRepository } from '../../repositories/discussion-repository.js';
 import { MaterialRepository } from '../../repositories/material-repository.js';
+import { LearningSessionRepository } from '../../repositories/learning-session-repository.js';
 import { QuizRepository } from '../../repositories/quiz-repository.js';
 import { GeneralQuizRepository } from '../../repositories/general-quiz-repository.js';
 import { QuizBankRepository } from '../../repositories/quiz-bank-repository.js';
@@ -12,6 +13,7 @@ import { LiveQuizAnswerQueue } from '../../services/live-quiz-answer-queue.js';
 import { createAttendanceHandler } from '../attendance/handler.js';
 import { createDiscussionsHandler } from '../discussions/handler.js';
 import { createMaterialsHandler } from '../materials/handler.js';
+import { createLearningSessionsHandler } from '../learning-sessions/handler.js';
 import { createQuizzesHandler } from '../quizzes/handler.js';
 import { createGeneralQuizzesHandler } from '../general-quizzes/handler.js';
 import { createQuizBankHandler } from '../quiz-bank/handler.js';
@@ -20,10 +22,11 @@ import { createUploadsHandler } from '../uploads/handler.js';
 import { createClassesHandler } from './handler.js';
 
 const classRepository = new ClassRepository();
-const materialRepository = new MaterialRepository({ classRepository });
+const learningSessionRepository = new LearningSessionRepository({ classRepository });
+const materialRepository = new MaterialRepository({ classRepository, learningSessionRepository });
 const discussionRepository = new DiscussionRepository({ materialRepository });
-const attendanceRepository = new AttendanceRepository({ classRepository });
-const quizRepository = new QuizRepository({ classRepository });
+const attendanceRepository = new AttendanceRepository({ classRepository, learningSessionRepository });
+const quizRepository = new QuizRepository({ classRepository, learningSessionRepository });
 const generalQuizRepository = new GeneralQuizRepository();
 const quizBankRepository = new QuizBankRepository({ quizRepository, generalQuizRepository });
 const liveQuizRepository = new LiveQuizRepository({ quizRepository, generalQuizRepository });
@@ -31,6 +34,7 @@ const uploadSigner = new CloudinaryUploadSigner({ classRepository });
 const liveQuizAnswerQueue = new LiveQuizAnswerQueue();
 
 const classesHandler = createClassesHandler({ authenticate: authenticateRequest, repository: classRepository });
+const learningSessionsHandler = createLearningSessionsHandler({ authenticate: authenticateRequest, repository: learningSessionRepository });
 const materialsHandler = createMaterialsHandler({ authenticate: authenticateRequest, repository: materialRepository });
 const discussionsHandler = createDiscussionsHandler({ authenticate: authenticateRequest, repository: discussionRepository });
 const attendanceHandler = createAttendanceHandler({ authenticate: authenticateRequest, repository: attendanceRepository });
@@ -47,6 +51,7 @@ export function handler(event, context) {
   if (path.includes('/live-sessions')) return liveQuizzesHandler(event, context);
   if (path.startsWith('/general-quizzes')) return generalQuizzesHandler(event, context);
   if (path.includes('/live-sessions') || path.startsWith('/live-quizzes/')) return liveQuizzesHandler(event, context);
+  if (/^\/classes\/[^/]+\/sessions(?:\/|$)/.test(path)) return learningSessionsHandler(event, context);
   if (path.includes('/attendance')) return attendanceHandler(event, context);
   if (path.includes('/discussions')) return discussionsHandler(event, context);
   if (path.includes('/quizzes')) return quizzesHandler(event, context);
