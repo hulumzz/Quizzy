@@ -4,7 +4,7 @@ import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, TransactW
 import { conflict, forbidden, notFound } from '../http/errors.js';
 
 const normalize = (value) => String(value ?? '').trim().toLocaleLowerCase('id-ID');
-const summary = (item) => ({ id: item.id, classId: item.classId, title: item.title, description: item.description || '', status: item.status, mode: item.mode, questionCount: item.questions?.length || 0, totalPoints: (item.questions || []).reduce((sum, q) => sum + q.points, 0), settings: item.settings, createdAt: item.createdAt, updatedAt: item.updatedAt, publishedAt: item.publishedAt || null });
+const summary = (item) => ({ id: item.id, classId: item.classId, sessionId: item.sessionId || null, title: item.title, description: item.description || '', status: item.status, mode: item.mode, questionCount: item.questions?.length || 0, totalPoints: (item.questions || []).reduce((sum, q) => sum + q.points, 0), settings: item.settings, createdAt: item.createdAt, updatedAt: item.updatedAt, publishedAt: item.publishedAt || null });
 const safeQuestion = (question) => ({
   id: question.id, type: question.type, prompt: question.prompt, choices: question.choices, points: question.points,
   ...(question.type === 'arrange' ? { items: question.items } : {}),
@@ -33,11 +33,12 @@ function isCorrectAnswer(question, supplied) {
 }
 
 export class QuizRepository {
-  constructor({ tableName = process.env.TABLE_NAME, documentClient, classRepository } = {}) {
+  constructor({ tableName = process.env.TABLE_NAME, documentClient, classRepository, learningSessionRepository } = {}) {
     if (!tableName) throw new Error('TABLE_NAME is required');
     if (!classRepository) throw new Error('classRepository is required');
     this.tableName = tableName;
     this.classRepository = classRepository;
+    this.learningSessionRepository = learningSessionRepository;
     this.client = documentClient || DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
   }
 
@@ -80,21 +81,30 @@ export class QuizRepository {
       },
     };
   }
-  async create({ classId, ownerId, now = new Date().toISOString(), ...input }) {
+  async create({ classId, ownerId, sessionId = null, now = new Date().toISOString(), ...input }) {
     await this.requireOwner(classId, ownerId);
+    if (sessionId) {
+      if (!this.learningSessionRepository) throw new Error('learningSessionRepository is required for session-linked quizzes');
+      await this.learningSessionRepository.requireAssignable(classId, sessionId, ownerId);
+    }
     const id = randomUUID();
-    const item = { PK: `CLASS#${classId}`, SK: `QUIZ#${id}`, entityType: 'QUIZ', id, classId, ownerId, ...input, createdAt: now, updatedAt: now, ...(input.status === 'published' ? { publishedAt: now } : {}) };
+    const item = { PK: `CLASS#${classId}`, SK: `QUIZ#${id}`, entityType: 'QUIZ', id, classId, ownerId, ...input, ...(sessionId ? { sessionId } : {}), createdAt: now, updatedAt: now, ...(input.status === 'published' ? { publishedAt: now } : {}) };
     await this.client.send(new TransactWriteCommand({ TransactItems: [
       { Put: { TableName: this.tableName, Item: item, ConditionExpression: 'attribute_not_exists(PK)' } },
       { Update: { TableName: this.tableName, Key: { PK: `CLASS#${classId}`, SK: 'META' }, UpdateExpression: 'SET updatedAt = :now ADD quizzesCount :one', ConditionExpression: 'ownerId = :owner', ExpressionAttributeValues: { ':now': now, ':one': 1, ':owner': ownerId } } },
     ] }));
     return { ...summary(item), questions: item.questions, accessRole: 'owner' };
   }
-  async update({ classId, quizId, ownerId, now = new Date().toISOString(), ...input }) {
+  async update({ classId, quizId, ownerId, sessionId = null, now = new Date().toISOString(), ...input }) {
     await this.requireOwner(classId, ownerId);
+    if (sessionId) {
+      if (!this.learningSessionRepository) throw new Error('learningSessionRepository is required for session-linked quizzes');
+      await this.learningSessionRepository.requireAssignable(classId, sessionId, ownerId);
+    }
     const current = await this.getItem(classId, quizId);
-    const item = { ...current, ...input, updatedAt: now, ...(input.status === 'published' ? { publishedAt: current.publishedAt || now } : {}) };
+    const item = { ...current, ...input, ...(sessionId ? { sessionId } : {}), updatedAt: now, ...(input.status === 'published' ? { publishedAt: current.publishedAt || now } : {}) };
     if (input.status !== 'published') delete item.publishedAt;
+    if (!sessionId) delete item.sessionId;
     await this.client.send(new PutCommand({ TableName: this.tableName, Item: item, ConditionExpression: 'ownerId = :owner AND attribute_exists(PK)', ExpressionAttributeValues: { ':owner': ownerId } }));
     return { ...summary(item), questions: item.questions, accessRole: 'owner' };
   }
