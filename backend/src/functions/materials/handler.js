@@ -3,6 +3,7 @@ import { badRequest, forbidden, HttpError } from '../../http/errors.js';
 import { emptyResponse, jsonResponse } from '../../http/response.js';
 import { validateClassId } from '../../validation/class.js';
 import { validateMaterialId, validateMaterialInput, validateProgress } from '../../validation/material.js';
+import { validateOptionalLearningSessionId } from '../../validation/learning-session.js';
 
 function requestMethod(event) {
   return event?.requestContext?.http?.method || event?.httpMethod || 'GET';
@@ -55,7 +56,8 @@ export function createMaterialsHandler({ authenticate, repository, logger = cons
         return jsonResponse(200, { data: { materials } }, requestId);
       }
       if (collection && method === 'POST') {
-        const input = validateMaterialInput(parseBody(event));
+        const body = parseBody(event);
+        const input = { ...validateMaterialInput(body), sessionId: validateOptionalLearningSessionId(body.sessionId) };
         const created = await repository.create({ classId: validateClassId(collection[1]), ownerId: identity.uid, ...input });
         return jsonResponse(201, { data: { material: created } }, requestId);
       }
@@ -64,7 +66,8 @@ export function createMaterialsHandler({ authenticate, repository, logger = cons
         return jsonResponse(200, { data: { material: item } }, requestId);
       }
       if (material && method === 'PUT') {
-        const input = validateMaterialInput(parseBody(event));
+        const body = parseBody(event);
+        const input = { ...validateMaterialInput(body), sessionId: validateOptionalLearningSessionId(body.sessionId) };
         const updated = await repository.update({ classId: validateClassId(material[1]), materialId: validateMaterialId(material[2]), ownerId: identity.uid, ...input });
         return jsonResponse(200, { data: { material: updated } }, requestId);
       }

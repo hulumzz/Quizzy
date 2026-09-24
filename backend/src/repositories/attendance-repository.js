@@ -27,6 +27,7 @@ function publicSession(item, extra = {}, { includeLocation = true } = {}) {
     id: item.id,
     classId: item.classId,
     title: item.title,
+    sessionId: item.sessionId || null,
     ...(includeLocation ? { latitude: item.latitude, longitude: item.longitude } : {}),
     radiusMeters: item.radiusMeters,
     status: item.status,
@@ -54,11 +55,12 @@ export function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
 }
 
 export class AttendanceRepository {
-  constructor({ tableName = process.env.TABLE_NAME, documentClient, classRepository } = {}) {
+  constructor({ tableName = process.env.TABLE_NAME, documentClient, classRepository, learningSessionRepository } = {}) {
     if (!tableName) throw new Error('TABLE_NAME is required');
     if (!classRepository) throw new Error('classRepository is required');
     this.tableName = tableName;
     this.classRepository = classRepository;
+    this.learningSessionRepository = learningSessionRepository;
     this.client = documentClient || DynamoDBDocumentClient.from(new DynamoDBClient({}), {
       marshallOptions: { removeUndefinedValues: true },
     });
@@ -119,8 +121,12 @@ export class AttendanceRepository {
     return sessions.map((item) => publicSession(item, { checkIn: publicCheckIn(checkIns.get(item.id)) }, { includeLocation: false }));
   }
 
-  async create({ classId, ownerId, title, latitude, longitude, radiusMeters, now = new Date().toISOString() }) {
+  async create({ classId, ownerId, title, latitude, longitude, radiusMeters, sessionId = null, now = new Date().toISOString() }) {
     await this.requireOwner(classId, ownerId);
+    if (sessionId) {
+      if (!this.learningSessionRepository) throw new Error('learningSessionRepository is required for session-linked attendance');
+      await this.learningSessionRepository.requireAssignable(classId, sessionId, ownerId);
+    }
     const id = randomUUID();
     const item = {
       ...sessionKey(classId, id),
@@ -132,6 +138,7 @@ export class AttendanceRepository {
       latitude,
       longitude,
       radiusMeters,
+      ...(sessionId ? { sessionId } : {}),
       status: 'draft',
       createdAt: now,
       updatedAt: now,

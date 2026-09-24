@@ -10,6 +10,7 @@ function summary(item, extra = {}) {
     title: item.title,
     summary: item.summary || '',
     status: item.status,
+    sessionId: item.sessionId || null,
     blocksCount: item.blocks?.length || 0,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
@@ -27,11 +28,12 @@ function stateKey(prefix, uid, classId, materialId) {
 }
 
 export class MaterialRepository {
-  constructor({ tableName = process.env.TABLE_NAME, documentClient, classRepository } = {}) {
+  constructor({ tableName = process.env.TABLE_NAME, documentClient, classRepository, learningSessionRepository } = {}) {
     if (!tableName) throw new Error('TABLE_NAME is required');
     if (!classRepository) throw new Error('classRepository is required');
     this.tableName = tableName;
     this.classRepository = classRepository;
+    this.learningSessionRepository = learningSessionRepository;
     this.client = documentClient || DynamoDBDocumentClient.from(new DynamoDBClient({}), {
       marshallOptions: { removeUndefinedValues: true },
     });
@@ -93,8 +95,12 @@ export class MaterialRepository {
     return detail(item, extra);
   }
 
-  async create({ classId, ownerId, title, summary: materialSummary, status, blocks, now = new Date().toISOString() }) {
+  async create({ classId, ownerId, title, summary: materialSummary, status, blocks, sessionId = null, now = new Date().toISOString() }) {
     await this.requireOwner(classId, ownerId);
+    if (sessionId) {
+      if (!this.learningSessionRepository) throw new Error('learningSessionRepository is required for session-linked materials');
+      await this.learningSessionRepository.requireAssignable(classId, sessionId, ownerId);
+    }
     const id = randomUUID();
     const item = {
       PK: `CLASS#${classId}`,
@@ -107,6 +113,7 @@ export class MaterialRepository {
       summary: materialSummary,
       status,
       blocks,
+      ...(sessionId ? { sessionId } : {}),
       createdAt: now,
       updatedAt: now,
       ...(status === 'published' ? { publishedAt: now } : {}),
@@ -128,19 +135,25 @@ export class MaterialRepository {
     return detail(item, { accessRole: 'owner' });
   }
 
-  async update({ classId, materialId, ownerId, title, summary: materialSummary, status, blocks, now = new Date().toISOString() }) {
+  async update({ classId, materialId, ownerId, title, summary: materialSummary, status, blocks, sessionId = null, now = new Date().toISOString() }) {
     await this.requireOwner(classId, ownerId);
     const current = await this.getItem(classId, materialId);
+    if (sessionId && sessionId !== current.sessionId) {
+      if (!this.learningSessionRepository) throw new Error('learningSessionRepository is required for session-linked materials');
+      await this.learningSessionRepository.requireAssignable(classId, sessionId, ownerId);
+    }
     const item = {
       ...current,
       title,
       summary: materialSummary,
       status,
       blocks,
+      ...(sessionId ? { sessionId } : {}),
       updatedAt: now,
       ...(status === 'published' ? { publishedAt: current.publishedAt || now } : {}),
     };
     if (status !== 'published') delete item.publishedAt;
+    if (!sessionId) delete item.sessionId;
     await this.client.send(new PutCommand({
       TableName: this.tableName,
       Item: item,

@@ -3,6 +3,7 @@ import { badRequest, forbidden, HttpError } from '../../http/errors.js';
 import { emptyResponse, jsonResponse } from '../../http/response.js';
 import { validateClassId } from '../../validation/class.js';
 import { validateAttempt, validateQuizId, validateQuizInput } from '../../validation/quiz.js';
+import { validateOptionalLearningSessionId } from '../../validation/learning-session.js';
 
 const methodOf = (event) => (event?.requestContext?.http?.method || event?.httpMethod || 'GET').toUpperCase();
 const pathOf = (event) => (event?.rawPath || event?.path || '/').replace(/\/+$/, '') || '/';
@@ -31,7 +32,10 @@ export function createQuizzesHandler({ authenticate, repository, logger = consol
       const identity = await authenticate(event);
       if (identity.signInProvider === 'anonymous') throw forbidden('Akun tamu tidak dapat menggunakan ruang kuis.');
       if (collection && method === 'GET') return jsonResponse(200, { data: { quizzes: await repository.list(validateClassId(collection[1]), identity.uid) } }, requestId);
-      if (collection && method === 'POST') return jsonResponse(201, { data: { quiz: await repository.create({ classId: validateClassId(collection[1]), ownerId: identity.uid, ...validateQuizInput(bodyOf(event)) }) } }, requestId);
+      if (collection && method === 'POST') {
+        const body = bodyOf(event);
+        return jsonResponse(201, { data: { quiz: await repository.create({ classId: validateClassId(collection[1]), ownerId: identity.uid, ...validateQuizInput(body), sessionId: validateOptionalLearningSessionId(body.sessionId) }) } }, requestId);
+      }
       if (importQuiz && method === 'POST') {
         const payload = bodyOf(event);
         const source = payload?.quiz && typeof payload.quiz === 'object' && !Array.isArray(payload.quiz) ? payload.quiz : payload;
@@ -41,7 +45,10 @@ export function createQuizzesHandler({ authenticate, repository, logger = consol
       if (results && method === 'GET') return jsonResponse(200, { data: { results: await repository.getResult(validateClassId(results[1]), validateQuizId(results[2]), identity.uid) } }, requestId);
       if (exportQuiz && method === 'GET') return jsonResponse(200, { data: await repository.exportForOwner(validateClassId(exportQuiz[1]), validateQuizId(exportQuiz[2]), identity.uid) }, requestId);
       if (quiz && method === 'GET') return jsonResponse(200, { data: { quiz: await repository.get(validateClassId(quiz[1]), validateQuizId(quiz[2]), identity.uid) } }, requestId);
-      if (quiz && method === 'PUT') return jsonResponse(200, { data: { quiz: await repository.update({ classId: validateClassId(quiz[1]), quizId: validateQuizId(quiz[2]), ownerId: identity.uid, ...validateQuizInput(bodyOf(event)) }) } }, requestId);
+      if (quiz && method === 'PUT') {
+        const body = bodyOf(event);
+        return jsonResponse(200, { data: { quiz: await repository.update({ classId: validateClassId(quiz[1]), quizId: validateQuizId(quiz[2]), ownerId: identity.uid, ...validateQuizInput(body), sessionId: validateOptionalLearningSessionId(body.sessionId) }) } }, requestId);
+      }
       if (quiz && method === 'DELETE') { await repository.remove(validateClassId(quiz[1]), validateQuizId(quiz[2]), identity.uid); return emptyResponse(204, requestId); }
       return jsonResponse(405, { error: { code: 'METHOD_NOT_ALLOWED', message: 'Metode tidak didukung.' } }, requestId);
     } catch (caught) {

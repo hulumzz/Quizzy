@@ -7,8 +7,9 @@ import { useAttendance } from '../features/attendance/hooks/useAttendance';
 import { getCurrentLocation, geolocationErrorMessage } from '../lib/geolocation';
 import { attendanceErrorMessage, checkInAttendance, createAttendanceSession, getAttendanceSession, setAttendanceStatus } from '../services/attendance.service';
 import { getClass } from '../services/class.service';
+import { listLearningSessions } from '../services/learning-session.service';
 
-const initialForm = { title: '', latitude: '', longitude: '', radiusMeters: '100' };
+const initialForm = { title: '', latitude: '', longitude: '', radiusMeters: '100', sessionId: '' };
 
 function formatDateTime(value) {
   if (!value) return '—';
@@ -26,6 +27,7 @@ export default function ClassAttendance({ role }) {
   const { classId } = useParams();
   const { attendance, status, error, configured, reload } = useAttendance(classId);
   const [className, setClassName] = useState('Ruang kelas');
+  const [sessions, setSessions] = useState([]);
   const [form, setForm] = useState(initialForm);
   const [busy, setBusy] = useState(false);
   const [busyId, setBusyId] = useState('');
@@ -37,7 +39,9 @@ export default function ClassAttendance({ role }) {
   useEffect(() => {
     if (!configured) return undefined;
     const controller = new AbortController();
-    getClass(classId, { signal: controller.signal }).then((item) => setClassName(item.name)).catch(() => {});
+    Promise.all([getClass(classId, { signal: controller.signal }), role === 'teacher' ? listLearningSessions(classId, { signal: controller.signal }) : Promise.resolve([])])
+      .then(([item, sessionItems]) => { setClassName(item.name); setSessions(sessionItems.filter((session) => session.status !== 'archived')); })
+      .catch(() => {});
     return () => controller.abort();
   }, [classId, configured]);
 
@@ -68,6 +72,7 @@ export default function ClassAttendance({ role }) {
         latitude: Number(form.latitude),
         longitude: Number(form.longitude),
         radiusMeters: Number(form.radiusMeters),
+        sessionId: form.sessionId || null,
       });
       setForm(initialForm);
       setNotice('Sesi tersimpan sebagai draf. Mulai sesi saat siswa sudah siap melakukan presensi.');
@@ -135,6 +140,7 @@ export default function ClassAttendance({ role }) {
     {role === 'teacher' ? <Card className="qz-attendance-create"><form className="qz-attendance-form" onSubmit={createSession}>
       <div className="qz-attendance-form__heading"><span><AttendanceIcon size={22} /></span><div><h2>Buat sesi presensi</h2><p>Koordinat dan radius ini menjadi acuan server saat siswa check-in.</p></div></div>
       <Input label="Nama sesi" value={form.title} onChange={setField('title')} maxLength={100} placeholder="Contoh: Pertemuan 3 · Sistem Pencernaan" />
+      <label className="qz-field"><span>Pertemuan pembelajaran (opsional)</span><select value={form.sessionId} onChange={setField('sessionId')}><option value="">Tanpa pertemuan</option>{sessions.map((session) => <option key={session.id} value={session.id}>{session.meetingDate} · {session.title}{session.status === 'draft' ? ' (Draf)' : ''}</option>)}</select></label>
       <div className="qz-attendance-location-fields"><Input label="Latitude" type="number" step="any" value={form.latitude} onChange={setField('latitude')} placeholder="-6.98" /><Input label="Longitude" type="number" step="any" value={form.longitude} onChange={setField('longitude')} placeholder="109.64" /><Input label="Radius (meter)" type="number" min="10" max="1000" step="10" value={form.radiusMeters} onChange={setField('radiusMeters')} /></div>
       <div className="qz-attendance-form__actions"><Button type="button" variant="secondary" disabled={busy} onClick={useTeacherLocation}>{busy ? 'Membaca lokasi…' : 'Gunakan lokasi saya'}</Button><Button type="submit" disabled={!configured || busy || form.title.trim().length < 3 || form.latitude === '' || form.longitude === ''}>{busy ? 'Menyimpan…' : 'Simpan sebagai draf'}</Button></div>
     </form></Card> : null}
