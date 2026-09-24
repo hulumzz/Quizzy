@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 const app = new Hono();
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
-const FIREBASE_CERTS_URL = 'https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com';
+const FIREBASE_JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MAX_BODY_BYTES = 24_000;
 let signingKeys = { expiresAt: 0, values: new Map() };
@@ -11,15 +11,25 @@ let signingKeys = { expiresAt: 0, values: new Map() };
 const bad = (message, status = 400, code = 'INVALID_REQUEST') => new Response(JSON.stringify({ error: { code, message } }), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
 const base64Url = (value) => Uint8Array.from(atob(value.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(value.length / 4) * 4, '=')), (character) => character.charCodeAt(0));
 const jsonPart = (value) => JSON.parse(decoder.decode(base64Url(value)));
-const pemBytes = (pem) => base64Url(pem.replace(/-----(BEGIN|END) CERTIFICATE-----|\s/g, ''));
+function cacheLifetime(headers) {
+  const cacheControl = headers.get('cache-control') || '';
+  const maxAge = Number(cacheControl.match(/max-age=(\d+)/i)?.[1] || 3600);
+  return Math.max(60, Math.min(maxAge, 6 * 60 * 60)) * 1000;
+}
 
 async function getSigningKeys() {
   if (signingKeys.expiresAt > Date.now()) return signingKeys.values;
-  const response = await fetch(FIREBASE_CERTS_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
+  const response = await fetch(FIREBASE_JWKS_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
   if (!response.ok) throw new Error('Firebase signing keys unavailable');
-  const certificates = await response.json(); const values = new Map();
-  await Promise.all(Object.entries(certificates).map(async ([kid, certificate]) => values.set(kid, await crypto.subtle.importKey('spki', pemBytes(certificate), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']))));
-  signingKeys = { expiresAt: Date.now() + 55 * 60 * 1000, values };
+  const payload = await response.json();
+  const jwks = Array.isArray(payload?.keys) ? payload.keys : [];
+  const values = new Map();
+  await Promise.all(jwks.filter((jwk) => jwk?.kid && jwk?.kty === 'RSA' && jwk?.alg === 'RS256').map(async (jwk) => {
+    const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
+    values.set(jwk.kid, key);
+  }));
+  if (!values.size) throw new Error('Firebase signing keys unavailable');
+  signingKeys = { expiresAt: Date.now() + cacheLifetime(response.headers), values };
   return values;
 }
 
@@ -31,9 +41,25 @@ async function verifyFirebaseToken(authorization, projectId) {
   if (rest.length || !encodedHeader || !encodedPayload || !encodedSignature) return null;
   try {
     const header = jsonPart(encodedHeader); const payload = jsonPart(encodedPayload);
-    if (header.alg !== 'RS256' || !header.kid || payload.aud !== projectId || payload.iss !== `https://securetoken.google.com/${projectId}` || !payload.sub || payload.sub.length > 128 || !Number.isFinite(payload.exp) || payload.exp <= Math.floor(Date.now() / 1000)) return null;
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    if (
+      header.alg !== 'RS256'
+      || !header.kid
+      || payload.aud !== projectId
+      || payload.iss !== `https://securetoken.google.com/${projectId}`
+      || typeof payload.sub !== 'string'
+      || !payload.sub
+      || payload.sub.length > 128
+      || !Number.isFinite(payload.exp)
+      || payload.exp <= nowSeconds
+      || !Number.isFinite(payload.iat)
+      || payload.iat > nowSeconds
+      || !Number.isFinite(payload.auth_time)
+      || payload.auth_time > nowSeconds
+    ) return null;
     const key = (await getSigningKeys()).get(header.kid);
-    return key && await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, base64Url(encodedSignature), encoder.encode(`${encodedHeader}.${encodedPayload}`)) ? { uid: payload.sub } : null;
+    const valid = key && await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, base64Url(encodedSignature), encoder.encode(`${encodedHeader}.${encodedPayload}`));
+    return valid ? { uid: payload.sub, signInProvider: payload.firebase?.sign_in_provider || '' } : null;
   } catch { return null; }
 }
 
