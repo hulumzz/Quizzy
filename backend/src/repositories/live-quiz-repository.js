@@ -242,15 +242,21 @@ export class LiveQuizRepository {
     } catch (error) {
       if (!['TransactionCanceledException', 'ConditionalCheckFailedException'].includes(error?.name)) throw error;
       let lastError = error;
+
       if (canAggregateCurrentQuestion) {
-        try {
-          await this.client.send(new TransactWriteCommand({ TransactItems: transactionItems(false) }));
-          return { accepted: true, questionId, answeredAt: acceptedAt };
-        } catch (retryError) {
-          if (!['TransactionCanceledException', 'ConditionalCheckFailedException'].includes(retryError?.name)) throw retryError;
-          lastError = retryError;
+        const freshSession = await this.getSession(sessionId);
+        const stillAggregatable = freshSession.currentQuestionIndex === questionIndex && ['question', 'reveal'].includes(freshSession.phase);
+        if (!stillAggregatable) {
+          try {
+            await this.client.send(new TransactWriteCommand({ TransactItems: transactionItems(false) }));
+            return { accepted: true, questionId, answeredAt: acceptedAt };
+          } catch (retryError) {
+            if (!['TransactionCanceledException', 'ConditionalCheckFailedException'].includes(retryError?.name)) throw retryError;
+            lastError = retryError;
+          }
         }
       }
+
       const existingAnswer = await this.client.send(new GetCommand({ TableName: this.tableName, Key: answerKey, ConsistentRead: true }));
       if (existingAnswer.Item) throw conflict('LIVE_ANSWER_ALREADY_RECEIVED', 'Jawaban untuk soal ini sudah diterima.');
       throw lastError;
