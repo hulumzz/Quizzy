@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, Gamepad2, GraduationCap, MessageSquare, School, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, Gamepad2, GraduationCap, MessageSquare, School } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Brand from '../components/Brand';
 import { ProcessLoader } from '../components/ui';
@@ -72,7 +72,7 @@ export default function Auth({ onAuthComplete }) {
     <main className="nlr-auth">
       <aside className="nlr-auth__aside">
         <Link to="/" aria-label="Kembali ke Nalaro Class"><Brand /></Link>
-        <div className="nlr-auth__story"><span className="nlr-auth__eyebrow"><Sparkles size={15} /> Ruang belajar yang terasa hidup</span><h1>Kelas yang hidup<br />dimulai <em>di sini.</em></h1><p>Ruang belajar yang menyatukan hal-hal penting, supaya guru bisa fokus mengajar dan siswa lebih leluasa mencoba.</p><ul><li><BookOpen size={19} /> Materi tertata dan mudah dibuka</li><li><MessageSquare size={19} /> Percakapan tetap dekat dengan pelajaran</li><li><Gamepad2 size={19} /> Kuis membuat belajar terasa lebih seru</li></ul><div className="nlr-auth__trust"><div><strong>1 ruang</strong><span>untuk materi, diskusi, kuis, dan presensi</span></div><div><strong>2 peran</strong><span>pengalaman khusus guru dan siswa</span></div></div></div>
+        <div className="nlr-auth__story"><h1>Kelas yang hidup<br />dimulai <em>di sini.</em></h1><p>Ruang belajar yang menyatukan hal-hal penting, supaya guru bisa fokus mengajar dan siswa lebih leluasa mencoba.</p><ul><li><BookOpen size={19} /> Materi tertata dan mudah dibuka</li><li><MessageSquare size={19} /> Percakapan tetap dekat dengan pelajaran</li><li><Gamepad2 size={19} /> Kuis membuat belajar terasa lebih seru</li></ul><div className="nlr-auth__trust"><div><strong>1 ruang</strong><span>untuk materi, diskusi, kuis, dan presensi</span></div><div><strong>2 peran</strong><span>pengalaman khusus guru dan siswa</span></div></div></div>
         <small>© {new Date().getFullYear()} Nalaro Class</small>
       </aside>
       <div className="nlr-auth__main">
