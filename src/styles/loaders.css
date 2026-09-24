@@ -30,29 +30,6 @@
   box-shadow: 0 18px 55px rgba(31,25,46,.10);
 }
 
-.qz-page-loader__clock {
-  width: 58px;
-  height: 58px;
-  overflow: visible;
-  filter: drop-shadow(0 8px 15px rgba(49,93,205,.15));
-}
-
-.qz-page-loader__ring {
-  fill: rgba(112,80,220,.035);
-  stroke: currentColor;
-  stroke-width: 3.3;
-}
-
-.qz-page-loader__ring--soft {
-  fill: none;
-  stroke: rgba(112,80,220,.15);
-  stroke-width: 7;
-}
-
-.qz-page-loader__hub { fill: currentColor; }
-.qz-page-loader__hand { stroke: currentColor; stroke-width: 4; stroke-linecap: round; }
-.qz-page-loader__hand--slow { opacity: .54; }
-
 .qz-page-loader__copy { display: grid; gap: 2px; }
 .qz-page-loader__copy strong { color: var(--qz-text); font-size: .95rem; letter-spacing: -.02em; }
 .qz-page-loader__copy span { color: var(--qz-text-muted); font-size: .78rem; }
@@ -67,7 +44,7 @@
   color: currentColor;
 }
 
-.qz-process-loader svg { width: 100%; height: 100%; overflow: visible; }
+.qz-process-loader svg { width: 100%; height: 100%; overflow: visible; filter: drop-shadow(0 7px 13px rgba(49,93,205,.13)); }
 .qz-process-loader circle {
   stroke: currentColor;
   stroke-width: 3.1;
@@ -75,8 +52,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .qz-page-loader animateTransform,
   .qz-process-loader animate { display: none; }
-  .qz-page-loader__clock,
   .qz-process-loader { opacity: .72; }
 }
