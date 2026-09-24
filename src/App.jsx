@@ -1,6 +1,20 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter, useLocation } from 'react-router-dom';
 import AppRoutes from './app/routes';
+import { PageLoader } from './components/ui';
+
+function RouteTransitionLoader() {
+  const { pathname } = useLocation();
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    setVisible(true);
+    const timer = window.setTimeout(() => setVisible(false), 420);
+    return () => window.clearTimeout(timer);
+  }, [pathname]);
+
+  return visible ? <PageLoader overlay label="Menyiapkan ruang belajarmu..." /> : null;
+}
 
 function RouteMetadata() {
   const { pathname } = useLocation();
@@ -16,5 +30,5 @@ function RouteMetadata() {
 }
 
 export default function App() {
-  return <BrowserRouter><RouteMetadata /><AppRoutes /></BrowserRouter>;
+  return <BrowserRouter><RouteMetadata /><RouteTransitionLoader /><AppRoutes /></BrowserRouter>;
 }
