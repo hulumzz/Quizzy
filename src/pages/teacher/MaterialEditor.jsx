@@ -25,7 +25,7 @@ export default function MaterialEditor() {
 
   useEffect(() => {
     const controller = new AbortController();
-    listLearningSessions(classId, { signal: controller.signal }).then((items) => setSessions(items.filter((item) => item.status !== 'archived'))).catch(() => {});
+    listLearningSessions(classId, { signal: controller.signal }).then(setSessions).catch(() => {});
     return () => controller.abort();
   }, [classId]);
 
@@ -81,7 +81,7 @@ export default function MaterialEditor() {
         <main className="qz-editor-canvas">
           <Input label="Judul materi" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Contoh: Memahami sistem tata surya" maxLength={120} error={fieldErrors.title} autoFocus={!editing} />
           <Textarea label="Ringkasan" value={form.summary} onChange={(event) => setForm((current) => ({ ...current, summary: event.target.value }))} placeholder="Jelaskan secara singkat apa yang akan dipelajari siswa." maxLength={400} error={fieldErrors.summary} hint={`${form.summary.length}/400 karakter`} />
-          <label className="qz-field"><span>Pertemuan (opsional)</span><select value={form.sessionId} onChange={(event) => setForm((current) => ({ ...current, sessionId: event.target.value }))}><option value="">Tanpa pertemuan</option>{sessions.map((session) => <option key={session.id} value={session.id}>{session.meetingDate} · {session.title}{session.status === 'draft' ? ' (Draf)' : ''}</option>)}</select></label>
+          <label className="qz-field"><span>Pertemuan (opsional)</span><select value={form.sessionId} onChange={(event) => setForm((current) => ({ ...current, sessionId: event.target.value }))}><option value="">Tanpa pertemuan</option>{sessions.map((session) => <option key={session.id} value={session.id} disabled={session.status === 'archived' && session.id !== form.sessionId}>{session.meetingDate} · {session.title}{session.status === 'draft' ? ' (Draf)' : session.status === 'archived' ? ' (Arsip)' : ''}</option>)}</select></label>
           <Button variant="secondary" disabled={aiBusy || saving || form.title.trim().length < 3} onClick={generateByAi}>{aiBusy ? 'AI menyusun materi...' : '✦ Buat draf materi dengan AI'}</Button>
           <BlockEditor classId={classId} blocks={form.blocks} onChange={(blocks) => setForm((current) => ({ ...current, blocks }))} errors={fieldErrors} />
         </main>
