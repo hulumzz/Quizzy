@@ -17,8 +17,8 @@ function cacheLifetime(headers) {
   return Math.max(60, Math.min(maxAge, 6 * 60 * 60)) * 1000;
 }
 
-async function getSigningKeys() {
-  if (signingKeys.expiresAt > Date.now()) return signingKeys.values;
+async function getSigningKeys({ forceRefresh = false } = {}) {
+  if (!forceRefresh && signingKeys.expiresAt > Date.now()) return signingKeys.values;
   const response = await fetch(FIREBASE_JWKS_URL, { cf: { cacheTtl: 3600, cacheEverything: true } });
   if (!response.ok) throw new Error('Firebase signing keys unavailable');
   const payload = await response.json();
@@ -65,7 +65,12 @@ async function verifyFirebaseToken(authorization, projectId) {
     || payload.auth_time > nowSeconds
   ) return null;
 
-  const key = (await getSigningKeys()).get(header.kid);
+  let keys = await getSigningKeys();
+  let key = keys.get(header.kid);
+  if (!key) {
+    keys = await getSigningKeys({ forceRefresh: true });
+    key = keys.get(header.kid);
+  }
   if (!key) return null;
   try {
     const valid = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, base64Url(encodedSignature), encoder.encode(`${encodedHeader}.${encodedPayload}`));
