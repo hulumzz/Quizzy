@@ -91,6 +91,8 @@ export class LearningSessionRepository {
 
   async create({ classId, ownerId, title, description, meetingDate, status, now = new Date().toISOString() }) {
     await this.requireOwner(classId, ownerId);
+    const existing = await this.listItems(classId);
+    if (existing.length >= 100) throw conflict('SESSION_LIMIT_REACHED', 'Satu kelas maksimal memiliki 100 pertemuan.');
     const id = randomUUID();
     const item = {
       PK: `CLASS#${classId}`,
