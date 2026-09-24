@@ -67,4 +67,10 @@ export class CloudinaryUploadSigner {
     if (!uid) throw forbidden('Akun tidak valid untuk mengunggah aset kuis.');
     return this.signedUpload({ folder: `quizzy/general-quizzes/${uid}`, resourceType });
   }
+
+  async createTaskSubmissionSignature({ classId, taskId, uid, resourceType }) {
+    const access = await this.classRepository.getForUser(classId, uid);
+    if (access.accessRole !== 'member') throw forbidden('Lampiran tugas hanya dapat diunggah oleh siswa kelas.');
+    return this.signedUpload({ folder: `quizzy/classes/${classId}/tasks/${taskId}/submissions/${uid}`, resourceType });
+  }
 }

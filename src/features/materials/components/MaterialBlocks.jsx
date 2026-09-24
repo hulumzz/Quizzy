@@ -25,7 +25,8 @@ export default function MaterialBlocks({ blocks }) {
       const embed = youtubeEmbed(block.url);
       return embed ? <figure key={block.id} className="qz-video"><iframe src={embed} title={block.label || 'Video materi'} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /><figcaption>{block.label || 'Video pendamping'}</figcaption></figure> : null;
     }
-    if (block.type === 'link' || block.type === 'file') return <a key={block.id} className="qz-resource-link" href={block.url} target="_blank" rel="noreferrer"><LinkIcon size={20} /><span><strong>{block.label || (block.type === 'file' ? 'Buka file' : 'Buka tautan')}</strong><small>{block.url}</small></span></a>;
+    if (block.type === 'file' && /\.pdf(?:$|[?#])/i.test(block.url)) return <figure key={block.id} className="qz-pdf-preview"><figcaption>{block.label || 'Dokumen PDF'}</figcaption><iframe src={block.url} title={block.label || 'Preview PDF'} loading="lazy" /><a className="qz-resource-link" href={block.url} target="_blank" rel="noreferrer"><LinkIcon size={20} /><span><strong>Buka atau unduh PDF</strong><small>Jika preview tidak didukung perangkatmu</small></span></a></figure>;
+    if (block.type === 'link' || block.type === 'file') return <a key={block.id} className="qz-resource-link" href={block.url} target="_blank" rel="noreferrer"><LinkIcon size={20} /><span><strong>{block.label || (block.type === 'file' ? 'Unduh file' : 'Buka tautan')}</strong><small>{block.type === 'file' ? 'Dokumen Office dan file lain diunduh untuk dibuka.' : block.url}</small></span></a>;
     return null;
   })}</div>;
 }

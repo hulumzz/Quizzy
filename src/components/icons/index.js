@@ -4,6 +4,7 @@ export {
   ClassesIcon,
   QuizIcon,
   AttendanceIcon,
+  TaskIcon,
   ProgressIcon,
   BookmarkIcon,
   AiAssistIcon,

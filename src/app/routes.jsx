@@ -34,6 +34,9 @@ const TeacherGeneralQuizzes = lazy(() => import('../pages/teacher/TeacherGeneral
 const QuizBank = lazy(() => import('../pages/teacher/QuizBank'));
 const LiveQuizHost = lazy(() => import('../pages/LiveQuizHost'));
 const LiveQuizPlayer = lazy(() => import('../pages/LiveQuizPlayer'));
+const ClassTasks = lazy(() => import('../pages/ClassTasks'));
+const TaskDetail = lazy(() => import('../pages/TaskDetail'));
+const TaskEditor = lazy(() => import('../pages/teacher/TaskEditor'));
 
 function RouteLoading() {
   return <div className="qz-app-shell" style={{ display: 'grid', minHeight: '45vh', placeItems: 'center' }} role="status"><div className="qz-status-strip">Menyiapkan halaman...</div></div>;
@@ -87,6 +90,10 @@ export default function AppRoutes() {
           <Route path="teacher/classes/:classId/quizzes/:quizId/edit" element={<RequireRole role="teacher"><QuizEditor /></RequireRole>} />
           <Route path="teacher/classes/:classId/quizzes/:quizId/results" element={<RequireRole role="teacher"><QuizResults /></RequireRole>} />
           <Route path="teacher/classes/:classId/quizzes/:quizId/live" element={<RequireRole role="teacher"><LiveQuizHost /></RequireRole>} />
+          <Route path="teacher/classes/:classId/tasks" element={<RequireRole role="teacher"><ClassTasks role="teacher" /></RequireRole>} />
+          <Route path="teacher/classes/:classId/tasks/new" element={<RequireRole role="teacher"><TaskEditor /></RequireRole>} />
+          <Route path="teacher/classes/:classId/tasks/:taskId/edit" element={<RequireRole role="teacher"><TaskEditor /></RequireRole>} />
+          <Route path="teacher/classes/:classId/tasks/:taskId" element={<RequireRole role="teacher"><TaskDetail role="teacher" /></RequireRole>} />
           <Route path="teacher/classes/:classId/*" element={<RequireRole role="teacher"><FeaturePlaceholder title="Ruang kelas" description="Materi, diskusi, dan presensi sudah tersedia. Modul kuis serta pengaturan anggota lanjutan akan diteruskan pada tahap berikutnya." emptyTitle="Modul ini belum tersedia" /></RequireRole>} />
           <Route path="teacher/quizzes" element={<RequireRole role="teacher"><TeacherQuizzes /></RequireRole>} />
           <Route path="teacher/general-quizzes" element={<RequireRole role="teacher"><TeacherGeneralQuizzes /></RequireRole>} />
@@ -108,6 +115,8 @@ export default function AppRoutes() {
           <Route path="student/classes/:classId/attendance" element={<RequireRole role="student"><ClassAttendance role="student" /></RequireRole>} />
           <Route path="student/classes/:classId/quizzes" element={<RequireRole role="student"><ClassQuizzes role="student" /></RequireRole>} />
           <Route path="student/classes/:classId/quizzes/:quizId" element={<RequireRole role="student"><QuizAttempt /></RequireRole>} />
+          <Route path="student/classes/:classId/tasks" element={<RequireRole role="student"><ClassTasks role="student" /></RequireRole>} />
+          <Route path="student/classes/:classId/tasks/:taskId" element={<RequireRole role="student"><TaskDetail role="student" /></RequireRole>} />
           <Route path="student/classes/:classId/*" element={<RequireRole role="student"><FeaturePlaceholder title="Ruang kelas" description="Materi, diskusi, dan presensi kelas tersedia dari navigasi ruang belajar." emptyTitle="Konten kelas belum tersedia" /></RequireRole>} />
           <Route path="student/progress" element={<RequireRole role="student"><StudentLearningLibrary mode="progress" /></RequireRole>} />
           <Route path="student/saved" element={<RequireRole role="student"><StudentLearningLibrary mode="saved" /></RequireRole>} />

@@ -16,6 +16,10 @@ export function AttendanceIcon(props) {
   return <QuizzyIcon {...props}><path d="M5.2 4.5h13.6a1.7 1.7 0 0 1 1.7 1.7v12.3a1.7 1.7 0 0 1-1.7 1.7H5.2a1.7 1.7 0 0 1-1.7-1.7V6.2a1.7 1.7 0 0 1 1.7-1.7Z" /><path d="M7.5 2.8v3.4M16.5 2.8v3.4M3.5 8.4h17" /><path d="m8 14.1 2.3 2.2 5.5-5.1" /></QuizzyIcon>;
 }
 
+export function TaskIcon(props) {
+  return <QuizzyIcon {...props}><path d="M7 3.5h10a2 2 0 0 1 2 2v15H5v-15a2 2 0 0 1 2-2Z" /><path d="M9 3.5v-1h6v1M8.5 10h7M8.5 14h7M8.5 18h4" /><path d="m7.2 9.8.7.7 1.2-1.3" /></QuizzyIcon>;
+}
+
 export function ProgressIcon(props) {
   return <QuizzyIcon {...props}><path d="M4 19.5V13h4v6.5M10 19.5V8.4h4v11.1M16 19.5V4h4v15.5" /><path d="M3 20h18" /></QuizzyIcon>;
 }

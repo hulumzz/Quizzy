@@ -8,6 +8,7 @@ import { QuizRepository } from '../../repositories/quiz-repository.js';
 import { GeneralQuizRepository } from '../../repositories/general-quiz-repository.js';
 import { QuizBankRepository } from '../../repositories/quiz-bank-repository.js';
 import { LiveQuizRepository } from '../../repositories/live-quiz-repository.js';
+import { TaskRepository } from '../../repositories/task-repository.js';
 import { CloudinaryUploadSigner } from '../../services/cloudinary-upload-signer.js';
 import { LiveQuizAnswerQueue } from '../../services/live-quiz-answer-queue.js';
 import { createAttendanceHandler } from '../attendance/handler.js';
@@ -19,6 +20,7 @@ import { createGeneralQuizzesHandler } from '../general-quizzes/handler.js';
 import { createQuizBankHandler } from '../quiz-bank/handler.js';
 import { createLiveQuizzesHandler } from '../live-quizzes/handler.js';
 import { createUploadsHandler } from '../uploads/handler.js';
+import { createTasksHandler } from '../tasks/handler.js';
 import { createClassesHandler } from './handler.js';
 
 const classRepository = new ClassRepository();
@@ -30,6 +32,7 @@ const quizRepository = new QuizRepository({ classRepository, learningSessionRepo
 const generalQuizRepository = new GeneralQuizRepository();
 const quizBankRepository = new QuizBankRepository({ quizRepository, generalQuizRepository });
 const liveQuizRepository = new LiveQuizRepository({ quizRepository, generalQuizRepository });
+const taskRepository = new TaskRepository({ classRepository, learningSessionRepository });
 const uploadSigner = new CloudinaryUploadSigner({ classRepository });
 const liveQuizAnswerQueue = new LiveQuizAnswerQueue();
 
@@ -43,6 +46,7 @@ const generalQuizzesHandler = createGeneralQuizzesHandler({ authenticate: authen
 const quizBankHandler = createQuizBankHandler({ authenticate: authenticateRequest, repository: quizBankRepository });
 const liveQuizzesHandler = createLiveQuizzesHandler({ authenticate: authenticateRequest, repository: liveQuizRepository, answerQueue: liveQuizAnswerQueue });
 const uploadsHandler = createUploadsHandler({ authenticate: authenticateRequest, signer: uploadSigner });
+const tasksHandler = createTasksHandler({ authenticate: authenticateRequest, repository: taskRepository, signer: uploadSigner });
 
 export function handler(event, context) {
   const path = event?.rawPath || event?.path || '/';
@@ -52,6 +56,7 @@ export function handler(event, context) {
   if (path.startsWith('/general-quizzes')) return generalQuizzesHandler(event, context);
   if (path.includes('/live-sessions') || path.startsWith('/live-quizzes/')) return liveQuizzesHandler(event, context);
   if (/^\/classes\/[^/]+\/sessions(?:\/|$)/.test(path)) return learningSessionsHandler(event, context);
+  if (path.includes('/tasks')) return tasksHandler(event, context);
   if (path.includes('/attendance')) return attendanceHandler(event, context);
   if (path.includes('/discussions')) return discussionsHandler(event, context);
   if (path.includes('/quizzes')) return quizzesHandler(event, context);
