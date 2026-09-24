@@ -17,6 +17,7 @@ const TeacherDashboard = lazy(() => import('../pages/teacher/TeacherDashboard'))
 const TeacherClasses = lazy(() => import('../pages/teacher/TeacherClasses'));
 const TeacherAttendance = lazy(() => import('../pages/teacher/TeacherAttendance'));
 const ClassOverview = lazy(() => import('../pages/ClassOverview'));
+const ClassSessions = lazy(() => import('../pages/ClassSessions'));
 const ClassMaterials = lazy(() => import('../pages/ClassMaterials'));
 const ClassAttendance = lazy(() => import('../pages/ClassAttendance'));
 const MaterialReader = lazy(() => import('../pages/MaterialReader'));
@@ -73,6 +74,7 @@ export default function AppRoutes() {
           <Route path="teacher/home" element={<RequireRole role="teacher"><TeacherDashboard /></RequireRole>} />
           <Route path="teacher/classes" element={<RequireRole role="teacher"><TeacherClasses /></RequireRole>} />
           <Route path="teacher/classes/:classId/overview" element={<RequireRole role="teacher"><ClassOverview role="teacher" /></RequireRole>} />
+          <Route path="teacher/classes/:classId/sessions" element={<RequireRole role="teacher"><ClassSessions role="teacher" /></RequireRole>} />
           <Route path="teacher/classes/:classId/materials" element={<RequireRole role="teacher"><ClassMaterials role="teacher" /></RequireRole>} />
           <Route path="teacher/classes/:classId/materials/new" element={<RequireRole role="teacher"><MaterialEditor /></RequireRole>} />
           <Route path="teacher/classes/:classId/materials/:materialId/edit" element={<RequireRole role="teacher"><MaterialEditor /></RequireRole>} />
@@ -98,6 +100,7 @@ export default function AppRoutes() {
           <Route path="student/home" element={<RequireRole role="student"><StudentDashboard /></RequireRole>} />
           <Route path="student/classes" element={<RequireRole role="student"><StudentClasses /></RequireRole>} />
           <Route path="student/classes/:classId/overview" element={<RequireRole role="student"><ClassOverview role="student" /></RequireRole>} />
+          <Route path="student/classes/:classId/sessions" element={<RequireRole role="student"><ClassSessions role="student" /></RequireRole>} />
           <Route path="student/classes/:classId/materials" element={<RequireRole role="student"><ClassMaterials role="student" /></RequireRole>} />
           <Route path="student/classes/:classId/materials/:materialId/discussions" element={<RequireRole role="student"><MaterialDiscussion role="student" /></RequireRole>} />
           <Route path="student/classes/:classId/materials/:materialId" element={<RequireRole role="student"><MaterialReader role="student" /></RequireRole>} />
