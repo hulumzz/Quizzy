@@ -143,8 +143,20 @@ export class LiveQuizRepository {
   }
 
   async listParticipants(session) {
-    const result = await this.client.send(new QueryCommand({ TableName: this.tableName, KeyConditionExpression: 'PK = :pk AND begins_with(SK, :participant)', ExpressionAttributeValues: { ':pk': session.PK, ':participant': 'PARTICIPANT#' }, Limit: 100 }));
-    return result.Items || [];
+    const participants = [];
+    let lastEvaluatedKey;
+    do {
+      const result = await this.client.send(new QueryCommand({
+        TableName: this.tableName,
+        KeyConditionExpression: 'PK = :pk AND begins_with(SK, :participant)',
+        ExpressionAttributeValues: { ':pk': session.PK, ':participant': 'PARTICIPANT#' },
+        Limit: 100,
+        ...(lastEvaluatedKey ? { ExclusiveStartKey: lastEvaluatedKey } : {}),
+      }));
+      participants.push(...(result.Items || []));
+      lastEvaluatedKey = result.LastEvaluatedKey;
+    } while (lastEvaluatedKey);
+    return participants;
   }
 
   async join({ joinCode, name, sourceIp, now = new Date().toISOString() }) {
