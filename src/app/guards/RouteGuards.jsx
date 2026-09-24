@@ -11,7 +11,7 @@ export function RequireAuth({ children }) {
   const location = useLocation();
   if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
-  if (!['teacher', 'student'].includes(userProfile?.role)) return <Navigate to="/onboarding" replace />;
+  if (!['teacher', 'student'].includes(userProfile?.role) || (!userProfile?.isAnonymous && !userProfile?.profileCompleted)) return <Navigate to="/onboarding" replace />;
   return children;
 }
 

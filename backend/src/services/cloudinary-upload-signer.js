@@ -42,25 +42,29 @@ export class CloudinaryUploadSigner {
     return this.apiSecretPromise;
   }
 
-  async createSignature({ classId, uid, resourceType }) {
-    const access = await this.classRepository.getForUser(classId, uid);
-    if (access.accessRole !== 'owner') throw forbidden('Hanya pengelola kelas yang dapat mengunggah aset materi.');
+  async signedUpload({ folder, resourceType }) {
     if (!this.cloudName || !this.apiKey) throw new HttpError(503, 'UPLOAD_NOT_CONFIGURED', 'Layanan unggahan belum dikonfigurasi.');
     const parameters = {
-      folder: `quizzy/classes/${classId}`,
+      folder,
       overwrite: 'false',
       timestamp: Math.floor(this.now() / 1000),
       unique_filename: 'true',
       use_filename: 'true',
     };
     return {
-      provider: 'cloudinary',
-      cloudName: this.cloudName,
-      apiKey: this.apiKey,
-      resourceType,
-      signatureAlgorithm: 'sha256',
-      signature: signatureFor(parameters, await this.getApiSecret()),
-      parameters,
+      provider: 'cloudinary', cloudName: this.cloudName, apiKey: this.apiKey, resourceType,
+      signatureAlgorithm: 'sha256', signature: signatureFor(parameters, await this.getApiSecret()), parameters,
     };
+  }
+
+  async createSignature({ classId, uid, resourceType }) {
+    const access = await this.classRepository.getForUser(classId, uid);
+    if (access.accessRole !== 'owner') throw forbidden('Hanya pengelola kelas yang dapat mengunggah aset materi.');
+    return this.signedUpload({ folder: `quizzy/classes/${classId}`, resourceType });
+  }
+
+  async createGeneralQuizSignature({ uid, resourceType }) {
+    if (!uid) throw forbidden('Akun tidak valid untuk mengunggah aset kuis.');
+    return this.signedUpload({ folder: `quizzy/general-quizzes/${uid}`, resourceType });
   }
 }

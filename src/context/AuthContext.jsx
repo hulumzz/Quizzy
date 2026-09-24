@@ -4,6 +4,8 @@ import {
   db,
   loginWithGoogle,
   loginAnonymously,
+  loginWithEmail,
+  registerWithEmail,
   logout,
   doc,
   setDoc,
@@ -14,14 +16,7 @@ import { AuthContext } from './auth-context';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(() => {
-    try {
-      const saved = localStorage.getItem('quizzy_user_profile');
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,17 +24,16 @@ export function AuthProvider({ children }) {
       if (firebaseUser) {
         setUser(firebaseUser);
         
-        // Try fetching user profile from Firestore with fallback to localStorage
+        const cacheKey = `quizzy_user_profile:${firebaseUser.uid}`;
         try {
           const ref = doc(db, 'users', firebaseUser.uid);
           const snap = await getDoc(ref);
           if (snap.exists()) {
             const profileData = snap.data();
             setUserProfile(profileData);
-            localStorage.setItem('quizzy_user_profile', JSON.stringify(profileData));
+            localStorage.setItem(cacheKey, JSON.stringify(profileData));
           } else {
-            // Check local storage cache
-            const cached = localStorage.getItem('quizzy_user_profile');
+            const cached = localStorage.getItem(cacheKey);
             if (cached) {
               setUserProfile(JSON.parse(cached));
             } else {
@@ -48,25 +42,16 @@ export function AuthProvider({ children }) {
           }
         } catch (err) {
           console.warn('Firestore User Profile read fallback:', err.message);
-          // Fallback to cached profile or construct default from auth user
-          const cached = localStorage.getItem('quizzy_user_profile');
+          const cached = localStorage.getItem(cacheKey);
           if (cached) {
             setUserProfile(JSON.parse(cached));
           } else {
-            setUserProfile({
-              uid: firebaseUser.uid,
-              name: firebaseUser.displayName || 'Pengguna',
-              email: firebaseUser.email,
-              role: 'teacher', // default role fallback
-              avatar: firebaseUser.photoURL,
-              isAnonymous: firebaseUser.isAnonymous,
-            });
+            setUserProfile(null);
           }
         }
       } else {
         setUser(null);
         setUserProfile(null);
-        localStorage.removeItem('quizzy_user_profile');
       }
       setLoading(false);
     });
@@ -83,6 +68,14 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const signInWithEmailAndPassword = async (email, password) => loginWithEmail(email, password);
+  const createAccountWithEmail = async (email, password) => registerWithEmail(email, password);
+
+  const readUserProfile = async (uid) => {
+    const snap = await getDoc(doc(db, 'users', uid));
+    return snap.exists() ? snap.data() : null;
+  };
+
   const signInAsGuest = async () => {
     try {
       const result = await loginAnonymously();
@@ -94,7 +87,6 @@ export function AuthProvider({ children }) {
   };
 
   const signOut = async () => {
-    localStorage.removeItem('quizzy_user_profile');
     setUserProfile(null);
     return logout();
   };
@@ -102,7 +94,7 @@ export function AuthProvider({ children }) {
   const saveUserProfile = async (uid, profile) => {
     // Always update state & localStorage first for instant UX
     setUserProfile(profile);
-    localStorage.setItem('quizzy_user_profile', JSON.stringify(profile));
+    localStorage.setItem(`quizzy_user_profile:${uid}`, JSON.stringify(profile));
 
     // Try persisting to Firestore asynchronously
     try {
@@ -115,7 +107,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, userProfile, loading, signInWithGoogle, signInAsGuest, signOut, saveUserProfile }}
+      value={{ user, userProfile, loading, signInWithGoogle, signInAsGuest, signInWithEmailAndPassword, createAccountWithEmail, signOut, saveUserProfile, readUserProfile }}
     >
       {children}
     </AuthContext.Provider>

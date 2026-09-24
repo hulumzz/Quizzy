@@ -4,6 +4,8 @@ import {
   GoogleAuthProvider, 
   signInWithPopup, 
   signInAnonymously, 
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   signOut
 } from "firebase/auth";
 import { 
@@ -35,6 +37,8 @@ export const googleProvider = new GoogleAuthProvider();
 // Auth Helpers
 export const loginWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const loginAnonymously = () => signInAnonymously(auth);
+export const registerWithEmail = (email, password) => createUserWithEmailAndPassword(auth, email, password);
+export const loginWithEmail = (email, password) => signInWithEmailAndPassword(auth, email, password);
 export const logout = () => signOut(auth);
 
 export { 

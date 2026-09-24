@@ -62,7 +62,7 @@ export function validateQuizInput(input) {
     const items = type === 'arrange' && Array.isArray(question?.items) ? question.items.map((item, itemIndex) => ({ id: text(item?.id) || `item-${itemIndex + 1}`, text: text(item?.text) })) : [];
     const correctOrder = type === 'arrange' ? normalizeOrder(question?.correctOrder) : [];
     const hotspots = type === 'image_hotspot' ? normalizeHotspots(question?.hotspots) : [];
-    const imageUrl = type === 'image_hotspot' ? text(question?.imageUrl) : '';
+    const imageUrl = text(question?.imageUrl);
     const tolerancePercent = type === 'image_hotspot' ? Number(question?.tolerancePercent ?? 2) : 0;
     let correctAnswer = type === 'true_false' ? Boolean(question?.correctAnswer) : text(question?.correctAnswer);
     if (!TYPES.has(type)) errors[`${prefix}.type`] = 'Jenis soal tidak didukung.';
@@ -75,6 +75,7 @@ export function validateQuizInput(input) {
       if ((status === 'published' && (choices.filter(Boolean).length < 2 || choices.some((choice) => !choice))) || choices.length > 6 || choices.some((choice) => choice.length > 300)) errors[`${prefix}.choices`] = 'Pilihan jawaban harus berisi 2-6 pilihan, masing-masing maksimal 300 karakter.';
       if (status === 'published' && !choices.includes(correctAnswer)) errors[`${prefix}.correctAnswer`] = 'Jawaban benar harus cocok dengan salah satu pilihan.';
     }
+    if (imageUrl && !/^https:\/\/.{1,2000}$/i.test(imageUrl)) errors[`${prefix}.imageUrl`] = 'Gambar soal harus menggunakan URL HTTPS yang valid.';
     if (type === 'short_answer' && ((status === 'published' && !correctAnswer) || correctAnswer.length > 300)) errors[`${prefix}.correctAnswer`] = 'Jawaban benar wajib diisi dan maksimal 300 karakter.';
     if (type === 'arrange') {
       const itemIds = items.map((item) => item.id);

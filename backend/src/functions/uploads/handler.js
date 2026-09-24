@@ -17,14 +17,17 @@ export function createUploadsHandler({ authenticate, signer, logger = console })
     const requestId = context.awsRequestId || event?.requestContext?.requestId || randomUUID();
     const startedAt = Date.now();
     const signatureRoute = path.match(/^\/classes\/([^/]+)\/uploads\/signature$/);
+    const generalQuizSignatureRoute = path === '/general-quizzes/uploads/signature';
     try {
       if (method === 'OPTIONS') return emptyResponse(204, requestId);
-      if (!signatureRoute) return jsonResponse(404, { error: { code: 'NOT_FOUND', message: 'Endpoint tidak ditemukan.' } }, requestId);
+      if (!signatureRoute && !generalQuizSignatureRoute) return jsonResponse(404, { error: { code: 'NOT_FOUND', message: 'Endpoint tidak ditemukan.' } }, requestId);
       if (method !== 'POST') return jsonResponse(405, { error: { code: 'METHOD_NOT_ALLOWED', message: 'Metode tidak didukung.' } }, requestId);
       const identity = await authenticate(event);
       if (identity.signInProvider === 'anonymous') throw forbidden('Akun tamu tidak dapat mengunggah aset.');
       const intent = validateUploadIntent(parseBody(event));
-      const upload = await signer.createSignature({ classId: validateClassId(signatureRoute[1]), uid: identity.uid, resourceType: intent.resourceType });
+      const upload = generalQuizSignatureRoute
+        ? await signer.createGeneralQuizSignature({ uid: identity.uid, resourceType: intent.resourceType })
+        : await signer.createSignature({ classId: validateClassId(signatureRoute[1]), uid: identity.uid, resourceType: intent.resourceType });
       return jsonResponse(200, { data: { upload } }, requestId);
     } catch (caught) {
       const error = caught instanceof HttpError ? caught : new HttpError(500, 'INTERNAL_ERROR', 'Terjadi kendala pada layanan Quizzy.');

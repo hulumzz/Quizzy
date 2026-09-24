@@ -8,7 +8,8 @@ const summary = (item) => ({ id: item.id, classId: item.classId, title: item.tit
 const safeQuestion = (question) => ({
   id: question.id, type: question.type, prompt: question.prompt, choices: question.choices, points: question.points,
   ...(question.type === 'arrange' ? { items: question.items } : {}),
-  ...(question.type === 'image_hotspot' ? { imageUrl: question.imageUrl, tolerancePercent: question.tolerancePercent, hotspots: (question.hotspots || []).map(({ id, label, x, y, width, height }) => ({ id, label, x, y, width, height })) } : {}),
+  ...(question.imageUrl ? { imageUrl: question.imageUrl } : {}),
+  ...(question.type === 'image_hotspot' ? { tolerancePercent: question.tolerancePercent, hotspots: (question.hotspots || []).map(({ id, label, x, y, width, height }) => ({ id, label, x, y, width, height })) } : {}),
 });
 const safeDetail = (item) => ({ ...summary(item), questions: (item.questions || []).map(safeQuestion) });
 

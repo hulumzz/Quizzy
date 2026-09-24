@@ -8,7 +8,8 @@ const code = () => Array.from(randomBytes(6), (byte) => CODE_ALPHABET[byte % COD
 const safeQuestion = (question) => ({
   id: question.id, type: question.type, prompt: question.prompt, choices: question.choices, points: question.points,
   ...(question.type === 'arrange' ? { items: question.items } : {}),
-  ...(question.type === 'image_hotspot' ? { imageUrl: question.imageUrl, tolerancePercent: question.tolerancePercent, hotspots: (question.hotspots || []).map(({ id, label, x, y, width, height }) => ({ id, label, x, y, width, height })) } : {}),
+  ...(question.imageUrl ? { imageUrl: question.imageUrl } : {}),
+  ...(question.type === 'image_hotspot' ? { tolerancePercent: question.tolerancePercent, hotspots: (question.hotspots || []).map(({ id, label, x, y, width, height }) => ({ id, label, x, y, width, height })) } : {}),
 });
 const revealedQuestion = (question) => ({ ...safeQuestion(question), correctAnswer: question.type === 'arrange' ? question.correctOrder : question.type === 'image_hotspot' ? 'Area yang ditandai' : question.correctAnswer, explanation: question.explanation || '' });
 function answerChoiceKey(question, answer) {
@@ -49,11 +50,12 @@ function leaderboard(participants) {
 }
 
 export class LiveQuizRepository {
-  constructor({ tableName = process.env.TABLE_NAME, documentClient, quizRepository } = {}) {
+  constructor({ tableName = process.env.TABLE_NAME, documentClient, quizRepository, generalQuizRepository } = {}) {
     if (!tableName) throw new Error('TABLE_NAME is required');
     if (!quizRepository) throw new Error('quizRepository is required');
     this.tableName = tableName;
     this.quizRepository = quizRepository;
+    this.generalQuizRepository = generalQuizRepository;
     this.client = documentClient || DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } });
   }
 
@@ -89,16 +91,22 @@ export class LiveQuizRepository {
     }
   }
 
-  async create({ classId, quizId, ownerId, questionDurationSeconds, now = new Date().toISOString() }) {
-    await this.quizRepository.requireOwner(classId, ownerId);
-    const quiz = await this.quizRepository.getItem(classId, quizId);
+  async create({ classId, quizId, ownerId, scope = 'class', questionDurationSeconds, now = new Date().toISOString() }) {
+    let quiz;
+    if (scope === 'general') {
+      if (!this.generalQuizRepository) throw new Error('generalQuizRepository is required');
+      quiz = await this.generalQuizRepository.get(ownerId, quizId);
+    } else {
+      await this.quizRepository.requireOwner(classId, ownerId);
+      quiz = await this.quizRepository.getItem(classId, quizId);
+    }
     if (quiz.status !== 'published') throw conflict('QUIZ_NOT_PUBLISHED', 'Terbitkan kuis sebelum memulai sesi live.');
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const id = randomUUID();
       const joinCode = code();
       const expiresAt = Math.floor(new Date(now).getTime() / 1000) + LIVE_SESSION_TTL_SECONDS;
       const item = {
-        PK: `LIVE_SESSION#${id}`, SK: 'META', entityType: 'LIVE_QUIZ_SESSION', id, joinCode, classId, quizId, ownerId,
+        PK: `LIVE_SESSION#${id}`, SK: 'META', entityType: 'LIVE_QUIZ_SESSION', id, joinCode, scope, ...(scope === 'class' ? { classId } : {}), quizId, ownerId,
         title: quiz.title, questionDurationSeconds, questions: quiz.questions, phase: 'lobby', currentQuestionIndex: -1,
         stateVersion: 1, participantsCount: 0, currentAnsweredCount: 0, currentCorrectCount: 0, currentOptionCounts: {}, expiresAt, createdAt: now, updatedAt: now,
       };

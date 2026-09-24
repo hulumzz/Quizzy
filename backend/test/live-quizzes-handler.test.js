@@ -38,6 +38,14 @@ test('host session actions derive owner identity from the verified token', async
   assert.equal(calls[1][1].ownerId, 'teacher-1');
 });
 
+test('a published general quiz can create and host a live session without a class id', async () => {
+  const { calls, handler } = setup();
+  assert.equal((await handler(request('POST', '/general-quizzes/quiz-1/live-sessions', { questionDurationSeconds: 45 }))).statusCode, 201);
+  assert.equal((await handler(request('GET', '/general-quizzes/live-sessions/session-1'))).statusCode, 200);
+  assert.deepEqual(calls[0], ['create', { scope: 'general', quizId: 'quiz-1', ownerId: 'teacher-1', questionDurationSeconds: 45 }]);
+  assert.deepEqual(calls[1], ['host', 'session-1', 'teacher-1']);
+});
+
 test('public answers are authorized before being queued', async () => {
   const { calls, handler } = setup();
   const token = 'a'.repeat(64);

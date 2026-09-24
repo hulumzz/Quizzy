@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDownIcon, LogoutIcon } from '../icons';
+import { UserRound } from 'lucide-react';
 import { Avatar } from '../ui';
 
-export default function UserMenu({ role, profile, user, onLogout }) {
+export default function UserMenu({ role, profile, user, onLogout, onProfile }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const displayName = profile?.name || user?.displayName || (role === 'teacher' ? 'Guru Quizzy' : 'Siswa Quizzy');
@@ -35,6 +36,7 @@ export default function UserMenu({ role, profile, user, onLogout }) {
               <div className="qz-user-menu__email">{email}</div>
             </div>
           </div>
+          <button type="button" className="qz-user-menu__action" onClick={onProfile}><UserRound size={18} /> Profil saya</button>
           <button type="button" className="qz-user-menu__action" onClick={onLogout}>
             <LogoutIcon size={18} /> Keluar
           </button>

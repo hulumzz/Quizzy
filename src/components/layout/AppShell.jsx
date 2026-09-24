@@ -54,7 +54,7 @@ export default function AppShell() {
       {mobileOpen ? <button type="button" className="qz-mobile-drawer-backdrop" aria-label="Tutup menu" onClick={() => setMobileOpen(false)} /> : null}
       <Sidebar role={role} items={items} profile={userProfile} user={user} open={mobileOpen} onNavigate={() => setMobileOpen(false)} />
       <div className="qz-main" inert={mobileOpen ? true : undefined}>
-        <AppHeader meta={meta} role={role} profile={userProfile} user={user} menuOpen={mobileOpen} onMenu={() => setMobileOpen(true)} onLogout={handleLogout} />
+        <AppHeader meta={meta} role={role} profile={userProfile} user={user} menuOpen={mobileOpen} onMenu={() => setMobileOpen(true)} onLogout={handleLogout} onProfile={() => navigate('/profile')} />
         <main className="qz-content" id="main-content" tabIndex={-1}><Outlet /></main>
       </div>
       {!mobileOpen ? <MobileNavigation items={items} /> : null}

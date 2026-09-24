@@ -10,6 +10,11 @@ export async function exportQuiz(classId, quizId) { return apiRequest(`${base(cl
 export async function importQuiz(classId, payload) { const data = await apiRequest(`${base(classId)}/import`, { method: 'POST', body: payload }); return data.quiz; }
 export async function submitQuiz(classId, quizId, answers) { const data = await apiRequest(`${base(classId)}/${encodeURIComponent(quizId)}/attempts`, { method: 'POST', body: { answers } }); return data.result; }
 export async function getQuizResults(classId, quizId, options = {}) { const data = await apiRequest(`${base(classId)}/${encodeURIComponent(quizId)}/results`, options); return data.results; }
+export async function listGeneralQuizzes(options = {}) { const data = await apiRequest('/general-quizzes', options); return data?.quizzes || []; }
+export async function getGeneralQuiz(quizId, options = {}) { const data = await apiRequest(`/general-quizzes/${encodeURIComponent(quizId)}`, options); return data.quiz; }
+export async function createGeneralQuiz(input) { const data = await apiRequest('/general-quizzes', { method: 'POST', body: input }); return data.quiz; }
+export async function updateGeneralQuiz(quizId, input) { const data = await apiRequest(`/general-quizzes/${encodeURIComponent(quizId)}`, { method: 'PUT', body: input }); return data.quiz; }
+export async function deleteGeneralQuiz(quizId) { await apiRequest(`/general-quizzes/${encodeURIComponent(quizId)}`, { method: 'DELETE' }); }
 export function quizErrorMessage(error) {
   if (error?.code === 'QUIZ_ALREADY_SUBMITTED') return 'Kuis ini sudah pernah kamu kumpulkan.';
   if (error?.status === 404) return 'Kuis tidak ditemukan atau belum diterbitkan.';

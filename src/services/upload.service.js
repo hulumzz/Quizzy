@@ -1,7 +1,8 @@
 import { ApiError, apiRequest } from './api';
 
-export async function uploadMaterialAsset(classId, file) {
-  const data = await apiRequest(`/classes/${encodeURIComponent(classId)}/uploads/signature`, {
+export async function uploadMaterialAsset(classId, file, { generalQuiz = false } = {}) {
+  const signatureUrl = generalQuiz ? '/general-quizzes/uploads/signature' : `/classes/${encodeURIComponent(classId)}/uploads/signature`;
+  const data = await apiRequest(signatureUrl, {
     method: 'POST',
     body: { fileName: file.name, mimeType: file.type, size: file.size },
   });

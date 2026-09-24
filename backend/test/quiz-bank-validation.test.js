@@ -9,6 +9,12 @@ test('quiz bank publication only accepts stable taxonomy identifiers', () => {
   assert.throws(() => validateQuizBankPublish({ classId: 'class-1', quizId: 'quiz-1', level: 'kelas-8', subjectId: 'bebas' }), (error) => error.code === 'VALIDATION_ERROR');
 });
 
+test('general quiz publication does not require a class identifier', () => {
+  const value = validateQuizBankPublish({ sourceType: 'general', quizId: 'quiz-1', level: 'umum', subjectId: 'umum' });
+  assert.equal(value.sourceType, 'general');
+  assert.equal(value.classId, undefined);
+});
+
 test('quiz bank filter defaults to all without allowing arbitrary filters', () => {
   assert.deepEqual(validateQuizBankQuery({}), { level: 'all', subjectId: 'all' });
   assert.throws(() => validateQuizBankQuery({ subject: 'mata-pelajaran-baru' }), (error) => error.code === 'INVALID_SUBJECT');

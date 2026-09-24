@@ -3,7 +3,7 @@ import { IconButton } from '../ui';
 import NotificationMenu from './NotificationMenu';
 import UserMenu from './UserMenu';
 
-export default function AppHeader({ meta, role, profile, user, onMenu, onLogout, menuOpen }) {
+export default function AppHeader({ meta, role, profile, user, onMenu, onLogout, onProfile, menuOpen }) {
   return (
     <header className="qz-header">
       <div className="qz-header__left">
@@ -16,7 +16,7 @@ export default function AppHeader({ meta, role, profile, user, onMenu, onLogout,
       <div className="qz-header__right">
         <span className="qz-header__date"><CalendarIcon size={16} />{new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date())}</span>
         <NotificationMenu />
-        <UserMenu role={role} profile={profile} user={user} onLogout={onLogout} />
+        <UserMenu role={role} profile={profile} user={user} onLogout={onLogout} onProfile={onProfile} />
       </div>
     </header>
   );

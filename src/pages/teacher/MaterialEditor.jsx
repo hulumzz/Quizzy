@@ -4,6 +4,7 @@ import { MaterialIcon } from '../../components/icons';
 import { Button, Card, EmptyState, Input, PageHeader, Skeleton, Textarea, buttonClassName } from '../../components/ui';
 import BlockEditor from '../../features/materials/components/BlockEditor';
 import { createMaterial, getMaterial, materialErrorMessage, updateMaterial } from '../../services/material.service';
+import { askQuizzyAi } from '../../services/ai.service';
 
 const initial = { title: '', summary: '', blocks: [] };
 
@@ -16,6 +17,7 @@ export default function MaterialEditor() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState('');
+  const [aiBusy, setAiBusy] = useState(false);
 
   useEffect(() => {
     if (!editing) return undefined;
@@ -47,6 +49,18 @@ export default function MaterialEditor() {
     }
   };
 
+  const generateByAi = async () => {
+    if (form.title.trim().length < 3) return setError(new Error('Isi judul materi terlebih dahulu agar AI memahami konteks.'));
+    setAiBusy(true); setError(null);
+    try {
+      const response = await askQuizzyAi({ task: 'material_draft', context: `Kelas: ${classId}\nJudul materi: ${form.title.trim()}\nRingkasan guru: ${form.summary.trim().slice(0, 400) || '-'}`, instruction: 'Buat draf yang siap diedit guru dan sesuai tingkat pembelajar.' });
+      const draft = JSON.parse(response.content); const allowed = new Set(['heading', 'paragraph', 'bullet_list']);
+      const blocks = Array.isArray(draft.blocks) ? draft.blocks.slice(0, 7).filter((block) => allowed.has(block?.type)).map((block) => ({ id: crypto.randomUUID(), type: block.type, ...(block.type === 'bullet_list' ? { items: Array.isArray(block.items) ? block.items.map(String).filter(Boolean).slice(0, 8) : [] } : { content: String(block.content || '').slice(0, 5000), ...(block.type === 'heading' ? { level: 2 } : {}) }) })) : [];
+      if (!blocks.length) throw new Error('Draf AI belum memiliki blok materi yang dapat digunakan.');
+      setForm((current) => ({ ...current, summary: String(draft.summary || current.summary).slice(0, 400), blocks: [...current.blocks, ...blocks] }));
+    } catch (caught) { setError(caught); } finally { setAiBusy(false); }
+  };
+
   if (status === 'loading') return <div className="qz-dashboard"><Skeleton width="45%" height={38} /><Skeleton height={520} /></div>;
   if (status === 'error') return <Card className="qz-placeholder"><EmptyState icon={MaterialIcon} title="Editor tidak dapat dibuka" description={materialErrorMessage(error)} action={<Link to={`/teacher/classes/${classId}/materials`} className={buttonClassName()}>Kembali ke materi</Link>} /></Card>;
 
@@ -57,6 +71,7 @@ export default function MaterialEditor() {
         <main className="qz-editor-canvas">
           <Input label="Judul materi" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Contoh: Memahami sistem tata surya" maxLength={120} error={fieldErrors.title} autoFocus={!editing} />
           <Textarea label="Ringkasan" value={form.summary} onChange={(event) => setForm((current) => ({ ...current, summary: event.target.value }))} placeholder="Jelaskan secara singkat apa yang akan dipelajari siswa." maxLength={400} error={fieldErrors.summary} hint={`${form.summary.length}/400 karakter`} />
+          <Button variant="secondary" disabled={aiBusy || saving || form.title.trim().length < 3} onClick={generateByAi}>{aiBusy ? 'AI menyusun materi...' : '✦ Buat draf materi dengan AI'}</Button>
           <BlockEditor classId={classId} blocks={form.blocks} onChange={(blocks) => setForm((current) => ({ ...current, blocks }))} errors={fieldErrors} />
         </main>
         <aside className="qz-editor-publish">
