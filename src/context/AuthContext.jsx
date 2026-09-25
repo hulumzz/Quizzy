@@ -93,7 +93,7 @@ export function AuthProvider({ children }) {
 
   const saveUserProfile = async (uid, profile) => {
     const ref = doc(db, 'users', uid);
-    await setDoc(ref, profile, { merge: true });
+    await setDoc(ref, profile);
     setUserProfile(profile);
     localStorage.setItem(`quizzy_user_profile:${uid}`, JSON.stringify(profile));
   };
