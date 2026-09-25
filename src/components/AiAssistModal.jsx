@@ -1,37 +1,57 @@
-import { useState } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
-import workerSrc from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { useEffect, useState } from 'react';
 import { Dialog, Button, Input, Textarea, ProcessLoader } from './ui';
 import { AiAssistIcon } from './icons';
 import { UploadCloud, FileText } from 'lucide-react';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
-
 const MAX_PDF_PAGES = 5;
 const MAX_CONTEXT_LENGTH = 5000;
+const MAX_DIFFICULTY_LENGTH = 80;
+const MAX_MAIN_POINTS_LENGTH = 500;
+let pdfJsLoader;
 
-export default function AiAssistModal({ open, onClose, module, initialContext = {}, onApply, busy }) {
-  const [form, setForm] = useState({
+function loadPdfJs() {
+  if (!pdfJsLoader) {
+    pdfJsLoader = Promise.all([
+      import('pdfjs-dist'),
+      import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+    ]).then(([pdfjsLib, workerModule]) => {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
+      return pdfjsLib;
+    });
+  }
+  return pdfJsLoader;
+}
+
+function initialForm(initialContext) {
+  return {
     title: initialContext.title || '',
     context: initialContext.context || '',
     pdfName: '',
-    
-    // Quiz specific
     numQuestions: 5,
     questionTypes: {
       multiple_choice: true,
       true_false: true,
       arrange: false,
-      short_answer: false
+      short_answer: false,
     },
-    
-    // Material specific
     difficulty: 'Siswa kelas 5 SD',
-    mainPoints: ''
-  });
+    mainPoints: '',
+  };
+}
+
+export default function AiAssistModal({ open, onClose, module, initialContext = {}, onApply, busy }) {
+  const initialTitle = initialContext.title || '';
+  const initialText = initialContext.context || '';
+  const [form, setForm] = useState(() => initialForm({ title: initialTitle, context: initialText }));
   
   const [pdfExtracting, setPdfExtracting] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!open) return;
+    setForm(initialForm({ title: initialTitle, context: initialText }));
+    setError('');
+  }, [open, initialText, initialTitle]);
   
   const handlePdfUpload = async (e) => {
     const file = e.target.files[0];
@@ -50,6 +70,7 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
     
     try {
       const arrayBuffer = await file.arrayBuffer();
+      const pdfjsLib = await loadPdfJs();
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
       const numPages = Math.min(pdf.numPages, MAX_PDF_PAGES);
       
@@ -62,8 +83,13 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
       }
       
       let cleanedText = extractedText.replace(/\s+/g, ' ').trim();
+      if (!cleanedText) {
+        setError('PDF tidak berisi teks yang dapat diekstrak. Gunakan PDF berbasis teks atau tulis ringkasannya.');
+        return;
+      }
       if (cleanedText.length > MAX_CONTEXT_LENGTH) {
-        cleanedText = cleanedText.slice(0, MAX_CONTEXT_LENGTH) + '... (terpotong)';
+        const suffix = '... (terpotong)';
+        cleanedText = cleanedText.slice(0, MAX_CONTEXT_LENGTH - suffix.length) + suffix;
       }
       
       setForm(prev => ({
@@ -97,12 +123,12 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
       const instruction = `Buat tepat ${form.numQuestions} soal bervariasi. HANYA gunakan tipe soal berikut: ${activeTypes.join(', ')}. Pastikan setiap soal valid dan akurat.`;
       const context = `Topik: ${form.title}\n\nMateri Referensi:\n${form.context.slice(0, MAX_CONTEXT_LENGTH)}`;
       
-      onApply({ instruction, context });
+      onApply({ title: form.title.trim(), instruction, context });
     } else if (module === 'material') {
       const instruction = `Susun materi ringkas dan menarik untuk target: ${form.difficulty}. Fokus pada poin-poin berikut:\n${form.mainPoints}`;
       const context = `Topik Materi: ${form.title}\n\nMateri Referensi:\n${form.context.slice(0, MAX_CONTEXT_LENGTH)}`;
       
-      onApply({ instruction, context });
+      onApply({ title: form.title.trim(), instruction, context });
     }
   };
 
@@ -114,7 +140,7 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
         min="1" 
         max="15" 
         value={form.numQuestions} 
-        onChange={(e) => setForm(f => ({ ...f, numQuestions: parseInt(e.target.value) || 5 }))} 
+        onChange={(event) => setForm((current) => ({ ...current, numQuestions: Math.max(1, Math.min(15, Number.parseInt(event.target.value, 10) || 5)) }))}
       />
       <div className="qz-field">
         <span style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '6px' }}>Bentuk Soal yang Diinginkan</span>
@@ -141,6 +167,7 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
       <Input 
         label="Target Pembelajar (Tingkat Kesulitan)" 
         placeholder="Misal: Siswa Kelas 5 SD, Pemula"
+        maxLength={MAX_DIFFICULTY_LENGTH}
         value={form.difficulty} 
         onChange={(e) => setForm(f => ({ ...f, difficulty: e.target.value }))} 
       />
@@ -148,6 +175,7 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
         label="Poin Utama yang Harus Dicakup" 
         placeholder="Sebutkan hal-hal yang wajib ada di materi..."
         rows={3}
+        maxLength={MAX_MAIN_POINTS_LENGTH}
         value={form.mainPoints} 
         onChange={(e) => setForm(f => ({ ...f, mainPoints: e.target.value }))} 
       />
@@ -167,6 +195,7 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
         <Input 
           label={module === 'quiz' ? 'Topik / Judul Kuis' : 'Topik Materi'} 
           value={form.title} 
+          maxLength={120}
           onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} 
           required 
         />
@@ -183,6 +212,7 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
             <Textarea 
               placeholder="Atau ketik/paste ringkasan materi di sini..."
               rows={4}
+              maxLength={MAX_CONTEXT_LENGTH}
               value={form.context} 
               onChange={(e) => setForm(f => ({ ...f, context: e.target.value }))} 
             />

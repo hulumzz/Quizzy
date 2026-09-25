@@ -61,14 +61,14 @@ export default function MaterialEditor() {
     }
   };
 
-  const generateByAi = async ({ context, instruction }) => {
+  const generateByAi = async ({ context, instruction, title }) => {
     setAiBusy(true); setError(null);
     try {
       const response = await askQuizzyAi({ task: 'material_draft', context, instruction });
       const draft = JSON.parse(response.content); const allowed = new Set(['heading', 'paragraph', 'bullet_list']);
       const blocks = Array.isArray(draft.blocks) ? draft.blocks.slice(0, 7).filter((block) => allowed.has(block?.type)).map((block) => ({ id: crypto.randomUUID(), type: block.type, ...(block.type === 'bullet_list' ? { items: Array.isArray(block.items) ? block.items.map(String).filter(Boolean).slice(0, 8) : [] } : { content: String(block.content || '').slice(0, 5000), ...(block.type === 'heading' ? { level: 2 } : {}) }) })) : [];
       if (!blocks.length) throw new Error('Draf AI belum memiliki blok materi yang dapat digunakan.');
-      setForm((current) => ({ ...current, summary: String(draft.summary || current.summary).slice(0, 400), blocks: [...current.blocks, ...blocks] }));
+      setForm((current) => ({ ...current, title: title || current.title, summary: String(draft.summary || current.summary).slice(0, 400), blocks: [...current.blocks, ...blocks] }));
       setAiModalOpen(false);
     } catch (caught) { setError(caught); } finally { setAiBusy(false); }
   };
