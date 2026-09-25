@@ -2,7 +2,7 @@ import { useEffect, useId, useRef } from 'react';
 import IconButton from './IconButton';
 import { CloseIcon } from '../icons';
 
-export default function Dialog({ open, onClose, title, description, children, footer }) {
+export default function Dialog({ open, onClose, title, description, children, footer, className = '' }) {
   const titleId = useId();
   const descriptionId = useId();
   const dialogRef = useRef(null);
@@ -42,7 +42,7 @@ export default function Dialog({ open, onClose, title, description, children, fo
 
   return (
     <div className="qz-dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onCloseRef.current?.()}>
-      <div ref={dialogRef} className="qz-dialog qz-enter" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} tabIndex={-1}>
+      <div ref={dialogRef} className={`qz-dialog qz-enter ${className}`.trim()} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} tabIndex={-1}>
         <div className="qz-dialog__header">
           <div>
             <h2 id={titleId}>{title}</h2>

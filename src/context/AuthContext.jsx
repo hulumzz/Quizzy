@@ -92,17 +92,10 @@ export function AuthProvider({ children }) {
   };
 
   const saveUserProfile = async (uid, profile) => {
-    // Always update state & localStorage first for instant UX
+    const ref = doc(db, 'users', uid);
+    await setDoc(ref, profile, { merge: true });
     setUserProfile(profile);
     localStorage.setItem(`quizzy_user_profile:${uid}`, JSON.stringify(profile));
-
-    // Try persisting to Firestore asynchronously
-    try {
-      const ref = doc(db, 'users', uid);
-      await setDoc(ref, profile, { merge: true });
-    } catch (err) {
-      console.warn('Firestore User Profile save warning (saved locally):', err.message);
-    }
   };
 
   return (

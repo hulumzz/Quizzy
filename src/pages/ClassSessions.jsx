@@ -202,7 +202,7 @@ export default function ClassSessions({ role }) {
       <SessionContent role={role} classId={classId} sessionId="__unassigned__" materialMap={materialMap} quizMap={quizMap} attendanceMap={attendanceMap} />
     </Card> : null}
 
-    <Dialog open={Boolean(dialog)} onClose={() => !saving && setDialog(null)} title={dialog?.mode === 'edit' ? 'Edit pertemuan' : 'Pertemuan baru'} description="Tanggal dan status membantu siswa mengikuti urutan belajar yang jelas." footer={<><Button variant="secondary" disabled={saving} onClick={() => setDialog(null)}>Batal</Button><Button form="learning-session-form" type="submit" disabled={saving}>{saving ? 'Menyimpan...' : 'Simpan'}</Button></>}>
+    <Dialog className="qz-dialog--session" open={Boolean(dialog)} onClose={() => !saving && setDialog(null)} title={dialog?.mode === 'edit' ? 'Edit pertemuan' : 'Pertemuan baru'} description="Tanggal dan status membantu siswa mengikuti urutan belajar yang jelas." footer={<><Button variant="secondary" disabled={saving} onClick={() => setDialog(null)}>Batal</Button><Button form="learning-session-form" type="submit" disabled={saving}>{saving ? 'Menyimpan...' : 'Simpan'}</Button></>}>
       <form id="learning-session-form" className="qz-session-form" onSubmit={submit}>
         <Input label="Judul pertemuan" required maxLength={120} value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Contoh: Pertemuan 3 · Sistem Pencernaan" />
         <Textarea label="Deskripsi" maxLength={600} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Tujuan atau gambaran singkat aktivitas pertemuan." />

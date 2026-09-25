@@ -125,6 +125,11 @@ export class TaskRepository {
     const folder = `quizzy/classes/${classId}/tasks/${taskId}/submissions/${uid}/`;
     if (attachments.some((file) => !file.publicId.startsWith(folder))) throw forbidden('Lampiran tidak sesuai dengan tugas ini.');
     const previous = await this.getSubmission(taskId, uid);
+    if (previous && previous.status !== 'returned') {
+      throw conflict('SUBMISSION_LOCKED', previous.status === 'graded'
+        ? 'Jawaban sudah dinilai dan tidak dapat diubah.'
+        : 'Jawaban sudah dikirim. Tunggu nilai atau permintaan revisi dari guru.');
+    }
     const late = Date.parse(now) > Date.parse(task.dueAt);
     const item = { ...submissionKey(taskId, uid), entityType: 'TASK_SUBMISSION', taskId, classId, studentId: uid, studentName, textAnswer, attachments, status: late ? 'late' : 'submitted', late, submittedAt: now, attemptNumber: (previous?.attemptNumber || 0) + 1, revisionCount: (previous?.revisionCount || 0) + (previous ? 1 : 0), updatedAt: now };
     if (previous) {
@@ -148,7 +153,7 @@ export class TaskRepository {
     if (task.ownerId !== ownerId) throw forbidden('Hanya pengelola tugas yang dapat memberi nilai.');
     const current = await this.getSubmission(taskId, studentId);
     if (!current) throw notFound('Pengumpulan siswa tidak ditemukan.');
-    const item = { ...current, status, ...(score === null ? {} : { score }), ...(status === 'returned' ? { returnedAt: now } : { gradedAt: now, gradedBy: ownerId }), feedback, revisionCount: (current.revisionCount || 0) + 1, updatedAt: now };
+    const item = { ...current, status, ...(score === null ? {} : { score }), ...(status === 'returned' ? { returnedAt: now } : { gradedAt: now, gradedBy: ownerId }), feedback, updatedAt: now };
     if (status === 'returned') { delete item.gradedAt; delete item.gradedBy; }
     await this.client.send(new TransactWriteCommand({ TransactItems: [
       { Put: { TableName: this.tableName, Item: historyEntry(current, now), ConditionExpression: 'attribute_not_exists(PK)' } },

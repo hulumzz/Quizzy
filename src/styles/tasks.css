@@ -26,6 +26,12 @@
 .qz-task-grade h3 { margin: 0 0 5px; font-size: 1rem; }
 .qz-task-answer { margin: 16px 0; padding: 14px; border-radius: 12px; background: var(--qz-surface-muted); white-space: pre-wrap; line-height: 1.6; }
 .qz-task-grade__form { grid-template-columns: minmax(120px, .3fr) minmax(0, 1fr) minmax(160px, .5fr) auto; align-items: end; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--qz-border); }
+.qz-task-lock-note { margin: 16px 0 0; padding: 12px 14px; border-radius: 12px; color: var(--qz-text-secondary); background: var(--qz-surface-muted); }
+.qz-task-grade__saved { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--qz-border); color: var(--qz-text-secondary); font-size: .85rem; }
+.qz-task-grade__details { margin-top: 14px; border-top: 1px solid var(--qz-border); }
+.qz-task-grade__details summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 0; color: var(--qz-primary-hover); font-size: .84rem; font-weight: 750; cursor: pointer; list-style: none; }
+.qz-task-grade__details summary::-webkit-details-marker { display: none; }
+.qz-task-grade__details[open] summary svg { transform: rotate(180deg); }
 .qz-pdf-preview { display: grid; gap: 10px; margin: 22px 0; }
 .qz-pdf-preview figcaption { color: var(--qz-text); font-weight: 750; }
 .qz-pdf-preview iframe { width: 100%; min-height: 560px; border: 1px solid var(--qz-border-strong); border-radius: 14px; background: #f5f5f5; }

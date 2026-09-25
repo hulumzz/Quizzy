@@ -58,20 +58,31 @@
 .qz-reader__meta { display: flex; align-items: center; gap: 10px; color: var(--qz-text-muted); font-size: 0.7rem; }
 .qz-reader__header h1 { margin: 14px 0 9px; font-size: clamp(1.8rem, 5vw, 2.75rem); font-weight: 780; line-height: 1.15; letter-spacing: -0.045em; }
 .qz-reader__header > p { margin: 0; color: var(--qz-text-secondary); font-size: 0.94rem; line-height: 1.7; }
-.qz-reader__student-actions { display: grid; grid-template-columns: minmax(160px, 1fr) auto auto auto; gap: 10px; align-items: center; margin-bottom: 30px; padding: 15px; border-radius: 16px; background: var(--qz-surface-muted); }
+.qz-reader__student-actions { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(190px, .9fr) auto auto; gap: 10px; align-items: center; margin-bottom: 30px; padding: 15px; border-radius: 16px; background: var(--qz-surface-muted); }
+.qz-reader-discussion { display: flex; align-items: center; gap: 10px; min-height: 54px; padding: 9px 12px; border: 1px solid #d9cdfb; border-radius: 13px; color: var(--qz-text); background: var(--qz-surface); text-decoration: none; }
+.qz-reader-discussion:hover { border-color: var(--qz-primary); background: #faf8ff; }
+.qz-reader-discussion > span:first-child { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: var(--qz-primary-hover); background: var(--qz-primary-soft); }
+.qz-reader-discussion > span:last-child { display: grid; gap: 2px; min-width: 0; }
+.qz-reader-discussion strong { font-size: .77rem; }
+.qz-reader-discussion small { color: var(--qz-text-muted); font-size: .65rem; }
 .qz-reader__teacher-actions { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 24px; }
 .qz-reader > .qz-inline-state { margin-bottom: 24px; }
 .qz-reader-blocks { color: #312c3a; font-size: 1rem; line-height: 1.85; }
 .qz-reader-blocks > * { max-width: 760px; margin-left: auto; margin-right: auto; }
 .qz-reader-blocks h2 { margin-top: 2.1em; margin-bottom: 0.65em; font-size: 1.55rem; font-weight: 770; line-height: 1.3; letter-spacing: -0.035em; }
 .qz-reader-blocks h3 { margin-top: 1.8em; margin-bottom: 0.55em; font-size: 1.2rem; font-weight: 750; }
-.qz-reader-blocks p { white-space: pre-wrap; }
+.qz-reader-blocks p { margin-top: 0; margin-bottom: 1.25em; white-space: pre-wrap; overflow-wrap: anywhere; }
+.qz-reader-blocks ul, .qz-reader-blocks ol { margin: 0 0 1.35em; padding-left: 1.5rem; }
+.qz-reader-blocks ul { list-style: disc outside; }
+.qz-reader-blocks ol { list-style: decimal outside; }
 .qz-reader-blocks blockquote { margin-top: 28px; margin-bottom: 28px; padding: 18px 22px; border-left: 4px solid var(--qz-primary); border-radius: 0 14px 14px 0; color: #55476e; background: var(--qz-primary-soft); font-size: 1.05rem; font-style: italic; }
-.qz-reader-blocks li { margin: 7px 0; padding-left: 5px; }
+.qz-reader-blocks li { display: list-item; margin: 7px 0; padding-left: 5px; }
 .qz-reader-blocks hr { margin-top: 36px; margin-bottom: 36px; border: 0; border-top: 1px solid var(--qz-border-strong); }
 .qz-reader-blocks figure { margin-top: 30px; margin-bottom: 30px; }
 .qz-reader-blocks img { width: 100%; max-height: 600px; object-fit: contain; border: 1px solid var(--qz-border); border-radius: 17px; background: var(--qz-surface-muted); }
 .qz-reader-blocks figcaption { margin-top: 9px; color: var(--qz-text-muted); font-size: 0.73rem; text-align: center; }
+.qz-reader-blocks .qz-pdf-preview { display: grid; justify-items: center; }
+.qz-reader-blocks .qz-pdf-preview iframe { display: block; margin: 0 auto; }
 .qz-video iframe { width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 17px; background: #18151e; }
 .qz-resource-link { display: flex; align-items: center; gap: 13px; margin-top: 16px; margin-bottom: 16px; padding: 16px; border: 1px solid var(--qz-border-strong); border-radius: 14px; color: var(--qz-primary-hover); background: var(--qz-surface-muted); text-decoration: none; }
 .qz-resource-link:hover { border-color: #a999d0; background: var(--qz-primary-soft); }
@@ -99,5 +110,6 @@
   .qz-reader { padding: 22px 18px; border-radius: 20px; }
   .qz-reader__student-actions { grid-template-columns: 1fr; }
   .qz-reader__student-actions .qz-button { width: 100%; }
+  .qz-reader-discussion { width: 100%; }
   .qz-reader-blocks { font-size: 0.94rem; }
 }
