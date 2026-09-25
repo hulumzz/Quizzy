@@ -54,15 +54,15 @@
   margin-right: auto;
 }
 
-.qz-discussion-composer {
+.qz-discussion-composer .qz-card__body {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px 16px;
-  padding: 22px;
+  grid-template-columns: minmax(190px, .72fr) minmax(0, 1.45fr) auto;
+  gap: 16px 20px;
+  align-items: center;
+  padding: 24px;
 }
 
-.qz-discussion-composer > div:first-child {
-  grid-column: 1 / -1;
+.qz-discussion-composer .qz-card__body > div:first-child {
   display: flex;
   align-items: center;
   gap: 13px;
@@ -80,13 +80,15 @@
   font-size: 0.74rem;
 }
 
-.qz-discussion-composer > .qz-field {
+.qz-discussion-composer .qz-field {
   min-width: 0;
 }
 
-.qz-discussion-composer > .qz-button {
-  align-self: start;
-  margin-top: 1px;
+.qz-discussion-composer .qz-textarea { min-height: 132px; font-size: .93rem; line-height: 1.55; }
+
+.qz-discussion-composer .qz-button {
+  min-width: 152px;
+  align-self: center;
 }
 
 .qz-discussion-thread {
@@ -239,16 +241,13 @@
     width: 100%;
   }
 
-  .qz-discussion-composer {
+  .qz-discussion-composer .qz-card__body {
     grid-template-columns: 1fr;
-    padding: 17px;
+    gap: 16px;
+    padding: 18px;
   }
 
-  .qz-discussion-composer > div:first-child {
-    grid-column: auto;
-  }
-
-  .qz-discussion-composer > .qz-button {
+  .qz-discussion-composer .qz-button {
     width: 100%;
   }
 

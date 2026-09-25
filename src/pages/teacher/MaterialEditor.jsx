@@ -76,7 +76,7 @@ export default function MaterialEditor() {
 
   return (
     <div className="qz-dashboard qz-enter">
-      <PageHeader eyebrow="Workspace materi" title={editing ? 'Edit materi' : 'Materi baru'} description="Susun penjelasan dalam blok dan unggah gambar atau dokumen langsung ke Cloudinary." actions={<Link to={`/teacher/classes/${classId}/materials`} className={buttonClassName({ variant: 'secondary' })}>Batal</Link>} />
+      <PageHeader eyebrow="Ruang materi" title={editing ? 'Edit materi' : 'Materi baru'} description="Susun penjelasan, gambar, dan dokumen agar mudah dipelajari siswa." actions={<Link to={`/teacher/classes/${classId}/materials`} className={buttonClassName({ variant: 'secondary' })}>Batal</Link>} />
       <div className="qz-editor-layout">
         <main className="qz-editor-canvas">
           <Input label="Judul materi" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Contoh: Memahami sistem tata surya" maxLength={120} error={fieldErrors.title} autoFocus={!editing} />

@@ -66,7 +66,7 @@ export default function ClassOverview({ role }) {
       <div className="qz-overview-grid">
         <section>
           <SectionHeader title="Materi dan aktivitas" description="Konten pembelajaran untuk kelas ini." action={<Link to={`/${role}/classes/${classId}/materials`} className={buttonClassName({ variant: 'secondary', size: 'sm' })}>Buka materi</Link>} />
-          <Card className="qz-class-empty"><EmptyState icon={MaterialIcon} title="Workspace materi siap digunakan" description={role === 'teacher' ? 'Susun, simpan sebagai draf, dan terbitkan konten pembelajaran dari satu ruang.' : 'Baca konten yang telah diterbitkan guru dan lanjutkan progres belajarmu.'} action={<Link to={`/${role}/classes/${classId}/materials`} className={buttonClassName()}>Lihat materi kelas</Link>} /></Card>
+          <Card className="qz-class-empty"><EmptyState icon={MaterialIcon} title="Materi kelas siap digunakan" description={role === 'teacher' ? 'Susun, simpan sebagai draf, dan terbitkan konten pembelajaran dari satu ruang.' : 'Baca konten yang telah diterbitkan guru dan lanjutkan progres belajarmu.'} action={<Link to={`/${role}/classes/${classId}/materials`} className={buttonClassName()}>Lihat materi kelas</Link>} /></Card>
         </section>
 
         <section>

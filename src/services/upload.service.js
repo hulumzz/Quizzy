@@ -17,10 +17,10 @@ async function uploadAsset(signatureUrl, file) {
   try {
     response = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(upload.cloudName)}/${upload.resourceType}/upload`, { method: 'POST', body });
   } catch {
-    throw new ApiError('Tidak dapat terhubung ke Cloudinary.', { code: 'UPLOAD_NETWORK_ERROR' });
+    throw new ApiError('Unggahan tidak dapat terhubung. Coba lagi beberapa saat.', { code: 'UPLOAD_NETWORK_ERROR' });
   }
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok || !payload.secure_url) throw new ApiError(payload.error?.message || 'Cloudinary menolak unggahan.', { code: 'UPLOAD_FAILED', status: response.status });
+  if (!response.ok || !payload.secure_url) throw new ApiError(payload.error?.message || 'File belum dapat diunggah.', { code: 'UPLOAD_FAILED', status: response.status });
   return { url: payload.secure_url, publicId: payload.public_id, bytes: payload.bytes, format: payload.format, name: file.name, mimeType: uploadFile.type };
 }
 
@@ -35,8 +35,9 @@ export async function uploadTaskAttachment(classId, taskId, file) {
 }
 
 export function uploadErrorMessage(error) {
-  if (error?.code === 'UPLOAD_NOT_CONFIGURED') return 'Cloudinary belum dikonfigurasi pada backend.';
+  if (error?.code === 'UPLOAD_NOT_CONFIGURED') return 'Layanan unggahan sedang disiapkan. Coba lagi beberapa saat.';
   if (error?.code === 'FILE_TOO_LARGE' || error?.code === 'UNSUPPORTED_FILE_TYPE') return error.message;
   if (error?.status === 403) return 'Hanya pengelola kelas yang dapat mengunggah file.';
+  if (error?.code === 'UPLOAD_NETWORK_ERROR' || error?.code === 'UPLOAD_FAILED') return 'File belum dapat diunggah. Coba lagi beberapa saat.';
   return error?.message || 'File belum dapat diunggah.';
 }

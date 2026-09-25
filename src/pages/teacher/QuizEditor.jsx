@@ -15,9 +15,9 @@ function QuestionImage({ question, change, classId, general }) {
   const [uploading, setUploading] = useState(false); const [error, setError] = useState('');
   const upload = async (file) => { if (!file) return; setUploading(true); setError(''); try { const asset = await uploadMaterialAsset(classId, file, { generalQuiz: general }); change({ imageUrl: asset.url }); } catch (caught) { setError(uploadErrorMessage(caught)); } finally { setUploading(false); } };
   return <div className="qz-question-image"><Input label="Gambar soal (opsional)" type="url" value={question.imageUrl || ''} placeholder="https://.../gambar.png" onChange={(event) => change({ imageUrl: event.target.value })} />
-    <label className="qz-upload-control"><span><MaterialIcon size={16} /> Unggah gambar</span><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploading} onChange={(event) => upload(event.target.files?.[0])} /><small>{uploading ? 'Mengunggah langsung ke Cloudinary...' : 'JPG, PNG, WebP, atau GIF · maks. 8 MB · rasio asli tetap terjaga'}</small></label>
+    <label className="qz-upload-control"><span><MaterialIcon size={16} /> Unggah gambar</span><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={uploading} onChange={(event) => upload(event.target.files?.[0])} /><small>{uploading ? 'Mengunggah gambar...' : 'JPG, PNG, WebP, atau GIF · maks. 8 MB · rasio asli tetap terjaga'}</small></label>
     {error ? <p className="qz-field__error" role="alert">{error}</p> : null}
-    {question.imageUrl ? <figure><img src={question.imageUrl} alt="Pratinjau gambar soal" onError={(event) => { event.currentTarget.style.display = 'none'; }} /><figcaption>Gambar ditampilkan tanpa dipotong. Hapus URL untuk menggantinya.</figcaption></figure> : null}
+    {question.imageUrl ? <figure><img src={question.imageUrl} alt="Pratinjau gambar soal" onError={(event) => { event.currentTarget.style.display = 'none'; }} /><figcaption>Gambar ditampilkan tanpa dipotong. Ubah tautan bila ingin menggantinya.</figcaption></figure> : null}
   </div>;
 }
 

@@ -16,7 +16,7 @@ export default function TeacherDashboard() {
 
   return (
     <div className="qz-dashboard qz-enter">
-      <div className="qz-workspace-heading"><div><span className="qz-eyebrow">WORKSPACE ANDA</span><h2>Hari baru, inspirasi baru.</h2></div><span className="qz-workspace-heading__note">Belajar. Terhubung. Bertumbuh.</span></div>
+      <div className="qz-workspace-heading"><div><span className="qz-eyebrow">RUANG ANDA</span><h2>Hari baru, inspirasi baru.</h2></div><span className="qz-workspace-heading__note">Belajar. Terhubung. Bertumbuh.</span></div>
       <div className="qz-home-layout">
         <div className="qz-home-main">
           <WelcomeBanner name={firstName} />
