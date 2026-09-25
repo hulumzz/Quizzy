@@ -23,13 +23,14 @@ function publicCheckIn(item) {
 }
 
 function publicSession(item, extra = {}, { includeLocation = true } = {}) {
+  const locationMode = item.locationMode || 'on_site';
   return {
     id: item.id,
     classId: item.classId,
     title: item.title,
     sessionId: item.sessionId || null,
-    ...(includeLocation ? { latitude: item.latitude, longitude: item.longitude } : {}),
-    radiusMeters: item.radiusMeters,
+    locationMode,
+    ...(includeLocation && locationMode === 'on_site' ? { latitude: item.latitude, longitude: item.longitude, radiusMeters: item.radiusMeters } : {}),
     status: item.status,
     createdAt: item.createdAt,
     updatedAt: item.updatedAt,
@@ -121,7 +122,7 @@ export class AttendanceRepository {
     return sessions.map((item) => publicSession(item, { checkIn: publicCheckIn(checkIns.get(item.id)) }, { includeLocation: false }));
   }
 
-  async create({ classId, ownerId, title, latitude, longitude, radiusMeters, sessionId = null, now = new Date().toISOString() }) {
+  async create({ classId, ownerId, title, locationMode = 'online', latitude = null, longitude = null, radiusMeters = null, sessionId = null, now = new Date().toISOString() }) {
     await this.requireOwner(classId, ownerId);
     if (sessionId) {
       if (!this.learningSessionRepository) throw new Error('learningSessionRepository is required for session-linked attendance');
@@ -135,9 +136,8 @@ export class AttendanceRepository {
       classId,
       ownerId,
       title,
-      latitude,
-      longitude,
-      radiusMeters,
+      locationMode,
+      ...(locationMode === 'on_site' ? { latitude, longitude, radiusMeters } : {}),
       ...(sessionId ? { sessionId } : {}),
       status: 'draft',
       createdAt: now,
@@ -197,12 +197,19 @@ export class AttendanceRepository {
     }));
     if (existing.Item) return publicCheckIn(existing.Item);
 
-    const distanceMeters = Math.round(calculateDistanceMeters(latitude, longitude, session.latitude, session.longitude));
-    if (distanceMeters > session.radiusMeters) {
-      throw new HttpError(422, 'OUTSIDE_RADIUS', 'Lokasi berada di luar radius presensi.', {
-        distanceMeters,
-        radiusMeters: session.radiusMeters,
-      });
+    const locationMode = session.locationMode || 'on_site';
+    let distanceMeters = null;
+    if (locationMode === 'on_site') {
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        throw new HttpError(400, 'LOCATION_REQUIRED', 'Aktifkan lokasi perangkat untuk presensi di lokasi pertemuan.');
+      }
+      distanceMeters = Math.round(calculateDistanceMeters(latitude, longitude, session.latitude, session.longitude));
+      if (distanceMeters > session.radiusMeters) {
+        throw new HttpError(422, 'OUTSIDE_RADIUS', 'Lokasi berada di luar radius presensi.', {
+          distanceMeters,
+          radiusMeters: session.radiusMeters,
+        });
+      }
     }
 
     const item = {
@@ -212,10 +219,7 @@ export class AttendanceRepository {
       classId,
       uid,
       name: name || 'Siswa Quizzy',
-      latitude,
-      longitude,
-      accuracyMeters,
-      distanceMeters,
+      ...(locationMode === 'on_site' ? { latitude, longitude, accuracyMeters, distanceMeters } : {}),
       checkedInAt: now,
     };
     try {

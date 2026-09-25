@@ -54,10 +54,10 @@ function AuthRoute({ onboarding = false }) {
   if (onboarding) {
     if (!user) return <Navigate to="/login" replace />;
     if (!['teacher', 'student'].includes(userProfile?.role)) return <Navigate to="/login" replace />;
-    if (userProfile?.isAnonymous || userProfile?.profileCompleted) return <Navigate to={homeForRole(userProfile.role)} replace />;
+    if (userProfile?.isAnonymous || (userProfile?.profileCompleted && userProfile?.institution?.trim())) return <Navigate to={homeForRole(userProfile.role)} replace />;
     return <Profile onboarding onComplete={(role) => navigate(homeForRole(role), { replace: true })} />;
   }
-  if (user && userProfile?.role) return <Navigate to={userProfile.profileCompleted || userProfile.isAnonymous ? homeForRole(userProfile.role) : '/onboarding'} replace />;
+  if (user && userProfile?.role) return <Navigate to={userProfile.isAnonymous || (userProfile.profileCompleted && userProfile.institution?.trim()) ? homeForRole(userProfile.role) : '/onboarding'} replace />;
   return <Auth onAuthComplete={(role) => navigate(homeForRole(role), { replace: true })} />;
 }
 

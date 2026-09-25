@@ -6,6 +6,11 @@ export default function Dialog({ open, onClose, title, description, children, fo
   const titleId = useId();
   const descriptionId = useId();
   const dialogRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -16,7 +21,7 @@ export default function Dialog({ open, onClose, title, description, children, fo
     const input = dialogRef.current?.querySelector('input:not(:disabled), textarea:not(:disabled)');
     (input || dialogRef.current)?.focus();
     const onKeyDown = (event) => {
-      if (event.key === 'Escape') onClose?.();
+      if (event.key === 'Escape') onCloseRef.current?.();
       if (event.key !== 'Tab') return;
       const items = focusable();
       if (!items.length) { event.preventDefault(); return; }
@@ -31,19 +36,19 @@ export default function Dialog({ open, onClose, title, description, children, fo
       document.body.style.overflow = oldOverflow;
       previous?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
   return (
-    <div className="qz-dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose?.()}>
+    <div className="qz-dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onCloseRef.current?.()}>
       <div ref={dialogRef} className="qz-dialog qz-enter" role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} tabIndex={-1}>
         <div className="qz-dialog__header">
           <div>
             <h2 id={titleId}>{title}</h2>
             {description ? <p id={descriptionId}>{description}</p> : null}
           </div>
-          <IconButton label="Tutup dialog" onClick={onClose}><CloseIcon size={18} /></IconButton>
+          <IconButton label="Tutup dialog" onClick={() => onCloseRef.current?.()}><CloseIcon size={18} /></IconButton>
         </div>
         <div className="qz-dialog__body">{children}</div>
         {footer ? <div className="qz-dialog__footer">{footer}</div> : null}

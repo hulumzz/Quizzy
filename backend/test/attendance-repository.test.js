@@ -83,6 +83,23 @@ test('successful check-in uses a transaction that rechecks active status', async
   assert.equal(checkIn.status, 'present');
 });
 
+test('online attendance records a member without requesting or storing location data', async () => {
+  const commands = [];
+  const documentClient = {
+    async send(command) {
+      commands.push(command);
+      if (commands.length === 1) return { Item: { entityType: 'ATTENDANCE', id: 'attendance-online', classId: 'class-1', status: 'active', locationMode: 'online' } };
+      return {};
+    },
+  };
+  const repository = new AttendanceRepository({ tableName: 'QuizzyTest', documentClient, classRepository: classRepository('member') });
+  const checkIn = await repository.checkIn({ classId: 'class-1', attendanceId: 'attendance-online', uid: 'student-1', name: 'Dina', latitude: null, longitude: null });
+  const item = commands[2].input.TransactItems[1].Put.Item;
+  assert.equal(checkIn.distanceMeters, undefined);
+  assert.equal(item.latitude, undefined);
+  assert.equal(item.distanceMeters, undefined);
+});
+
 test('teacher detail returns present and absent recap from the session check-in partition', async () => {
   const commands = [];
   const documentClient = {

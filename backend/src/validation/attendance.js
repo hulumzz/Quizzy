@@ -26,16 +26,23 @@ export function validateAttendanceInput(input) {
   }
   const title = cleanText(input.title).replace(/\s+/g, ' ');
   const errors = {};
-  if (title.length < 3 || title.length > 100) errors.title = 'Nama sesi harus terdiri dari 3–100 karakter.';
-  const latitude = coordinate(input.latitude, 'latitude', -90, 90, errors);
-  const longitude = coordinate(input.longitude, 'longitude', -180, 180, errors);
-  const radiusMeters = Number(input.radiusMeters);
-  if (!Number.isInteger(radiusMeters) || radiusMeters < 10 || radiusMeters > 1000) {
-    errors.radiusMeters = 'Radius harus berupa angka bulat 10–1.000 meter.';
+  if (title.length < 3 || title.length > 100) errors.title = 'Nama sesi harus terdiri dari 3-100 karakter.';
+  const locationMode = cleanText(input.locationMode || 'online');
+  if (!['online', 'on_site'].includes(locationMode)) errors.locationMode = 'Mode presensi tidak valid.';
+  let latitude = null;
+  let longitude = null;
+  let radiusMeters = null;
+  if (locationMode === 'on_site') {
+    latitude = coordinate(input.latitude, 'latitude', -90, 90, errors);
+    longitude = coordinate(input.longitude, 'longitude', -180, 180, errors);
+    radiusMeters = Number(input.radiusMeters);
+    if (!Number.isInteger(radiusMeters) || radiusMeters < 10 || radiusMeters > 1000) {
+      errors.radiusMeters = 'Radius harus berupa angka bulat 10-1.000 meter.';
+    }
   }
   const sessionId = validateOptionalLearningSessionId(input.sessionId);
   if (Object.keys(errors).length) throw badRequest('VALIDATION_ERROR', 'Periksa kembali sesi presensi.', errors);
-  return { title, latitude, longitude, radiusMeters, sessionId };
+  return { title, locationMode, latitude, longitude, radiusMeters, sessionId };
 }
 
 export function validateAttendanceStatus(input) {
@@ -54,8 +61,14 @@ export function validateCheckIn(input) {
     throw badRequest('INVALID_BODY', 'Data lokasi presensi tidak valid.');
   }
   const errors = {};
-  const latitude = coordinate(input.latitude, 'latitude', -90, 90, errors);
-  const longitude = coordinate(input.longitude, 'longitude', -180, 180, errors);
+  const hasLatitude = input.latitude !== undefined && input.latitude !== null && input.latitude !== '';
+  const hasLongitude = input.longitude !== undefined && input.longitude !== null && input.longitude !== '';
+  let latitude = null;
+  let longitude = null;
+  if (hasLatitude || hasLongitude) {
+    latitude = coordinate(input.latitude, 'latitude', -90, 90, errors);
+    longitude = coordinate(input.longitude, 'longitude', -180, 180, errors);
+  }
   const accuracyMeters = input.accuracyMeters === undefined || input.accuracyMeters === null
     ? null
     : Number(input.accuracyMeters);

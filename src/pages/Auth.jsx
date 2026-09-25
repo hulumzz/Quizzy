@@ -10,7 +10,7 @@ const roleCopy = {
   teacher: { label: 'Guru', description: 'Buat dan kelola kelas', icon: School },
   student: { label: 'Siswa', description: 'Belajar dan ikut kuis', icon: GraduationCap },
 };
-const profileSeed = (user, role) => ({ uid: user.uid, name: user.displayName || '', nickname: '', email: user.email || '', role, subject: 'Umum', gender: '', avatar: user.photoURL || null, isAnonymous: false, profileCompleted: false, createdAt: new Date().toISOString() });
+const profileSeed = (user, role) => ({ uid: user.uid, name: user.displayName || '', nickname: '', email: user.email || '', role, subject: 'Umum', institution: '', gender: '', avatar: user.photoURL || null, isAnonymous: false, profileCompleted: false, createdAt: new Date().toISOString() });
 function authErrorMessage(error, mode) {
   if (error.message?.includes('terdaftar sebagai')) return error.message;
   if (error.code === 'auth/email-already-in-use') return 'Email ini sudah terdaftar. Pilih Masuk untuk melanjutkan.';
@@ -62,7 +62,7 @@ export default function Auth({ onAuthComplete }) {
     setBusy(true); setError('');
     try {
       const result = await signInAsGuest();
-      await saveUserProfile(result.user.uid, { uid: result.user.uid, name: 'Siswa Tamu', nickname: 'Tamu', email: '', role: 'student', subject: 'Umum', gender: '', avatar: null, isAnonymous: true, profileCompleted: true });
+      await saveUserProfile(result.user.uid, { uid: result.user.uid, name: 'Siswa Tamu', nickname: 'Tamu', email: '', role: 'student', subject: 'Umum', institution: 'Akun tamu', gender: '', avatar: null, isAnonymous: true, profileCompleted: true, createdAt: new Date().toISOString() });
       onAuthComplete('student');
     } catch { setError('Akun tamu belum dapat dibuat. Coba lagi.'); }
     finally { setBusy(false); }

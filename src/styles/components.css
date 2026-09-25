@@ -135,8 +135,8 @@
 .qz-skeleton { border-radius: var(--qz-radius-sm); background: linear-gradient(90deg, #eeeef2 25%, #f8f8fa 50%, #eeeef2 75%); background-size: 200% 100%; animation: qz-skeleton 1.4s infinite linear; }
 @keyframes qz-skeleton { to { background-position: -200% 0; } }
 
-.qz-dialog-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: rgba(25, 20, 38, 0.52); backdrop-filter: blur(4px); }
-.qz-dialog { width: min(100%, 480px); max-height: min(90vh, 720px); overflow: auto; border: 1px solid var(--qz-border); border-radius: var(--qz-radius-xl); background: var(--qz-surface); box-shadow: 0 24px 80px rgba(20, 15, 35, 0.24); }
+.qz-dialog-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; background: color-mix(in srgb, var(--qz-surface) 72%, transparent); backdrop-filter: blur(10px) saturate(1.05); }
+.qz-dialog { width: min(100%, 520px); max-height: min(calc(100dvh - 48px), 720px); overflow: auto; border: 1px solid var(--qz-border-strong); border-radius: var(--qz-radius-xl); background: var(--qz-surface); box-shadow: 0 18px 48px rgba(38, 30, 58, 0.14); }
 .qz-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 22px 22px 0; }
 .qz-dialog__header h2 { margin: 0; font-size: 1.15rem; font-weight: 800; }
 .qz-dialog__header p { margin: 6px 0 0; color: var(--qz-text-muted); font-size: 0.84rem; }
@@ -158,8 +158,12 @@
   .qz-page-header__actions { width: 100%; }
   .qz-page-header__actions .qz-button { flex: 1; }
   .qz-card__body { padding: var(--qz-space-5); }
-  .qz-dialog-backdrop { padding: 12px; }
-  .qz-dialog { max-height: calc(100dvh - 24px); }
+  .qz-dialog-backdrop { align-items: end; padding: 12px; }
+  .qz-dialog { width: 100%; max-height: min(calc(100dvh - 24px), 720px); border-radius: 20px; }
+  .qz-dialog__header { padding: 18px 18px 0; }
+  .qz-dialog__body { padding: 18px; }
+  .qz-dialog__footer { padding: 0 18px 18px; }
+  .qz-dialog__footer .qz-button { flex: 1; }
   .qz-toast-stack { bottom: calc(88px + env(safe-area-inset-bottom)); }
 }
 

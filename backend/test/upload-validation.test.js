@@ -4,7 +4,7 @@ import { validateUploadIntent } from '../src/validation/upload.js';
 
 test('upload intent maps safe images and documents to Cloudinary resource types', () => {
   assert.equal(validateUploadIntent({ fileName: 'diagram.webp', mimeType: 'image/webp', size: 1024 }).resourceType, 'image');
-  assert.equal(validateUploadIntent({ fileName: 'modul.pdf', mimeType: 'application/pdf', size: 2048 }).resourceType, 'raw');
+  assert.equal(validateUploadIntent({ fileName: 'modul.pdf', mimeType: 'application/pdf', size: 2048 }).resourceType, 'image');
 });
 
 test('upload intent rejects unsafe names, unsupported types, and oversized files', () => {

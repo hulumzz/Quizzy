@@ -1,0 +1,90 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsProfile(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function validText(value, maxLength) {
+      return value is string && value.size() <= maxLength;
+    }
+
+    function validAvatar(value) {
+      return value == null || validText(value, 2048);
+    }
+
+    function validProfile(data) {
+      return data.keys().hasAll([
+        'uid',
+        'name',
+        'nickname',
+        'email',
+        'role',
+        'subject',
+        'institution',
+        'gender',
+        'avatar',
+        'isAnonymous',
+        'profileCompleted',
+        'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid',
+        'name',
+        'nickname',
+        'email',
+        'role',
+        'subject',
+        'institution',
+        'gender',
+        'avatar',
+        'isAnonymous',
+        'profileCompleted',
+        'createdAt',
+        'updatedAt'
+      ]) &&
+      data.uid == request.auth.uid &&
+      validText(data.name, 100) &&
+      validText(data.nickname, 40) &&
+      validText(data.email, 320) &&
+      data.role in ['teacher', 'student'] &&
+      validText(data.subject, 100) &&
+      validText(data.institution, 160) &&
+      (!data.profileCompleted || data.institution.size() > 0) &&
+      data.gender in ['', 'female', 'male', 'prefer_not_to_say'] &&
+      validAvatar(data.avatar) &&
+      data.isAnonymous is bool &&
+      data.profileCompleted is bool &&
+      validText(data.createdAt, 40) &&
+      (!('updatedAt' in data) || validText(data.updatedAt, 40));
+    }
+
+    match /users/{userId} {
+      // Profil hanya dapat dilihat dan diubah oleh pemilik akun Firebase-nya.
+      allow get: if ownsProfile(userId);
+      allow list: if false;
+
+      allow create: if ownsProfile(userId) && validProfile(request.resource.data);
+
+      // Identitas, peran, dan status akun tamu tidak dapat dinaikkan/diganti
+      // oleh browser setelah profil pertama kali dibuat.
+      allow update: if ownsProfile(userId) &&
+        validProfile(request.resource.data) &&
+        !request.resource.data.diff(resource.data).affectedKeys()
+          .hasAny(['uid', 'role', 'isAnonymous', 'createdAt']);
+
+      allow delete: if ownsProfile(userId);
+    }
+
+    // Saat ini seluruh data kelas berada di API AWS. Koleksi Firestore lain
+    // sengaja ditutup sampai ada kebutuhan dan rules yang spesifik.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
