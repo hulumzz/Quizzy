@@ -1,9 +1,10 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { homeForRole } from '../navigation';
 import { useAuth } from '../../context/useAuth';
+import { PageLoader } from '../../components/ui';
 
 function LoadingScreen() {
-  return <div className="qz-app-shell" style={{ display: 'grid', placeItems: 'center' }} role="status"><div className="qz-status-strip">Menyiapkan ruang belajar...</div></div>;
+  return <div className="qz-app-shell"><PageLoader label="Menyiapkan ruang belajar..." /></div>;
 }
 
 export function RequireAuth({ children }) {

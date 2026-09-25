@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import IconButton from './IconButton';
 import { CloseIcon } from '../icons';
 
@@ -15,8 +16,6 @@ export default function Dialog({ open, onClose, title, description, children, fo
   useEffect(() => {
     if (!open) return undefined;
     const previous = document.activeElement;
-    const oldOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     const focusable = () => [...(dialogRef.current?.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), a[href], [tabindex="0"]') || [])].filter((node) => node.getClientRects().length);
     const input = dialogRef.current?.querySelector('input:not(:disabled), textarea:not(:disabled)');
     (input || dialogRef.current)?.focus();
@@ -33,16 +32,15 @@ export default function Dialog({ open, onClose, title, description, children, fo
     document.addEventListener('keydown', onKeyDown);
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = oldOverflow;
       previous?.focus?.();
     };
   }, [open]);
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className="qz-dialog-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onCloseRef.current?.()}>
-      <div ref={dialogRef} className={`qz-dialog qz-enter ${className}`.trim()} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} tabIndex={-1}>
+      <div ref={dialogRef} className={`qz-dialog qz-dialog--open ${className}`.trim()} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={description ? descriptionId : undefined} tabIndex={-1}>
         <div className="qz-dialog__header">
           <div>
             <h2 id={titleId}>{title}</h2>
@@ -54,5 +52,6 @@ export default function Dialog({ open, onClose, title, description, children, fo
         {footer ? <div className="qz-dialog__footer">{footer}</div> : null}
       </div>
     </div>
+    , document.body
   );
 }

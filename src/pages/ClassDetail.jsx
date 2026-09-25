@@ -11,11 +11,11 @@ import {
   Clock, 
   Send, 
   CheckCircle2, 
-  Loader2,
   Copy,
   Check,
 } from 'lucide-react';
 import { useAuth } from '../context/useAuth';
+import { ProcessLoader } from '../components/ui';
 
 export default function ClassDetail({ classData, onBack, userRole }) {
   const { userProfile, user } = useAuth();
@@ -306,7 +306,7 @@ export default function ClassDetail({ classData, onBack, userRole }) {
                 className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 font-bold text-sm hover:scale-[1.01] transition flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isCheckingIn ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Verifikasi Koordinat...</>
+                  <><ProcessLoader size={16} label="Memverifikasi koordinat" /> Verifikasi Koordinat...</>
                 ) : (
                   <><MapPin className="w-4 h-4" /> Dapatkan Koordinat & Presensi</>
                 )}

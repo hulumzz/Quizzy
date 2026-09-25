@@ -12,10 +12,10 @@ import {
   Clock,
   Users,
   Send,
-  Loader2,
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
+import { ProcessLoader } from '../components/ui';
 
 export default function Dashboard({ onBackToLanding }) {
   const [activeTab, setActiveTab] = useState('classes');
@@ -368,7 +368,7 @@ export default function Dashboard({ onBackToLanding }) {
                     className="w-full py-3.5 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 font-bold text-sm hover:scale-[1.01] transition flex items-center justify-center gap-2 disabled:opacity-50"
                   >
                     {isCheckingIn ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> Verifikasi Koordinat...</>
+                      <><ProcessLoader size={16} label="Memverifikasi koordinat" /> Verifikasi Koordinat...</>
                     ) : (
                       <><MapPin className="w-4 h-4" /> Dapatkan Koordinat & Presensi</>
                     )}
@@ -479,7 +479,7 @@ export default function Dashboard({ onBackToLanding }) {
                   className="px-6 py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-amber-600 font-bold text-sm text-black flex items-center gap-2 hover:scale-[1.01] transition disabled:opacity-50"
                 >
                   {isAiGenerating ? (
-                    <><Loader2 className="w-4 h-4 animate-spin text-black" /> Memproses Cloudflare Neurons...</>
+                    <><ProcessLoader size={16} label="Memproses soal dengan AI" /> Memproses Cloudflare Neurons...</>
                   ) : (
                     <><Sparkles className="w-4 h-4 text-black" /> Generasi Soal Kuis (Cloudflare AI)</>
                   )}

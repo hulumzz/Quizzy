@@ -188,8 +188,9 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
       onClose={busy ? undefined : onClose} 
       title={<span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><AiAssistIcon size={20} /> AI Assist: {module === 'quiz' ? 'Buat Kuis' : 'Susun Materi'}</span>}
       description={`AI akan mempelajari referensi Anda dan meng-generate draf ${module === 'quiz' ? 'soal kuis' : 'materi'} secara cerdas.`}
+      footer={<><Button type="button" variant="ghost" onClick={onClose} disabled={busy}>Batal</Button><Button type="submit" form="ai-assist-form" disabled={busy || pdfExtracting || form.title.trim().length < 3}>{busy ? <><ProcessLoader size={16} label="Menyusun draf dengan AI" /> Menyusun...</> : <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><AiAssistIcon size={16} /> Generate Draft</span>}</Button></>}
     >
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <form id="ai-assist-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {error && <div className="qz-inline-state qz-inline-state--error">{error}</div>}
         
         <Input 
@@ -205,7 +206,7 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', alignSelf: 'flex-start', background: 'var(--bg-surface)' }}>
               <UploadCloud size={16} /> 
-              {pdfExtracting ? 'Mengekstrak PDF...' : 'Ekstrak dari PDF (Max 2MB)'}
+              {pdfExtracting ? <><ProcessLoader size={16} label="Mengekstrak PDF" /> Mengekstrak PDF...</> : 'Ekstrak dari PDF (maks. 2 MB)'}
               <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={handlePdfUpload} disabled={pdfExtracting || busy} />
             </label>
             {form.pdfName && <small style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}><FileText size={14}/> Diambil dari: {form.pdfName}</small>}
@@ -221,13 +222,6 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
         </div>
 
         {module === 'quiz' ? renderQuizFields() : renderMaterialFields()}
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>
-          <Button type="button" variant="ghost" onClick={onClose} disabled={busy}>Batal</Button>
-          <Button type="submit" disabled={busy || pdfExtracting || form.title.trim().length < 3}>
-            {busy ? <><ProcessLoader size={16} label="Memproses" /> Memproses...</> : <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><AiAssistIcon size={16}/> Generate Draft</span>}
-          </Button>
-        </div>
       </form>
     </Dialog>
   );

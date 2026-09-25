@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { AddIcon, ErrorIcon } from '../../components/icons';
-import { Button, Dialog, Input, PageHeader, Textarea, Toast } from '../../components/ui';
+import { Button, Dialog, Input, PageHeader, ProcessLoader, Textarea, Toast } from '../../components/ui';
 import ClassCollection from '../../features/classes/components/ClassCollection';
 import { useClasses } from '../../features/classes/hooks/useClasses';
 import { classErrorMessage } from '../../services/class.service';
@@ -74,7 +74,7 @@ export default function TeacherClasses() {
         onClose={closeDialog}
         title="Buat kelas baru"
         description="Kode kelas dibuat otomatis setelah kelas tersimpan."
-        footer={<><Button variant="secondary" onClick={closeDialog} disabled={submitting}>Batal</Button><Button type="submit" form="create-class-form" disabled={submitting}>{submitting ? 'Menyimpan...' : 'Buat kelas'}</Button></>}
+        footer={<><Button variant="secondary" onClick={closeDialog} disabled={submitting}>Batal</Button><Button type="submit" form="create-class-form" disabled={submitting}>{submitting ? <><ProcessLoader size={16} label="Membuat kelas" /> Menyimpan...</> : 'Buat kelas'}</Button></>}
       >
         <form id="create-class-form" onSubmit={handleSubmit} className="qz-form-stack">
           <Input label="Nama kelas" value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="Contoh: Matematika XI A" maxLength={80} error={fieldErrors.name} autoFocus />

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { AddIcon, ErrorIcon } from '../../components/icons';
-import { Button, Dialog, Input, PageHeader, Toast } from '../../components/ui';
+import { Button, Dialog, Input, PageHeader, ProcessLoader, Toast } from '../../components/ui';
 import ClassCollection from '../../features/classes/components/ClassCollection';
 import { useClasses } from '../../features/classes/hooks/useClasses';
 import { classErrorMessage } from '../../services/class.service';
@@ -59,7 +59,7 @@ export default function StudentClasses() {
 
       <ClassCollection classes={classes} status={status} configured={configured} role="student" onCreate={openDialog} />
 
-      <Dialog open={dialogOpen} onClose={closeDialog} title="Gabung kelas" description="Masukkan kode 6 karakter yang dibagikan oleh guru." footer={<><Button variant="secondary" onClick={closeDialog} disabled={submitting}>Batal</Button><Button type="submit" form="join-class-form" disabled={submitting}>{submitting ? 'Menghubungkan...' : 'Gabung kelas'}</Button></>}>
+      <Dialog open={dialogOpen} onClose={closeDialog} title="Gabung kelas" description="Masukkan kode 6 karakter yang dibagikan oleh guru." footer={<><Button variant="secondary" onClick={closeDialog} disabled={submitting}>Batal</Button><Button type="submit" form="join-class-form" disabled={submitting}>{submitting ? <><ProcessLoader size={16} label="Menghubungkan ke kelas" /> Menghubungkan...</> : 'Gabung kelas'}</Button></>}>
         <form id="join-class-form" onSubmit={handleSubmit} className="qz-form-stack">
           <Input label="Kode kelas" value={code} onChange={(event) => setCode(event.target.value.toUpperCase())} placeholder="Contoh: ABC234" maxLength={6} error={fieldError} autoCapitalize="characters" autoComplete="off" className="qz-code-input" autoFocus />
           {submitError ? <div className="qz-inline-state qz-inline-state--error" role="alert">{submitError}</div> : null}
