@@ -72,11 +72,17 @@ service cloud.firestore {
       allow create: if ownsProfile(userId) && validProfile(request.resource.data);
 
       // Identitas, peran, dan status akun tamu tidak dapat dinaikkan/diganti
-      // oleh browser setelah profil pertama kali dibuat.
+      // oleh browser setelah profil pertama kali dibuat. Akun lama yang dibuat
+      // sebelum createdAt diwajibkan boleh menambahkan nilai tersebut satu kali
+      // saat menyelesaikan onboarding.
       allow update: if ownsProfile(userId) &&
         validProfile(request.resource.data) &&
         !request.resource.data.diff(resource.data).affectedKeys()
-          .hasAny(['uid', 'role', 'isAnonymous', 'createdAt']);
+          .hasAny(['uid', 'role', 'isAnonymous']) &&
+        (
+          request.resource.data.createdAt == resource.data.createdAt ||
+          !('createdAt' in resource.data)
+        );
 
       allow delete: if ownsProfile(userId);
     }
