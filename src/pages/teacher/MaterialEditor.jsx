@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { MaterialIcon } from '../../components/icons';
+import { AiAssistIcon, MaterialIcon } from '../../components/icons';
 import { Button, Card, EmptyState, Input, PageHeader, ProcessLoader, Skeleton, Textarea, buttonClassName } from '../../components/ui';
 import BlockEditor from '../../features/materials/components/BlockEditor';
+import AiAssistModal from '../../components/AiAssistModal';
 import { createMaterial, getMaterial, materialErrorMessage, updateMaterial } from '../../services/material.service';
 import { askQuizzyAi } from '../../services/ai.service';
 import { listLearningSessions } from '../../services/learning-session.service';
@@ -22,6 +23,7 @@ export default function MaterialEditor() {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -59,15 +61,15 @@ export default function MaterialEditor() {
     }
   };
 
-  const generateByAi = async () => {
-    if (form.title.trim().length < 3) return setError(new Error('Isi judul materi terlebih dahulu agar AI memahami konteks.'));
+  const generateByAi = async ({ context, instruction }) => {
     setAiBusy(true); setError(null);
     try {
-      const response = await askQuizzyAi({ task: 'material_draft', context: `Kelas: ${classId}\nJudul materi: ${form.title.trim()}\nRingkasan guru: ${form.summary.trim().slice(0, 400) || '-'}`, instruction: 'Buat draf yang siap diedit guru dan sesuai tingkat pembelajar.' });
+      const response = await askQuizzyAi({ task: 'material_draft', context, instruction });
       const draft = JSON.parse(response.content); const allowed = new Set(['heading', 'paragraph', 'bullet_list']);
       const blocks = Array.isArray(draft.blocks) ? draft.blocks.slice(0, 7).filter((block) => allowed.has(block?.type)).map((block) => ({ id: crypto.randomUUID(), type: block.type, ...(block.type === 'bullet_list' ? { items: Array.isArray(block.items) ? block.items.map(String).filter(Boolean).slice(0, 8) : [] } : { content: String(block.content || '').slice(0, 5000), ...(block.type === 'heading' ? { level: 2 } : {}) }) })) : [];
       if (!blocks.length) throw new Error('Draf AI belum memiliki blok materi yang dapat digunakan.');
       setForm((current) => ({ ...current, summary: String(draft.summary || current.summary).slice(0, 400), blocks: [...current.blocks, ...blocks] }));
+      setAiModalOpen(false);
     } catch (caught) { setError(caught); } finally { setAiBusy(false); }
   };
 
@@ -76,13 +78,12 @@ export default function MaterialEditor() {
 
   return (
     <div className="qz-dashboard qz-enter">
-      <PageHeader eyebrow="Ruang materi" title={editing ? 'Edit materi' : 'Materi baru'} description="Susun penjelasan, gambar, dan dokumen agar mudah dipelajari siswa." actions={<Link to={`/teacher/classes/${classId}/materials`} className={buttonClassName({ variant: 'secondary' })}>Batal</Link>} />
+      <PageHeader eyebrow="Ruang materi" title={editing ? 'Edit materi' : 'Materi baru'} description="Susun penjelasan, gambar, dan dokumen agar mudah dipelajari siswa." actions={<div style={{ display: 'flex', gap: '8px' }}><Button variant="secondary" onClick={() => setAiModalOpen(true)}><AiAssistIcon size={16} /> AI Assist</Button><Link to={`/teacher/classes/${classId}/materials`} className={buttonClassName({ variant: 'ghost' })}>Batal</Link></div>} />
       <div className="qz-editor-layout">
         <main className="qz-editor-canvas">
           <Input label="Judul materi" value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Contoh: Memahami sistem tata surya" maxLength={120} error={fieldErrors.title} autoFocus={!editing} />
           <Textarea label="Ringkasan" value={form.summary} onChange={(event) => setForm((current) => ({ ...current, summary: event.target.value }))} placeholder="Jelaskan secara singkat apa yang akan dipelajari siswa." maxLength={400} error={fieldErrors.summary} hint={`${form.summary.length}/400 karakter`} />
           <label className="qz-field"><span>Pertemuan (opsional)</span><select value={form.sessionId} onChange={(event) => setForm((current) => ({ ...current, sessionId: event.target.value }))}><option value="">Tanpa pertemuan</option>{sessions.map((session) => <option key={session.id} value={session.id} disabled={session.status === 'archived' && session.id !== form.sessionId}>{session.meetingDate} · {session.title}{session.status === 'draft' ? ' (Draf)' : session.status === 'archived' ? ' (Arsip)' : ''}</option>)}</select></label>
-          <Button variant="secondary" disabled={aiBusy || saving || form.title.trim().length < 3} onClick={generateByAi}>{aiBusy ? <><ProcessLoader size={18} label="AI menyusun materi" /> AI menyusun materi...</> : '✦ Buat draf materi dengan AI'}</Button>
           <BlockEditor classId={classId} blocks={form.blocks} onChange={(blocks) => setForm((current) => ({ ...current, blocks }))} errors={fieldErrors} />
         </main>
         <aside className="qz-editor-publish">
@@ -92,6 +93,7 @@ export default function MaterialEditor() {
           {error ? <div className="qz-inline-state qz-inline-state--error" role="alert">{materialErrorMessage(error)}</div> : null}
         </aside>
       </div>
+      <AiAssistModal open={aiModalOpen} onClose={() => setAiModalOpen(false)} module="material" initialContext={{ title: form.title, context: form.summary }} onApply={generateByAi} busy={aiBusy} />
     </div>
   );
 }

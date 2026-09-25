@@ -1,0 +1,495 @@
+Daftar Mapel:
+A
+Administrasi Infrastruktur Jaringan
+Administrasi Pajak
+Administrasi Perkantoran
+Administrasi Sistem Jaringan
+Agribisnis Ikan Hias
+Agribisnis Perbenihan Tanaman
+Agribisnis Pengolahan Hasil Perikanan
+Agribisnis Pengolahan Hasil Pertanian
+Agribisnis Perikanan
+Agribisnis Perikanan Air Tawar
+Agribisnis Perikanan Payau dan Laut
+Agribisnis Rumput Laut
+Agribisnis Tanaman
+Agribisnis Tanaman Pangan dan Hortikultura
+Agribisnis Tanaman Perkebunan
+Agribisnis Ternak
+Agribisnis Ternak Ruminansia
+Agribisnis Ternak Unggas
+Agriteknologi
+Agriteknologi Pengolahan Hasil Pertanian
+Akidah Akhlak
+Akuntansi
+Akuntansi Dasar
+Akuntansi dan Keuangan Lembaga
+Akuntansi Keuangan
+Akuntansi Pemerintahan
+Al-Qur'an Hadis
+Algoritma dan Pemrograman
+Analisis Data
+Analisis Kimia
+Analisis Pengujian Laboratorium
+Anatomi
+Animasi
+Antropologi
+Aplikasi Pengolah Angka
+Aplikasi Pengolah Kata
+Aplikasi Perkantoran
+Arsitektur
+Aswaja / Ke-NU-an
+Audio Video
+B
+Bahasa Aceh
+Bahasa Arab
+Bahasa Bali
+Bahasa Banjar
+Bahasa Batak
+Bahasa Betawi
+Bahasa Bugis
+Bahasa Daerah
+Bahasa Indonesia
+Bahasa Indonesia Lanjutan
+Bahasa Indonesia Tingkat Lanjut
+Bahasa Inggris
+Bahasa Inggris Lanjutan
+Bahasa Inggris Tingkat Lanjut
+Bahasa Jepang
+Bahasa Jawa
+Bahasa Jerman
+Bahasa Korea
+Bahasa Lampung
+Bahasa Madura
+Bahasa Makassar
+Bahasa Mandarin
+Bahasa Melayu
+Bahasa Minangkabau
+Bahasa Osing
+Bahasa Prancis
+Bahasa Rejang
+Bahasa Sasak
+Bahasa Sunda
+Bahasa Tionghoa
+Bahasa dan Sastra Indonesia
+Bahasa dan Sastra Inggris
+Bahasa dan Sastra Jawa
+Bahasa dan Sastra Sunda
+Biologi
+Bisnis Digital
+Bisnis Daring dan Pemasaran
+Bisnis Online
+Bisnis Retail
+Boga Dasar
+Broadcasting
+Broadcasting dan Perfilman
+Budaya Melayu
+Budaya Sunda
+Budidaya Perikanan
+Budidaya Tanaman
+Budidaya Ternak
+C
+Caregiving
+CNC
+Coding
+Coding dan Kecerdasan Artifisial
+Computer Aided Design
+Computer Numerical Control
+D
+Dasar Desain Grafis
+Dasar-Dasar Agribisnis Tanaman
+Dasar-Dasar Agriteknologi Pengolahan Hasil Pertanian
+Dasar-Dasar Akuntansi dan Keuangan Lembaga
+Dasar-Dasar Animasi
+Dasar-Dasar Broadcasting dan Perfilman
+Dasar-Dasar Busana
+Dasar-Dasar Desain Komunikasi Visual
+Dasar-Dasar Elektronika
+Dasar-Dasar Kecantikan dan Spa
+Dasar-Dasar Kehutanan
+Dasar-Dasar Ketenagalistrikan
+Dasar-Dasar Kimia Analisis
+Dasar-Dasar Konstruksi
+Dasar-Dasar Kuliner
+Dasar-Dasar Layanan Kesehatan
+Dasar-Dasar Manajemen Perkantoran
+Dasar-Dasar Otomotif
+Dasar-Dasar Pemasaran
+Dasar-Dasar Pengembangan Perangkat Lunak dan Gim
+Dasar-Dasar Perhotelan
+Dasar-Dasar Teknik Elektronika
+Dasar-Dasar Teknik Energi Terbarukan
+Dasar-Dasar Teknik Geologi Pertambangan
+Dasar-Dasar Teknik Jaringan Komputer dan Telekomunikasi
+Dasar-Dasar Teknik Ketenagalistrikan
+Dasar-Dasar Teknik Kimia Industri
+Dasar-Dasar Teknik Logistik
+Dasar-Dasar Teknik Mesin
+Dasar-Dasar Teknik Otomotif
+Dasar-Dasar Usaha Layanan Pariwisata
+Desain Busana
+Desain Grafis
+Desain Interior
+Desain Komunikasi Visual
+Desain Pemodelan dan Informasi Bangunan
+Desain Produk
+Desain Rancang Bangun Kapal
+Desain Web
+Digital Marketing
+E
+Ekonomi
+Ekonomi Bisnis
+Ekonomi Syariah
+Elektronika
+Elektronika Dasar
+Elektronika Industri
+Embedded System
+Energi Terbarukan
+Entrepreneurship
+F
+Farmasi
+Fikih
+Fisika
+Fisika Terapan
+Fotografi
+G
+Gambar Teknik
+Geografi
+Geologi
+Geologi Pertambangan
+Gizi
+Grafika Komputer
+H
+Hadis
+Higiene dan Sanitasi
+Housekeeping
+I
+Ilmu Gizi
+Ilmu Hadis
+Ilmu Kalam
+Ilmu Kesehatan
+Ilmu Komputer
+Ilmu Pengetahuan Alam
+Ilmu Pengetahuan Alam dan Sosial
+Ilmu Pengetahuan Sosial
+Ilmu Tafsir
+Informatika
+Instalasi Motor Listrik
+Instalasi Penerangan Listrik
+Instalasi Tenaga Listrik
+Instrumentasi
+Internet of Things
+J
+Jaringan Komputer
+Jaringan Komputer dan Telekomunikasi
+Jaringan Nirkabel
+Jurnalistik
+K
+Karya Ilmiah
+Kearsipan
+Keamanan Jaringan
+Kecantikan dan Spa
+Kecerdasan Artifisial
+Kegambar-teknikan
+Ke-NU-an
+Kehutanan
+Kemuhammadiyahan
+Kemaritiman
+Kesehatan
+Kesehatan Hewan
+Kewirausahaan
+Kimia
+Kimia Analisis
+Kimia Industri
+Kimia Tekstil
+Koding
+Koding dan Kecerdasan Artifisial
+Komputer Akuntansi
+Komputer dan Jaringan Dasar
+Komunikasi Bisnis
+Komunikasi Industri
+Konstruksi Gedung dan Sanitasi
+Konstruksi Jalan dan Jembatan
+Konstruksi Jalan, Irigasi, dan Jembatan
+Konstruksi Kapal Baja
+Konstruksi Kapal Non Baja
+Konstruksi dan Perawatan Bangunan Sipil
+Kriya
+Kriya Kreatif Batik dan Tekstil
+Kriya Kreatif Kayu dan Rotan
+Kriya Kreatif Keramik
+Kriya Kreatif Kulit dan Imitasi
+Kriya Kreatif Logam dan Perhiasan
+Kuliner
+L
+Layanan Kesehatan
+Layanan Keuangan
+Layanan Penunjang Dental Care
+Layanan Penunjang Keperawatan dan Caregiving
+Layanan Penunjang Laboratorium Medik
+Layanan Perbankan
+Layanan Perbankan Syariah
+Literasi
+Literasi Digital
+Logika dan Algoritma
+M
+Manajemen Bisnis
+Manajemen Logistik
+Manajemen Perkantoran
+Manajemen Perkantoran dan Layanan Bisnis
+Matematika
+Matematika Dasar
+Matematika Lanjutan
+Matematika Peminatan
+Matematika Tingkat Lanjut
+Mekanika Teknik
+Mikrobiologi
+Multimedia
+Musik
+N
+Nahwu
+Nautika
+Nautika Kapal Niaga
+Nautika Kapal Penangkap Ikan
+Numerasi
+O
+Olahraga
+Otomasi Tata Kelola Kepegawaian
+Otomasi Tata Kelola Keuangan
+Otomasi Tata Kelola Perkantoran
+Otomotif
+P
+PAI dan Budi Pekerti
+Pajak
+Pemasaran
+Pemrograman
+Pemrograman Berorientasi Objek
+Pemrograman Dasar
+Pemrograman Game
+Pemrograman Mobile
+Pemrograman Web
+Pemrograman Web dan Perangkat Bergerak
+Pemeliharaan Mesin
+Pemesinan CNC
+Pemodelan Perangkat Lunak
+Pendidikan Agama
+Pendidikan Agama Buddha dan Budi Pekerti
+Pendidikan Agama Hindu dan Budi Pekerti
+Pendidikan Agama Islam dan Budi Pekerti
+Pendidikan Agama Katolik dan Budi Pekerti
+Pendidikan Agama Khonghucu dan Budi Pekerti
+Pendidikan Agama Kristen dan Budi Pekerti
+Pendidikan Jasmani dan Olahraga
+Pendidikan Jasmani, Olahraga, dan Kesehatan
+Pendidikan Kewarganegaraan
+Pendidikan Lingkungan Hidup
+Pendidikan Pancasila
+Pendidikan Pancasila dan Kewarganegaraan
+Pendidikan Karakter
+Pengantar Administrasi Perkantoran
+Pengantar Akuntansi
+Pengantar Ekonomi dan Bisnis
+Pengembangan Gim
+Pengembangan Perangkat Lunak dan Gim
+Pengawasan Mutu Hasil Pertanian
+Pengelolaan Bisnis Retail
+Pengelolaan Kas
+Pengelolaan Keuangan
+Pengelolaan Meeting, Incentive, Conference, dan Exhibition
+Pengolahan dan Penyajian Makanan
+Perakitan Komputer
+Perbankan
+Perbankan Syariah
+Perhotelan
+Perpajakan
+Pertanian
+Pekerjaan Dasar Elektromekanik
+Pekerjaan Dasar Teknik Mesin
+Pekerjaan Sosial
+PJOK
+Praktikum Akuntansi
+Praktikum Akuntansi Lembaga/Instansi Pemerintah
+Prakarya
+Prakarya dan Kewirausahaan
+Produksi Film
+Produksi dan Siaran Program Radio
+Produksi dan Siaran Program Televisi
+Produk Kreatif dan Kewirausahaan
+Projek Kreatif dan Kewirausahaan
+Q
+Qira'ah
+Qiraatul Kutub
+Qur'an Hadis
+R
+Rekayasa Perangkat Lunak
+Robotika
+S
+Sejarah
+Sejarah Indonesia
+Sejarah Kebudayaan Islam
+Seni Budaya
+Seni Budaya dan Prakarya
+Seni Karawitan
+Seni Musik
+Seni Pedalangan
+Seni Pertunjukan
+Seni Rupa
+Seni Tari
+Seni Teater
+Simulasi dan Komunikasi Digital
+Sistem Basis Data
+Sistem Informasi
+Sistem Informasi, Jaringan, dan Aplikasi
+Sistem Komputer
+Sistem Operasi
+Sistem Pengendali Elektronik
+Sosiologi
+Spa dan Beauty Therapy
+Statistik
+Statistika
+T
+Tafsir
+Tahfiz Al-Qur'an
+Tahsin Al-Qur'an
+Tata Artistik Teater
+Tata Boga
+Tata Busana
+Tata Graha
+Tata Hidang
+Tata Kecantikan
+Tata Kecantikan Kulit dan Rambut
+Tata Kelola Infrastruktur Jaringan
+Tata Kelola Perkantoran
+Teknologi Dasar Otomotif
+Teknologi Digital
+Teknologi Informasi
+Teknologi Jaringan Berbasis Luas
+Teknologi Layanan Jaringan
+Teknologi Perkantoran
+Teknik Alat Berat
+Teknik Audio Video
+Teknik Bodi Otomotif
+Teknik Elektronika
+Teknik Elektronika Industri
+Teknik Energi Biomassa
+Teknik Energi Surya, Hidro, dan Angin
+Teknik Fabrikasi Logam
+Teknik Furnitur
+Teknik Geomatika
+Teknik Geospasial
+Teknik Grafika
+Teknik Instalasi Tenaga Listrik
+Teknik Jaringan Akses Telekomunikasi
+Teknik Jaringan Komputer dan Telekomunikasi
+Teknik Jaringan Tenaga Listrik
+Teknik Kendaraan Ringan
+Teknik Kendaraan Ringan Otomotif
+Teknik Kelistrikan Kapal
+Teknik Kelistrikan Pesawat Udara
+Teknik Kimia Industri
+Teknik Komputer
+Teknik Komputer dan Jaringan
+Teknik Konstruksi dan Perumahan
+Teknik Konstruksi Kapal
+Teknik Laboratorium Medik
+Teknik Logistik
+Teknik Mekatronika
+Teknik Mesin
+Teknik Otomasi Industri
+Teknik Otomotif
+Teknik Pemanasan, Tata Udara, dan Pendinginan
+Teknik Pemesinan
+Teknik Pembangkit Tenaga Listrik
+Teknik Pengecoran Logam
+Teknik Pengelasan
+Teknik Pengendalian Produksi
+Teknik Pendingin dan Tata Udara
+Teknik Pesawat Udara
+Teknik Sepeda Motor
+Teknik Tenaga Listrik
+Teknik Transmisi Telekomunikasi
+Teknologi Farmasi
+Teknologi Informasi dan Komunikasi
+Teori Kejuruan
+U
+Ulumul Hadis
+Ulumul Qur'an
+Usaha Layanan Pariwisata
+V
+Videografi
+W
+Web Development
+Muatan lokal yang sebaiknya ikut masuk
+
+Ini penting untuk Quizzy karena nama muatan lokal sangat bergantung pemerintah daerah dan sekolah. Regulasi nasional memang memungkinkan bahasa daerah dan muatan lokal, dan contohnya Bahasa Jawa ditetapkan sebagai muatan lokal pada sekolah di Jawa Tengah.
+
+Selain nama-nama di atas, aku akan memasukkan pilihan berikut sebagai master:
+
+Adat dan Budaya Aceh
+Adat dan Budaya Bali
+Adat dan Budaya Batak
+Adat dan Budaya Betawi
+Adat dan Budaya Bugis
+Adat dan Budaya Dayak
+Adat dan Budaya Jawa
+Adat dan Budaya Lampung
+Adat dan Budaya Madura
+Adat dan Budaya Melayu
+Adat dan Budaya Minangkabau
+Adat dan Budaya Papua
+Adat dan Budaya Sasak
+Adat dan Budaya Sunda
+Baca Tulis Al-Qur'an
+Baca Tulis Arab
+Batik
+Budaya Daerah
+Budaya Lokal
+Budidaya Pertanian
+Budidaya Tanaman Lokal
+Kerajinan Daerah
+Kesenian Daerah
+Kesenian Tradisional
+Keterampilan Daerah
+Kearifan Lokal
+Pendidikan Lingkungan Hidup
+Pendidikan Antikorupsi
+Pendidikan Kependudukan
+Pendidikan Lalu Lintas
+Pendidikan Mitigasi Bencana
+Pendidikan Multikultural
+Pendidikan Karakter
+Seni Karawitan
+Seni Tradisional
+Tahfiz
+Tahsin
+Khusus madrasah/pesantren
+
+Sebaiknya master Quizzy juga menyediakan:
+
+Akhlak
+Akidah
+Akidah Akhlak
+Al-Qur'an
+Al-Qur'an Hadis
+Bahasa Arab
+Balaghah
+Baca Kitab
+Faraid
+Fikih
+Hadis
+Imla'
+Insya'
+Ke-NU-an
+Kemuhammadiyahan
+Mahfuzat
+Nahwu
+Qira'ah
+Qiraatul Kutub
+Sejarah Kebudayaan Islam
+Sharaf
+Tarikh
+Tafsir
+Tahfiz Al-Qur'an
+Tahsin Al-Qur'an
+Ulumul Hadis
+Ulumul Qur'an
