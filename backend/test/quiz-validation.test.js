@@ -17,6 +17,13 @@ test('published quiz requires questions and a valid correct answer', () => {
   assert.throws(() => validateQuizInput({ title: 'Kuis pilihan', status: 'published', questions: [{ type: 'multiple_choice', prompt: 'Pilih jawaban benar', choices: ['A', 'B'], correctAnswer: 'C' }] }), (error) => error.code === 'VALIDATION_ERROR' && Boolean(error.details['questions.0.correctAnswer']));
 });
 
+test('draft quiz can retain an incomplete arrange question', () => {
+  const value = validateQuizInput({ title: 'Draf susunan', status: 'draft', questions: [
+    { id: 'order', type: 'arrange', prompt: '', items: [{ id: 'item-1', text: '' }, { id: 'item-2', text: '' }], correctOrder: [] },
+  ] });
+  assert.equal(value.questions[0].items.length, 2);
+});
+
 test('attempt validation keeps only question identity and supplied answer', () => {
   assert.deepEqual(validateAttempt({ answers: [{ questionId: 'q-1', answer: ' Sel ', correctAnswer: 'injected' }] }), { answers: [{ questionId: 'q-1', answer: 'Sel' }] });
 });

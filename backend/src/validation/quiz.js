@@ -80,7 +80,9 @@ export function validateQuizInput(input) {
     if (type === 'arrange') {
       const itemIds = items.map((item) => item.id);
       const validOrder = correctOrder.length === itemIds.length && new Set(correctOrder).size === itemIds.length && correctOrder.every((itemId) => itemIds.includes(itemId));
-      if ((status === 'published' && (items.length < 3 || !validOrder)) || items.length > 10 || items.some((item) => !/^[A-Za-z0-9_-]{1,64}$/.test(item.id) || !item.text || item.text.length > 300) || new Set(itemIds).size !== itemIds.length) errors[`${prefix}.items`] = 'Susunan harus berisi 3-10 item unik dengan urutan jawaban yang lengkap.';
+      const malformedItems = items.some((item) => !/^[A-Za-z0-9_-]{1,64}$/.test(item.id) || item.text.length > 300);
+      const incompletePublishedArrangement = items.length < 3 || !validOrder || items.some((item) => !item.text);
+      if (items.length > 10 || malformedItems || new Set(itemIds).size !== itemIds.length || (status === 'published' && incompletePublishedArrangement)) errors[`${prefix}.items`] = 'Susunan harus berisi 3-10 item unik dengan urutan jawaban yang lengkap.';
     }
     if (type === 'image_hotspot') {
       const validImage = /^https:\/\/.{1,2000}$/i.test(imageUrl);

@@ -20,5 +20,9 @@ export function quizErrorMessage(error) {
   if (error?.status === 404) return 'Kuis tidak ditemukan atau belum diterbitkan.';
   if (error?.status === 403) return error.message || 'Akun ini tidak memiliki akses ke kuis.';
   if (error?.code === 'NETWORK_ERROR') return 'Koneksi ke layanan kuis gagal. Coba lagi.';
+  if (error?.code === 'VALIDATION_ERROR' && error?.details) {
+    const firstDetail = Object.values(error.details).find(Boolean);
+    return firstDetail ? `Periksa kuis: ${firstDetail}` : 'Periksa kembali isian kuis.';
+  }
   return error?.message || 'Kuis belum dapat diproses.';
 }
