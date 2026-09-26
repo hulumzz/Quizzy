@@ -4,7 +4,7 @@ import { AiAssistIcon } from './icons';
 import { UploadCloud, FileText } from 'lucide-react';
 
 const MAX_PDF_PAGES = 5;
-const MAX_CONTEXT_LENGTH = 4200;
+const MAX_CONTEXT_LENGTH = 5000;
 const MAX_DIFFICULTY_LENGTH = 60;
 const MAX_MAIN_POINTS_LENGTH = 320;
 let pdfJsLoader;
@@ -106,10 +106,10 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+    let payload;
     if (module === 'quiz') {
       const activeTypes = Object.entries(form.questionTypes)
         .filter(([, active]) => active)
@@ -123,12 +123,18 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
       const instruction = `Buat tepat ${form.numQuestions} soal bervariasi. HANYA gunakan tipe soal berikut: ${activeTypes.join(', ')}. Pastikan setiap soal valid dan akurat.`;
       const context = `Topik: ${form.title}\n\nMateri Referensi:\n${form.context.slice(0, MAX_CONTEXT_LENGTH)}`;
       
-      onApply({ title: form.title.trim(), instruction, context });
+      payload = { title: form.title.trim(), instruction, context };
     } else if (module === 'material') {
       const instruction = `Susun materi ringkas dan menarik untuk target: ${form.difficulty}. Fokus pada poin-poin berikut:\n${form.mainPoints}`;
       const context = `Topik Materi: ${form.title}\n\nMateri Referensi:\n${form.context.slice(0, MAX_CONTEXT_LENGTH)}`;
       
-      onApply({ title: form.title.trim(), instruction, context });
+      payload = { title: form.title.trim(), instruction, context };
+    }
+    try {
+      await onApply(payload);
+      onClose();
+    } catch (caught) {
+      setError(caught?.message || 'Draf AI belum dapat dibuat. Coba lagi sebentar.');
     }
   };
 
@@ -217,7 +223,7 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
               value={form.context} 
               onChange={(e) => setForm(f => ({ ...f, context: e.target.value }))} 
             />
-            <small style={{ color: 'var(--text-muted)', alignSelf: 'flex-end', fontSize: '12px' }}>{form.context.length}/{MAX_CONTEXT_LENGTH} karakter · batas aman AI sekitar 1.400 token</small>
+            <small style={{ color: 'var(--text-muted)', alignSelf: 'flex-end', fontSize: '12px' }}>{form.context.length}/{MAX_CONTEXT_LENGTH} karakter</small>
           </div>
         </div>
 

@@ -85,7 +85,7 @@ test('AI endpoint accepts a correctly signed Firebase token using Google JWKS fo
   }
 });
 
-test('AI endpoint falls back to the next model when the primary provider is unavailable', async () => {
+test('AI endpoint falls back to the next model when the primary rate limit is reached', async () => {
   const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
   const publicJwk = publicKey.export({ format: 'jwk' });
   const now = Math.floor(Date.now() / 1000);
@@ -101,7 +101,10 @@ test('AI endpoint falls back to the next model when the primary provider is unav
     if (target === 'https://api.groq.com/openai/v1/chat/completions') {
       const body = JSON.parse(options.body);
       requestedModels.push(body.model);
-      if (body.model === 'qwen/qwen3.8-27b') return new Response(JSON.stringify({ error: { code: 'service_unavailable' } }), { status: 503 });
+      if (body.model === 'qwen/qwen3.8-27b') {
+        assert.equal(body.max_completion_tokens, 1100);
+        return new Response(JSON.stringify({ error: { code: 'rate_limit_exceeded' } }), { status: 429 });
+      }
       return new Response(JSON.stringify({ choices: [{ message: { content: '{"questions":[{"type":"true_false","prompt":"Bumi bulat?","correctAnswer":true}]}' } }] }), { status: 200 });
     }
     throw new Error(`Unexpected fetch: ${target}`);
@@ -110,7 +113,7 @@ test('AI endpoint falls back to the next model when the primary provider is unav
     const response = await app.fetch(request('/api/ai/assist', {
       method: 'POST',
       headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ task: 'quiz_draft', context: 'Materi IPA' }),
+      body: JSON.stringify({ task: 'quiz_draft', context: 'Materi IPA', instruction: 'Gunakan tipe arrange untuk semua soal.' }),
     }), {
       ...environment,
       GROQ_API_KEY: 'test-key',
