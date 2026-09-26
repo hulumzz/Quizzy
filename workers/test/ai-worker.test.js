@@ -85,6 +85,47 @@ test('AI endpoint accepts a correctly signed Firebase token using Google JWKS fo
   }
 });
 
+test('AI endpoint falls back to the next model when the primary provider is unavailable', async () => {
+  const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const publicJwk = publicKey.export({ format: 'jwk' });
+  const now = Math.floor(Date.now() / 1000);
+  const encode = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  const header = encode({ alg: 'RS256', kid: 'fallback-key', typ: 'JWT' });
+  const payload = encode({ aud: 'quizzy-test', iss: 'https://securetoken.google.com/quizzy-test', sub: 'teacher-fallback', exp: now + 3600, iat: now - 30, auth_time: now - 60 });
+  const token = `${header}.${payload}.${sign('RSA-SHA256', Buffer.from(`${header}.${payload}`), privateKey).toString('base64url')}`;
+  const originalFetch = globalThis.fetch;
+  const requestedModels = [];
+  globalThis.fetch = async (url, options = {}) => {
+    const target = String(url);
+    if (target.includes('/service_accounts/v1/jwk/')) return new Response(JSON.stringify({ keys: [{ ...publicJwk, kid: 'fallback-key', alg: 'RS256', use: 'sig' }] }), { status: 200, headers: { 'cache-control': 'public, max-age=3600' } });
+    if (target === 'https://api.groq.com/openai/v1/chat/completions') {
+      const body = JSON.parse(options.body);
+      requestedModels.push(body.model);
+      if (body.model === 'qwen/qwen3.8-27b') return new Response(JSON.stringify({ error: { code: 'service_unavailable' } }), { status: 503 });
+      return new Response(JSON.stringify({ choices: [{ message: { content: '{"questions":[{"type":"true_false","prompt":"Bumi bulat?","correctAnswer":true}]}' } }] }), { status: 200 });
+    }
+    throw new Error(`Unexpected fetch: ${target}`);
+  };
+  try {
+    const response = await app.fetch(request('/api/ai/assist', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ task: 'quiz_draft', context: 'Materi IPA' }),
+    }), {
+      ...environment,
+      GROQ_API_KEY: 'test-key',
+      AI_RATE_LIMITER: { async limit() { return { success: true }; } },
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.data.model, 'openai/gpt-oss-20b');
+    assert.equal(body.data.fallbackUsed, true);
+    assert.deepEqual(requestedModels, ['qwen/qwen3.8-27b', 'openai/gpt-oss-20b']);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('AI endpoint refreshes Firebase JWKS from origin when a rotated key ID is not cached', async () => {
   const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
   const { privateKey: stalePrivateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });

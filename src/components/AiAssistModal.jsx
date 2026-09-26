@@ -4,9 +4,9 @@ import { AiAssistIcon } from './icons';
 import { UploadCloud, FileText } from 'lucide-react';
 
 const MAX_PDF_PAGES = 5;
-const MAX_CONTEXT_LENGTH = 5000;
-const MAX_DIFFICULTY_LENGTH = 80;
-const MAX_MAIN_POINTS_LENGTH = 500;
+const MAX_CONTEXT_LENGTH = 4200;
+const MAX_DIFFICULTY_LENGTH = 60;
+const MAX_MAIN_POINTS_LENGTH = 320;
 let pdfJsLoader;
 
 function loadPdfJs() {
@@ -217,7 +217,7 @@ export default function AiAssistModal({ open, onClose, module, initialContext = 
               value={form.context} 
               onChange={(e) => setForm(f => ({ ...f, context: e.target.value }))} 
             />
-            <small style={{ color: 'var(--text-muted)', alignSelf: 'flex-end', fontSize: '12px' }}>{form.context.length}/{MAX_CONTEXT_LENGTH} karakter</small>
+            <small style={{ color: 'var(--text-muted)', alignSelf: 'flex-end', fontSize: '12px' }}>{form.context.length}/{MAX_CONTEXT_LENGTH} karakter · batas aman AI sekitar 1.400 token</small>
           </div>
         </div>
 
