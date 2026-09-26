@@ -103,8 +103,11 @@ test('AI endpoint falls back to the next model when the primary rate limit is re
       requestedModels.push(body.model);
       if (body.model === 'qwen/qwen3.8-27b') {
         assert.equal(body.max_completion_tokens, 1100);
+        assert.equal(body.reasoning_format, 'hidden');
         return new Response(JSON.stringify({ error: { code: 'rate_limit_exceeded' } }), { status: 429 });
       }
+      assert.equal(body.reasoning_format, undefined);
+      assert.equal(body.include_reasoning, false);
       return new Response(JSON.stringify({ choices: [{ message: { content: '{"questions":[{"type":"true_false","prompt":"Bumi bulat?","correctAnswer":true}]}' } }] }), { status: 200 });
     }
     throw new Error(`Unexpected fetch: ${target}`);

@@ -108,7 +108,7 @@ function retryableProviderFailure(status, code) {
 }
 async function providerFailure(response) {
   const payload = await response.json().catch(() => ({}));
-  return { status: response.status, code: String(payload?.error?.code || payload?.code || '').slice(0, 80) };
+  return { status: response.status, code: String(payload?.error?.code || payload?.code || ''), message: String(payload?.error?.message || payload?.message || '') };
 }
 app.use('*', async (c, next) => {
   const origin = c.req.header('origin'); const allowed = origin && origins(c.env).includes(origin);
@@ -142,7 +142,8 @@ app.post('/api/ai/assist', async (c) => {
     const reasoningEffort = reasoningFor(model, task);
     let response;
     try {
-      response = await fetch(GROQ_URL, { method: 'POST', headers: { authorization: `Bearer ${c.env.GROQ_API_KEY}`, 'content-type': 'application/json' }, body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: task === 'assessment_feedback' ? 0.4 : 0.55, max_completion_tokens: completionBudget, reasoning_effort: reasoningEffort, reasoning_format: 'hidden', ...(['quiz_draft', 'material_draft'].includes(task) ? { response_format: { type: 'json_object' } } : {}) }) });
+      const isGptOss = model.startsWith('openai/gpt-oss-');
+      response = await fetch(GROQ_URL, { method: 'POST', headers: { authorization: `Bearer ${c.env.GROQ_API_KEY}`, 'content-type': 'application/json' }, body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: task === 'assessment_feedback' ? 0.4 : 0.55, max_completion_tokens: completionBudget, reasoning_effort: reasoningEffort, ...(isGptOss ? { include_reasoning: false } : { reasoning_format: 'hidden' }), ...(['quiz_draft', 'material_draft'].includes(task) ? { response_format: { type: 'json_object' } } : {}) }) });
     } catch {
       lastFailure = { status: 503, code: 'NETWORK' };
       continue;
@@ -150,7 +151,7 @@ app.post('/api/ai/assist', async (c) => {
     if (!response.ok) {
       lastFailure = await providerFailure(response);
       console.warn('AI provider attempt failed', { model, status: lastFailure.status, code: lastFailure.code || undefined });
-      if (retryableProviderFailure(lastFailure.status, lastFailure.code)) continue;
+      if (retryableProviderFailure(lastFailure.status, `${lastFailure.code} ${lastFailure.message}`)) continue;
       return bad('Konfigurasi layanan AI perlu diperiksa. Coba lagi nanti.', 503, 'AI_PROVIDER_CONFIGURATION');
     }
     const output = await response.json().catch(() => ({}));
