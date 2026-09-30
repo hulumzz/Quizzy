@@ -29,6 +29,8 @@ function historyEntry(item, now) {
     previousStatus: item.status,
     previousScore: item.score ?? null,
     previousFeedback: item.feedback || '',
+    previousTextAnswer: item.textAnswer || '',
+    previousAttachments: item.attachments || [],
     previousSubmittedAt: item.submittedAt,
     previousAttemptNumber: item.attemptNumber,
     createdAt: now,
@@ -62,7 +64,7 @@ export class TaskRepository {
   }
   async submissionHistory(taskId, uid) {
     const result = await this.client.send(new QueryCommand({ TableName: this.tableName, KeyConditionExpression: 'PK = :task AND begins_with(SK, :revision)', ExpressionAttributeValues: { ':task': `TASK#${taskId}`, ':revision': `REVISION#${uid}#` }, ConsistentRead: true, ScanIndexForward: false, Limit: 100 }));
-    return (result.Items || []).filter((item) => item.entityType === 'TASK_SUBMISSION_REVISION').map((item) => ({ previousStatus: item.previousStatus, previousScore: item.previousScore ?? null, previousFeedback: item.previousFeedback || '', previousSubmittedAt: item.previousSubmittedAt, previousAttemptNumber: item.previousAttemptNumber, createdAt: item.createdAt }));
+    return (result.Items || []).filter((item) => item.entityType === 'TASK_SUBMISSION_REVISION').map((item) => ({ previousStatus: item.previousStatus, previousScore: item.previousScore ?? null, previousFeedback: item.previousFeedback || '', previousTextAnswer: item.previousTextAnswer || '', previousAttachments: item.previousAttachments || [], previousSubmittedAt: item.previousSubmittedAt, previousAttemptNumber: item.previousAttemptNumber, createdAt: item.createdAt }));
   }
   async list(classId, uid) {
     const access = await this.access(classId, uid);

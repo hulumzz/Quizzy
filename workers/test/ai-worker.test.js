@@ -10,7 +10,7 @@ test('healthcheck is public and does not expose configuration', async () => {
   const response = await app.fetch(request('/', { headers: { origin: 'https://app.quizzy.test' } }), environment);
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('access-control-allow-origin'), 'https://app.quizzy.test');
-  assert.deepEqual(await response.json(), { name: 'Quizzy AI Gateway', status: 'online' });
+  assert.deepEqual(await response.json(), { name: 'Nalaro Class API', status: 'online' });
 });
 
 test('AI endpoint requires a Firebase bearer token before using the provider', async () => {

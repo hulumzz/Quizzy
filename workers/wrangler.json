@@ -1,18 +1,34 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "quizzy",
+  "name": "nalaro-api",
   "main": "src/index.js",
-  "compatibility_date": "2026-09-23",
+  "compatibility_date": "2026-09-28",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "FIREBASE_PROJECT_ID": "quizzy-eb33b",
     "GROQ_DEFAULT_MODEL": "qwen/qwen3.8-27b",
-    "ALLOWED_ORIGINS": "https://quizzy-f01.pages.dev,https://quizzy.my.id,https://nalaro.web.id,http://localhost:5173"
+    "ALLOWED_ORIGINS": "https://nalaroclass.pages.dev,https://quizzy-f01.pages.dev,https://quizzy.my.id,https://nalaro.web.id,http://localhost:5173"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "nalaro",
+      "database_id": "750ff7b1-7db4-4ed5-8c3b-5f42773b74af",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "LIVE_QUIZ", "class_name": "LiveQuizRoom" }
+    ]
+  },
+  "exports": {
+    "LiveQuizRoom": { "type": "durable-object", "storage": "sqlite" }
   },
   "ratelimits": [
     {
       "name": "AI_RATE_LIMITER",
-      "namespace_id": "27123",
+      "namespace_id": "874101",
       "simple": { "limit": 6, "period": 60 }
     }
   ],

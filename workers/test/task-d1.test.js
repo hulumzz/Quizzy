@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { ClassRepository } from '../src/repositories/class.repository.js';
+import { TaskRepository } from '../src/repositories/task.repository.js';
+import { CloudinaryUploadSigner } from '../src/services/cloudinary.js';
+import { createD1Fixture } from './d1-fixture.js';
+
+test('D1 task supports edit, signed student upload, grading and revision history', async (t) => {
+  const fixture = createD1Fixture(); t.after(fixture.close);
+  const repository = new TaskRepository({ db: fixture.db, classRepository: new ClassRepository(fixture.db), cloudName: 'demo' });
+  const task = await repository.create({ classId: 'class-1', ownerId: 'teacher-1', title: 'Laporan', instructions: '', dueAt: '2026-10-01T00:00:00.000Z', responseMode: 'both', status: 'published', sessionId: null });
+  assert.equal(task.sessionId, null);
+  assert.equal((await repository.list('class-1', 'student-1'))[0].submission, null);
+  assert.equal((await repository.update({ classId: 'class-1', taskId: task.id, ownerId: 'teacher-1', title: 'Laporan revisi', instructions: '', dueAt: '2026-10-01T00:00:00.000Z', responseMode: 'both', status: 'published', sessionId: null })).title, 'Laporan revisi');
+  await repository.prepareAttachmentUpload({ classId: 'class-1', taskId: task.id, uid: 'student-1' });
+  const signer = new CloudinaryUploadSigner({ cloudName: 'demo', apiKey: 'public-test-key', apiSecret: 'test-secret' });
+  const signed = await signer.createTaskSubmissionSignature({ classId: 'class-1', taskId: task.id, uid: 'student-1', resourceType: 'image' });
+  assert.equal(signed.parameters.folder, `quizzy/classes/class-1/tasks/${task.id}/submissions/student-1`);
+  const publicId = `${signed.parameters.folder}/file`;
+  const attachment = { name: 'file.png', url: `https://res.cloudinary.com/demo/image/upload/v1/${publicId}.png`, publicId, mimeType: 'image/png', bytes: 100 };
+  await assert.rejects(() => repository.submit({ classId: 'class-1', taskId: task.id, uid: 'student-1', studentName: 'Siswa', textAnswer: 'Pertama', attachments: [{ ...attachment, url: 'https://example.org/fake.png' }] }), { code: 'FORBIDDEN' });
+  const first = await repository.submit({ classId: 'class-1', taskId: task.id, uid: 'student-1', studentName: 'Siswa', textAnswer: 'Pertama', attachments: [attachment], now: '2026-09-30T01:00:00.000Z' });
+  assert.equal(first.late, false);
+  assert.equal((await repository.list('class-1', 'student-1'))[0].submission.status, 'submitted');
+  await assert.rejects(() => repository.prepareAttachmentUpload({ classId: 'class-1', taskId: task.id, uid: 'student-1' }), { code: 'SUBMISSION_LOCKED' });
+  await repository.grade({ classId: 'class-1', taskId: task.id, studentId: 'student-1', ownerId: 'teacher-1', status: 'returned', score: null, feedback: 'Lengkapi', now: '2026-09-30T02:00:00.000Z' });
+  const revised = await repository.submit({ classId: 'class-1', taskId: task.id, uid: 'student-1', studentName: 'Siswa', textAnswer: 'Kedua', attachments: [attachment], now: '2026-10-02T00:00:00.000Z' });
+  assert.equal(revised.late, true);
+  assert.equal(revised.attemptNumber, 2);
+  assert.equal((await repository.get('class-1', task.id, 'student-1')).submission.history.length, 2);
+  await repository.grade({ classId: 'class-1', taskId: task.id, studentId: 'student-1', ownerId: 'teacher-1', status: 'graded', score: 90, feedback: 'Baik', now: '2026-10-02T01:00:00.000Z' });
+  await assert.rejects(() => repository.submit({ classId: 'class-1', taskId: task.id, uid: 'student-1', studentName: 'Siswa', textAnswer: 'Ketiga', attachments: [attachment] }), { code: 'SUBMISSION_LOCKED' });
+});

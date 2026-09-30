@@ -1,6 +1,13 @@
 # Handoff Pengembangan Quizzy - 24 September 2026
 
-Dokumen ini adalah **source of truth handoff terbaru** untuk melanjutkan Quizzy dari agent lain atau environment lokal. Instruksi pemilik yang lebih baru tetap mengalahkan dokumen ini.
+> Snapshot historis. Status kode terbaru pada 29 September 2026 ada di `README.md`, `docs/architecture-status.md`, dan `docs/phase-10-and-learning-roadmap.md`. Instruksi pemilik yang lebih baru tetap mengalahkan dokumen ini.
+
+## Pembaruan 29 September 2026
+
+- Tahap 1 memperbaiki kontrak live session, inisialisasi arrange, dan review hasil per tipe soal.
+- Tahap 2 menyelesaikan UX runtime kuis, editor fokus, dan hasil guru bernama siswa.
+- Tahap 3 menambahkan selector Pertemuan pada tugas, timezone `datetime-local` lokal, snapshot revisi, serta GitHub Actions validation.
+- Tidak ada deployment AWS/Cloudflare atau verifikasi browser nyata yang dilakukan oleh pembaruan ini.
 
 Dokumen pendamping yang relevan:
 
@@ -260,7 +267,7 @@ Masih perlu E2E browser nyata dan deployment backend/frontend sebelum menyatakan
 
 ### Prioritas 1 - Tugas, pengumpulan, penilaian, dan revisi
 
-Modul ini belum ada. Bangun setelah model Learning Sessions stabil.
+Sudah tersedia di kode pada pembaruan 29 September 2026. Prioritas lanjutannya adalah rubric, analytics, dan E2E browser nyata.
 
 Minimum domain:
 
@@ -293,7 +300,7 @@ Untuk cache gunakan metadata/ETag serta Cache Storage atau IndexedDB yang dibata
 
 ### Prioritas 3 - AI dan kualitas konteks
 
-- AI belum ada pada alur tugas karena modul tugas belum ada.
+- AI untuk tugas belum dihubungkan ke alur operator; bila ditambahkan, gunakan hanya sebagai draf feedback/rubrik yang dapat diedit guru.
 - Konteks materi masih perlu memanfaatkan judul kelas dan ringkasan materi aktif dengan batas token ketat.
 - Belum ada telemetry penggunaan atau guardrail per guru/kelas selain rate limit Worker.
 - 401 AI produksi harus diuji dari akun Firebase nyata setelah `VITE_AI_URL` dan origin deployment dikonfirmasi.

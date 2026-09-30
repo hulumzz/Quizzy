@@ -1,8 +1,20 @@
-# Quizzy Architecture Status
+# Nalaro Class Architecture Status
 
-Last updated: 23 September 2026
-Audited baseline: `4bdef7d` (`feat: add live quiz and secure Groq worker`)
+Catatan 30 September 2026: halaman ini adalah baseline historis dan sebagian uraian AWS di bawah sudah tidak menggambarkan target API frontend. Posisi terkini ada di [status dan riwayat Nalaro Class](nalaro-project-status.md); bukti deployment ada di [status migrasi Cloudflare](cloudflare-backend-migration-status.md).
+
+Last updated: 29 September 2026
+Audited baseline: local `main` with runtime stages 1-3 applied
 Current implementation branch: `main`
+
+## Update 29 September 2026
+
+- Live-session response has canonical `id` with temporary `sessionId` compatibility; host control, polling, and actions share that resolver.
+- Self-paced quiz now presents one question at a time with progress, answer navigator, and submit confirmation. Arrange answers are initialized once and sent even without a drag.
+- Nalaro Live has a clear lobby, question, locked-answer, reveal, host leaderboard, and final-ranking flow. Server remains scoring authority.
+- Teacher quiz results use class member names and show submitted, average, high, low, and pass-rate summaries.
+- Tasks, submissions, grading, return-for-revision, optional Learning Session linking, and immutable prior-answer snapshots are implemented.
+- Face Attendance MVP stores only a self-owned numeric embedding, runs browser-side 1:1 matching before ordinary check-in, and retains ordinary server-side attendance controls. It is not a production anti-spoofing control; see `docs/face-attendance-mvp.md`.
+- Pull requests and pushes to `main` run the repository validation workflow in GitHub Actions. It does not deploy AWS or Cloudflare resources.
 
 ## Executive status
 
@@ -109,7 +121,7 @@ The live runtime now exists in `main`; it is no longer "not started".
 - A separate Lambda processor rechecks canonical session state before writing answers.
 - Duplicate answer writes are prevented transactionally.
 - Host receives aggregate answer counts/distribution rather than individual answer payloads.
-- Host and participant UIs currently poll compact state every two seconds.
+- Host uses one-second polling only while a question is active; participant polling is one second. This is a beta UX setting, not a capacity guarantee.
 
 ### AI gateway
 
@@ -145,8 +157,8 @@ The live runtime now exists in `main`; it is no longer "not started".
 
 - Add frontend component/integration tests for critical class, material, quiz, attendance, and live flows.
 - Add browser E2E tests for the highest-risk user journeys.
-- Add CI so pull requests run frontend lint/build, backend tests/checks, Worker tests, and SAM validation.
-- Root `npm run validate` currently does not execute Worker tests or SAM validation/build.
+- CI now runs frontend lint/build/runtime tests, backend tests/checks, Worker tests, and whitespace checks. SAM validation/build remains an explicit local or release gate because it depends on the AWS SAM toolchain.
+- Root `npm run validate` executes Worker tests; `npm run validate:infra` remains separate and does not deploy.
 - Add load tests around live-answer queueing/processing and establish a supported classroom-size target.
 - Add pagination or an explicit supported cap for host participant lists; the current participant query is limited to 100 items.
 - Review AI token verification parity with the AWS verifier and keep auth validation requirements documented consistently.
@@ -159,7 +171,7 @@ These are intentional roadmap items, not regressions in the current implementati
 
 - persistent live score, leaderboard, streak/checkpoint, and final live results;
 - realtime state transport to replace two-second polling where justified;
-- assignments, submissions, revision requests, rubrics, grading, and teacher feedback;
+- rubric tooling and richer task analytics;
 - class learning sessions/timeline that group materials, tasks, and quizzes per meeting/date;
 - teacher quiz bank/catalog with copy semantics, taxonomy, moderation, import/export;
 - richer progress analytics and teacher reporting;
@@ -200,8 +212,8 @@ Exit criteria:
 2. live-answer capacity strategy corrected and load-tested;
 3. CORS/secret configuration reviewed for the hosted frontend;
 4. queue/Lambda/DLQ monitoring in place;
-5. root/CI validation covers frontend, backend, Worker, and SAM;
+5. root/CI validation covers frontend, backend, and Worker, while SAM validation/build passes as an explicit release gate;
 6. end-to-end browser verification passes for class, material upload, attendance, self-paced quiz, live quiz, and AI quiz draft;
-7. only after those gates pass, continue with persistent live scoring/leaderboards and the LMS task/session modules.
+7. only after those gates pass, continue with persistent live scoring/leaderboards plus task/session rubric and analytics improvements.
 
 See `docs/phase-10-and-learning-roadmap.md` for the product sequence.

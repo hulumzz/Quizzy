@@ -126,7 +126,7 @@ export class LiveQuizRepository {
   publicState(item) {
     const currentQuestion = item.currentQuestionIndex >= 0 ? item.questions[item.currentQuestionIndex] : null;
     const activeQuestion = currentQuestion ? item.phase === 'reveal' ? revealedQuestion(currentQuestion) : safeQuestion(currentQuestion) : null;
-    return { sessionId: item.id, code: item.joinCode, title: item.title, phase: item.phase, questionIndex: item.currentQuestionIndex, questionCount: item.questions.length, question: activeQuestion, startedAt: item.startedAt || null, endsAt: item.endsAt || null, stateVersion: item.stateVersion, participantCount: item.participantsCount || 0, answeredCount: item.currentAnsweredCount || 0 };
+    return { id: item.id, sessionId: item.id, code: item.joinCode, title: item.title, phase: item.phase, questionIndex: item.currentQuestionIndex, questionCount: item.questions.length, question: activeQuestion, startedAt: item.startedAt || null, endsAt: item.endsAt || null, stateVersion: item.stateVersion, participantCount: item.participantsCount || 0, answeredCount: item.currentAnsweredCount || 0 };
   }
 
   hostState(item, participants) {

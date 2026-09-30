@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { ClassRepository } from '../src/repositories/class.repository.js';
+import { GeneralQuizRepository } from '../src/repositories/general-quiz.repository.js';
+import { QuizBankRepository } from '../src/repositories/quiz-bank.repository.js';
+import { QuizRepository } from '../src/repositories/quiz.repository.js';
+import { validateQuizBankPublish } from '../src/validation/quiz-bank.js';
+import { validateQuizInput } from '../src/validation/quizzes.js';
+import { createD1Fixture } from './d1-fixture.js';
+
+test('D1 general quizzes and bank publish snapshots, filter, copy and unpublish', async (t) => {
+  const fixture = createD1Fixture(); t.after(fixture.close);
+  const classes = new ClassRepository(fixture.db);
+  const quizzes = new QuizRepository({ db: fixture.db, classRepository: classes });
+  const general = new GeneralQuizRepository(fixture.db);
+  const bank = new QuizBankRepository({ db: fixture.db, quizRepository: quizzes, generalQuizRepository: general });
+  const input = validateQuizInput({ title: 'Pecahan', status: 'published', questions: [{ id: 'q1', type: 'multiple_choice', prompt: 'Setengah itu?', choices: ['1/2', '1/3'], correctAnswer: '1/2', points: 1 }] });
+  const source = await quizzes.create({ classId: 'class-1', ownerId: 'teacher-1', ...input });
+  const generalSource = await general.create({ ownerId: 'teacher-1', ...input });
+  assert.equal((await general.list('teacher-1')).length, 1);
+  await assert.rejects(() => general.get('student-1', generalSource.id), { code: 'NOT_FOUND' });
+  const details = validateQuizBankPublish({ classId: 'class-1', quizId: source.id, level: 'sd', subjectId: 'matematika', tags: ['pecahan'] });
+  const published = await bank.publish({ ownerId: 'teacher-1', ...details });
+  assert.equal((await bank.list({ level: 'sd', subjectId: 'matematika' }))[0].id, published.id);
+  assert.equal((await bank.list({ level: 'smp', subjectId: 'all' })).length, 0);
+  assert.equal((await bank.listMine('teacher-1')).length, 1);
+  const copied = await bank.copyToClass({ catalogId: published.id, classId: 'class-1', ownerId: 'teacher-1' });
+  assert.equal(copied.status, 'draft');
+  assert.equal(copied.copiedFrom.id, published.id);
+  const republished = await bank.publish({ ownerId: 'teacher-1', ...details, level: 'smp' });
+  assert.equal(republished.id, published.id);
+  await bank.unpublish({ catalogId: published.id, ownerId: 'teacher-1' });
+  assert.equal((await bank.listMine('teacher-1')).length, 0);
+  const generalPublished = await bank.publish({ ownerId: 'teacher-1', ...validateQuizBankPublish({ sourceType: 'general', quizId: generalSource.id, level: 'sd', subjectId: 'matematika' }) });
+  assert.equal(generalPublished.sourceType, 'general');
+});

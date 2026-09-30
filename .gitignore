@@ -28,6 +28,7 @@ build/
 # Cloudflare Workers & Wrangler
 .wrangler/
 workers/.wrangler/
+workers/.wrangler-dry-run*/
 .dev.vars
 workers/.dev.vars
 implementation-plan.md
@@ -58,3 +59,7 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+*.txt
+*.md
+!docs/cloudflare-backend-migration-status.md
+!docs/nalaro-project-status.md

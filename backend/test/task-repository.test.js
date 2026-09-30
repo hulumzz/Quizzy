@@ -17,9 +17,11 @@ test('submission derives late status from the canonical deadline and preserves t
 
 test('resubmission stores the prior answer as an immutable revision record', async () => {
   let calls = 0; let transaction;
-  const previous = { ...task, entityType: 'TASK_SUBMISSION', taskId: 'task-1', classId: 'class-1', studentId: 'student-1', studentName: 'Dina', status: 'returned', submittedAt: '2026-09-30T10:00:00.000Z', attemptNumber: 1, attachments: [] };
+  const previous = { ...task, entityType: 'TASK_SUBMISSION', taskId: 'task-1', classId: 'class-1', studentId: 'student-1', studentName: 'Dina', status: 'returned', submittedAt: '2026-09-30T10:00:00.000Z', attemptNumber: 1, textAnswer: 'Jawaban pertama', attachments: [attachment] };
   const repository = new TaskRepository({ tableName: 'QuizzyTest', classRepository, documentClient: { async send(command) { calls += 1; if (calls === 1) return { Item: task }; if (calls === 2) return { Item: previous }; transaction = command; return {}; } } });
   await repository.submit({ classId: 'class-1', taskId: 'task-1', uid: 'student-1', studentName: 'Dina', textAnswer: 'Revisi saya', attachments: [attachment], now: '2026-09-30T11:00:00.000Z' });
   assert.equal(transaction.input.TransactItems[0].Put.Item.entityType, 'TASK_SUBMISSION_REVISION');
+  assert.equal(transaction.input.TransactItems[0].Put.Item.previousTextAnswer, 'Jawaban pertama');
+  assert.deepEqual(transaction.input.TransactItems[0].Put.Item.previousAttachments, [attachment]);
   assert.equal(transaction.input.TransactItems[1].Put.Item.attemptNumber, 2);
 });

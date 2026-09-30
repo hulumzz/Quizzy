@@ -32,6 +32,19 @@ function isCorrectAnswer(question, supplied) {
   return normalize(supplied) === normalize(question.correctAnswer);
 }
 
+function reviewAnswer(question, supplied) {
+  if (question.type === 'arrange') {
+    const itemText = new Map((question.items || []).map((item) => [item.id, item.text]));
+    const asText = (order) => Array.isArray(order) ? order.map((id) => itemText.get(id) || id) : [];
+    return { answer: asText(supplied), correctAnswer: asText(question.correctOrder) };
+  }
+  if (question.type === 'image_hotspot') {
+    const correctHotspot = (question.hotspots || []).find((spot) => spot.correct);
+    return { answer: supplied, correctAnswer: correctHotspot?.label || 'Area yang ditandai' };
+  }
+  return { answer: supplied, correctAnswer: question.correctAnswer };
+}
+
 export class QuizRepository {
   constructor({ tableName = process.env.TABLE_NAME, documentClient, classRepository, learningSessionRepository } = {}) {
     if (!tableName) throw new Error('TABLE_NAME is required');
@@ -140,7 +153,7 @@ export class QuizRepository {
   }
   result(attempt, quiz) {
     const response = { id: attempt.id, quizId: attempt.quizId, classId: attempt.classId, score: attempt.score, earnedPoints: attempt.earnedPoints, totalPoints: attempt.totalPoints, passed: attempt.passed, submittedAt: attempt.submittedAt };
-    if (quiz.settings.showCorrectAnswers) response.review = quiz.questions.map((question) => ({ questionId: question.id, prompt: question.prompt, answer: attempt.answers.find((a) => a.questionId === question.id)?.answer ?? '', correctAnswer: question.correctAnswer, explanation: question.explanation || '' }));
+    if (quiz.settings.showCorrectAnswers) response.review = quiz.questions.map((question) => ({ questionId: question.id, prompt: question.prompt, ...reviewAnswer(question, attempt.answers.find((answer) => answer.questionId === question.id)?.answer ?? ''), explanation: question.explanation || '' }));
     return response;
   }
   async getResult(classId, quizId, uid) {
@@ -155,6 +168,8 @@ export class QuizRepository {
     await this.requireOwner(classId, uid);
     await this.getItem(classId, quizId);
     const result = await this.client.send(new QueryCommand({ TableName: this.tableName, KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)', ExpressionAttributeValues: { ':pk': `QUIZ#${quizId}`, ':sk': 'ATTEMPT#' }, Limit: 100 }));
-    return (result.Items || []).map((item) => ({ id: item.id, quizId: item.quizId, classId: item.classId, studentId: item.studentId, score: item.score, earnedPoints: item.earnedPoints, totalPoints: item.totalPoints, passed: item.passed, submittedAt: item.submittedAt })).sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
+    const members = await this.classRepository.listMembers(classId, uid);
+    const names = new Map(members.map((member) => [member.uid, member.name]));
+    return (result.Items || []).map((item) => ({ id: item.id, quizId: item.quizId, classId: item.classId, studentId: item.studentId, studentName: names.get(item.studentId) || 'Siswa tidak diketahui', score: item.score, earnedPoints: item.earnedPoints, totalPoints: item.totalPoints, passed: item.passed, submittedAt: item.submittedAt })).sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
   }
 }

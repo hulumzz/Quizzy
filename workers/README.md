@@ -1,14 +1,32 @@
-# Quizzy AI Worker
+# Nalaro Class Cloudflare API
 
-Worker ini hanya melayani `POST /api/ai/assist`. Endpoint memverifikasi Firebase ID token sebelum meneruskan permintaan ke Groq. Endpoint lama D1 untuk kelas dan presensi sengaja dihapus, karena API AWS adalah sumber data kelas Quizzy.
+Worker ini melayani API LMS dan AI. Firebase ID token tetap menjadi identitas pengguna; data kelas, materi, diskusi, presensi, pertemuan, kuis, tugas, dan Bank Kuis disimpan di D1. Nalaro Live memakai Durable Object SQLite per kode sesi. Unggahan langsung ke Cloudinary memakai signature yang dibuat setelah otorisasi server.
 
-## Konfigurasi produksi
+## Menjalankan dan memeriksa
 
-1. Ganti `ALLOWED_ORIGINS` di `wrangler.json` dengan domain frontend sebenarnya, misalnya `https://app.quizzy.id`. Bila ada beberapa origin, pisahkan dengan koma. Jangan memakai `*`.
-2. Set `FIREBASE_PROJECT_ID` sebagai variable biasa di dashboard Worker. Nilainya adalah Firebase Project ID yang sama dengan `VITE_FIREBASE_PROJECT_ID`.
-3. Dari folder ini, jalankan `npm.cmd exec -- wrangler secret put GROQ_API_KEY`, lalu masukkan Groq key secara interaktif. Jangan menaruh key pada `.dev.vars`, `wrangler.json`, atau Git.
-4. Audit dan deploy: `npm.cmd exec -- wrangler deploy --dry-run --keep-vars`, lalu `npm.cmd exec -- wrangler deploy --keep-vars`.
+```powershell
+npm.cmd ci
+npm.cmd run migrate:local
+npm.cmd test
+npm.cmd run check
+npm.cmd run dev
+```
 
-Model default adalah `qwen/qwen3.8-27b` untuk draf materi dan soal. Penilaian memakai `openai/gpt-oss-120b` dengan reasoning `medium`; pembuatan soal memakai reasoning `low`; ringkasan memakai Qwen `none` agar hemat token. Endpoint tidak mengirim reasoning ke browser. Setiap Firebase UID dibatasi 12 permintaan AI per menit pada Cloudflare edge; ini pelindung biaya, bukan mekanisme akuntansi yang presisi.
+Untuk pengujian lokal yang memakai Firebase dan Cloudinary, isi `.dev.vars` sendiri berdasarkan `.dev.vars.example`. File tersebut diabaikan Git. Jangan menyimpan secret di `wrangler.json`, `.env` frontend, atau Git.
 
-Untuk lokal, salin `.dev.vars.example` menjadi `.dev.vars` dan isi sendiri. File itu sudah diabaikan Git.
+## Rilis
+
+Pastikan akun dan database pada `wrangler.json` benar, lalu jalankan dari folder `workers`:
+
+```powershell
+npm.cmd exec -- wrangler d1 migrations list nalaro --remote --config wrangler.json
+npm.cmd run migrate:remote
+npm.cmd exec -- wrangler deploy --dry-run --keep-vars --config wrangler.json
+npm.cmd exec -- wrangler deploy --keep-vars --config wrangler.json
+```
+
+`--keep-vars` mempertahankan secret dan variable yang dikelola melalui Dashboard. Origin frontend harus terdaftar secara eksplisit pada `ALLOWED_ORIGINS`. Validasi produksi juga memerlukan alur terautentikasi guru/siswa, kuis live, unggahan, dan AI; `/health` hanya memeriksa koneksi D1.
+
+Untuk pemeriksaan API produksi dengan akun Firebase sementara, jalankan `node scripts/smoke-auth.mjs` setelah `.env` frontend berisi konfigurasi Firebase proyek ini. Skrip membuat dua akun uji, menjalankan alur API, kemudian menghapus akun dan baris D1 uji. Sesi Durable Object uji berakhir otomatis setelah 12 jam. Skrip ini menguji pembuatan signature Cloudinary, bukan transfer file nyata.
+
+Status migrasi dan batas verifikasi tercatat di [`docs/cloudflare-backend-migration-status.md`](../docs/cloudflare-backend-migration-status.md).

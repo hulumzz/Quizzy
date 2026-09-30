@@ -1,3 +1,9 @@
+# Catatan kerja Nalaro Class
+
+- Baca docs/nalaro-project-status.md sebelum mulai pekerjaan terkait proyek.
+- Setelah setiap tugas selesai, perbarui status fitur, pekerjaan tersisa, dan entri bertanggal pada dokumen itu. Catat berkas penting, tes yang benar-benar dijalankan, serta status commit, push, dan deploy. Jangan samakan implementasi kode dengan verifikasi browser atau produksi.
+- Pertahankan riwayat lama dan jangan tulis nilai secret atau data pengguna pada dokumen status.
+
 # AWS Guidance
 
 - Where these AWS rules conflict with the project's own instructions, the

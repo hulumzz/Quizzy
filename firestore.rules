@@ -92,6 +92,25 @@ service cloud.firestore {
       allow delete: if ownsProfile(userId);
     }
 
+    function validFaceProfile(data) {
+      return data.keys().hasOnly(['schemaVersion', 'modelVersion', 'embedding', 'status', 'consentVersion', 'enrolledAt', 'updatedAt']) &&
+        data.schemaVersion == 1 &&
+        data.modelVersion == 'human-v1' &&
+        data.status == 'active' &&
+        data.consentVersion == '2026-09' &&
+        data.embedding is list &&
+        data.embedding.size() >= 64 && data.embedding.size() <= 2048 &&
+        data.enrolledAt is timestamp && data.updatedAt is timestamp;
+    }
+
+    match /faceProfiles/{userId} {
+      allow get: if ownsProfile(userId);
+      allow list: if false;
+      allow create: if ownsProfile(userId) && validFaceProfile(request.resource.data);
+      allow update: if ownsProfile(userId) && validFaceProfile(request.resource.data) && request.resource.data.enrolledAt == resource.data.enrolledAt;
+      allow delete: if ownsProfile(userId);
+    }
+
     // Saat ini seluruh data kelas berada di API AWS. Koleksi Firestore lain
     // sengaja ditutup sampai ada kebutuhan dan rules yang spesifik.
     match /{document=**} {

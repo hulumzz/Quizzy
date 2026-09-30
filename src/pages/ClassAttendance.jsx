@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import ClassWorkspaceNav from '../components/classroom/ClassWorkspaceNav';
 import { AttendanceIcon, MembersIcon } from '../components/icons';
-import { Badge, Button, Card, EmptyState, Input, PageHeader, Skeleton } from '../components/ui';
+import { Badge, Button, Card, EmptyState, Input, PageHeader, Skeleton, buttonClassName } from '../components/ui';
 import { useAttendance } from '../features/attendance/hooks/useAttendance';
+import FaceCheckInDialog from '../features/face/FaceCheckInDialog';
 import { getCurrentLocation, geolocationErrorMessage } from '../lib/geolocation';
 import { attendanceErrorMessage, checkInAttendance, createAttendanceSession, getAttendanceSession, setAttendanceStatus } from '../services/attendance.service';
 import { getClass } from '../services/class.service';
 import { listLearningSessions } from '../services/learning-session.service';
+import { faceProfileErrorMessage, getFaceProfile } from '../services/face.service';
+import { useAuth } from '../context/useAuth';
 
 const initialForm = { title: '', locationMode: 'online', latitude: '', longitude: '', radiusMeters: '100', sessionId: '' };
 
@@ -31,6 +34,7 @@ function checkInSummary(checkIn) {
 
 export default function ClassAttendance({ role }) {
   const { classId } = useParams();
+  const { user } = useAuth();
   const { attendance, status, error, configured, reload } = useAttendance(classId);
   const [className, setClassName] = useState('Ruang kelas');
   const [sessions, setSessions] = useState([]);
@@ -41,6 +45,9 @@ export default function ClassAttendance({ role }) {
   const [notice, setNotice] = useState('');
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [faceDialog, setFaceDialog] = useState(null);
+  const [faceProfile, setFaceProfile] = useState(null);
+  const [faceEnrollmentNeeded, setFaceEnrollmentNeeded] = useState(false);
 
   useEffect(() => {
     if (!configured) return undefined;
@@ -103,10 +110,22 @@ export default function ClassAttendance({ role }) {
       const checkInResult = await checkInAttendance(classId, session.id, location);
       setNotice(`Presensi berhasil dicatat${Number.isFinite(checkInResult.distanceMeters) ? ` pada jarak sekitar ${checkInResult.distanceMeters} m dari titik kelas` : ''}.`);
       await reload();
+      return true;
     } catch (caught) {
       const isGeolocationError = caught?.name === 'GeolocationError' || caught?.code === 'GEOLOCATION_UNAVAILABLE';
       setActionError(isGeolocationError ? geolocationErrorMessage(caught) : attendanceErrorMessage(caught));
+      return false;
     } finally { setBusyId(''); }
+  };
+
+  const openFaceCheckIn = async (session) => {
+    setBusyId(session.id); setActionError(''); setNotice('');
+    try {
+      const profile = await getFaceProfile(user?.uid);
+      if (!profile) { setFaceEnrollmentNeeded(true); setNotice('Daftarkan profil wajah terlebih dahulu untuk menggunakan presensi wajah.'); return; }
+      setFaceEnrollmentNeeded(false);
+      setFaceProfile(profile); setFaceDialog(session);
+    } catch (caught) { setActionError(faceProfileErrorMessage(caught)); } finally { setBusyId(''); }
   };
 
   const title = role === 'teacher' ? 'Presensi kelas' : 'Presensi dan riwayat';
@@ -115,7 +134,7 @@ export default function ClassAttendance({ role }) {
     <ClassWorkspaceNav role={role} classId={classId} />
     {!configured ? <div className="qz-status-strip">Layanan presensi belum tersedia di lingkungan ini.</div> : null}
     {actionError ? <div className="qz-inline-state qz-inline-state--error" role="alert">{actionError}</div> : null}
-    {notice ? <div className="qz-inline-state" role="status">{notice}</div> : null}
+    {notice ? <div className="qz-inline-state" role="status">{notice}{faceEnrollmentNeeded ? <> <Link className={buttonClassName({ variant: 'secondary', size: 'sm' })} to="/profile/face">Daftarkan wajah</Link></> : null}</div> : null}
 
     {role === 'teacher' ? <Card className="qz-attendance-create"><form className="qz-attendance-form" onSubmit={createSession}>
       <div className="qz-attendance-form__heading"><span><AttendanceIcon size={22} /></span><div><h2>Buat sesi presensi</h2><p>Presensi online cocok untuk siswa lintas wilayah. Lokasi hanya dipakai untuk pertemuan di tempat yang sama.</p></div></div>
@@ -132,11 +151,12 @@ export default function ClassAttendance({ role }) {
       return <Card key={session.id} className={`qz-attendance-session qz-attendance-session--${session.status}`}>
         <div className="qz-attendance-session__top"><div><Badge tone={meta.tone}>{meta.label}</Badge><h2>{session.title}</h2></div><AttendanceIcon size={24} /></div>
         <div className="qz-attendance-session__meta"><span>Jenis <strong>{onSite ? 'Tatap muka' : 'Online'}</strong></span>{onSite ? <span>Radius <strong>{session.radiusMeters} m</strong></span> : null}<span>Mulai <strong>{formatDateTime(session.startedAt)}</strong></span><span>Selesai <strong>{formatDateTime(session.endedAt)}</strong></span></div>
-        {role === 'teacher' ? <div className="qz-attendance-session__actions">{session.status === 'draft' ? <Button disabled={busyId === session.id} onClick={() => changeStatus(session.id, 'active')}>{busyId === session.id ? 'Memproses...' : 'Mulai sesi'}</Button> : null}{session.status === 'active' ? <Button variant="danger" disabled={busyId === session.id} onClick={() => changeStatus(session.id, 'ended')}>{busyId === session.id ? 'Memproses...' : 'Akhiri sesi'}</Button> : null}<Button variant="secondary" disabled={detailLoading} onClick={() => openRecap(session.id)}>Lihat rekap</Button></div> : <div className="qz-attendance-student-state">{alreadyPresent ? <><Badge tone="success">Hadir</Badge><span>Dicatat {checkInSummary(session.checkIn)}</span></> : session.status === 'active' ? <Button disabled={busyId === session.id} onClick={() => checkIn(session)}>{busyId === session.id ? (onSite ? 'Memeriksa lokasi...' : 'Mencatat presensi...') : 'Presensi sekarang'}</Button> : <><Badge tone="warning">Belum tercatat</Badge><span>Tidak ada check-in tersimpan untuk sesi ini.</span></>}</div>}
+        {role === 'teacher' ? <div className="qz-attendance-session__actions">{session.status === 'draft' ? <Button disabled={busyId === session.id} onClick={() => changeStatus(session.id, 'active')}>{busyId === session.id ? 'Memproses...' : 'Mulai sesi'}</Button> : null}{session.status === 'active' ? <Button variant="danger" disabled={busyId === session.id} onClick={() => changeStatus(session.id, 'ended')}>{busyId === session.id ? 'Memproses...' : 'Akhiri sesi'}</Button> : null}<Button variant="secondary" disabled={detailLoading} onClick={() => openRecap(session.id)}>Lihat rekap</Button></div> : <div className="qz-attendance-student-state">{alreadyPresent ? <><Badge tone="success">Hadir</Badge><span>Dicatat {checkInSummary(session.checkIn)}</span></> : session.status === 'active' ? <div className="qz-attendance-session__actions"><Button disabled={busyId === session.id} onClick={() => checkIn(session)}>{busyId === session.id ? (onSite ? 'Memeriksa lokasi...' : 'Mencatat presensi...') : 'Presensi biasa'}</Button><Button variant="secondary" disabled={busyId === session.id} onClick={() => openFaceCheckIn(session)}>{busyId === session.id ? 'Memeriksa...' : 'Presensi wajah'}</Button></div> : <><Badge tone="warning">Belum tercatat</Badge><span>Tidak ada check-in tersimpan untuk sesi ini.</span></>}</div>}
       </Card>;
     })}</div> : null}
 
     {status === 'success' && !attendance.length ? <Card><EmptyState icon={AttendanceIcon} title={role === 'teacher' ? 'Belum ada sesi presensi' : 'Belum ada riwayat presensi'} description={role === 'teacher' ? 'Buat sesi pertama lalu buka saat pertemuan dimulai. Pilih verifikasi lokasi hanya untuk tatap muka.' : 'Sesi aktif dan riwayat presensi yang dibagikan guru akan muncul di sini.'} /></Card> : null}
     {role === 'teacher' && (detail || detailLoading) ? <section className="qz-attendance-recap" aria-live="polite">{detailLoading ? <Skeleton height={220} /> : <Card><div className="qz-attendance-recap__header"><div><span>Rekap sesi</span><h2>{detail.title}</h2></div><div><strong>{detail.summary?.presentCount || 0}</strong><span>hadir dari {detail.summary?.totalMembers || 0} siswa</span></div></div>{detail.recap?.length ? <ul className="qz-attendance-recap__list">{detail.recap.map((member) => <li key={member.uid}><span className="qz-member-avatar" aria-hidden="true">{member.name.charAt(0).toUpperCase()}</span><div><strong>{member.name}</strong><span>{checkInSummary(member.checkIn)}</span></div><Badge tone={member.status === 'present' ? 'success' : 'warning'}>{member.status === 'present' ? 'Hadir' : 'Belum tercatat'}</Badge></li>)}</ul> : <EmptyState icon={MembersIcon} title="Belum ada anggota" description="Rekap akan terisi setelah siswa bergabung dan melakukan presensi." />}</Card>}</section> : null}
+    <FaceCheckInDialog open={Boolean(faceDialog)} onClose={() => setFaceDialog(null)} profile={faceProfile} busy={busyId === faceDialog?.id} onVerified={async () => { if (await checkIn(faceDialog)) setFaceDialog(null); }} />
   </div>;
 }

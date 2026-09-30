@@ -1,6 +1,14 @@
-# Fase 10 dan roadmap pembelajaran Quizzy
+# Fase 10 dan roadmap pembelajaran Nalaro Class
 
-Status dokumen: diperbarui setelah audit `main` pada 23 September 2026, baseline `4bdef7d`.
+Status dokumen: diperbarui setelah implementasi tahap 1-3 pada 29 September 2026.
+
+## Update runtime 29 September 2026
+
+- Kontrak live session sudah distandardkan ke `id` dengan kompatibilitas `sessionId`; flow host dipulihkan untuk respons lama maupun baru.
+- Kuis mandiri menggunakan satu soal per layar, progres, navigator, dan konfirmasi pengumpulan.
+- Editor kuis memakai navigator/focused editor, indikator kelengkapan, duplikasi, pengurutan, preview, dan batas 2-6 pilihan ganda.
+- Tugas dan submission sudah tersedia, termasuk `sessionId` opsional, grading, return-for-revision, serta snapshot jawaban dan lampiran sebelumnya.
+- CI menjalankan validasi aplikasi pada pull request dan `main`; CI tidak melakukan deployment.
 
 Dokumen ini membedakan tiga hal: fitur yang sudah ada di repository, pekerjaan yang masih harus diverifikasi/deploy, dan fitur produk lanjutan yang memang belum diimplementasikan.
 
@@ -34,7 +42,7 @@ Sudah tersedia di kode:
 - correct answer dan pembahasan tersedia pada fase `reveal`;
 - TTL 12 jam untuk data live;
 - rate limit join berdasarkan hash source network;
-- host/player melakukan polling state ringkas setiap dua detik.
+- host memakai polling satu detik ketika soal aktif dan dua detik pada fase lain; peserta memakai polling satu detik.
 
 Yang masih wajib sebelum production:
 
@@ -149,9 +157,9 @@ Keduanya masih tercantum sebagai model Groq yang aktif pada audit 23 September 2
 ### Pekerjaan AI berikutnya
 
 - sambungkan `VITE_AI_URL` pada deployment frontend ke Worker produksi;
-- masukkan Worker tests ke validation/CI utama;
+- Worker tests sudah masuk validation/CI utama;
 - gunakan `material_draft` di editor materi;
-- gunakan `assessment_feedback` hanya setelah modul tugas/submission tersedia;
+- gunakan `assessment_feedback` sebagai draf feedback/rubrik tugas yang tetap ditinjau guru;
 - tambahkan usage telemetry/cost guardrail bila penggunaan AI mulai terbuka luas.
 
 ## Learning Sessions
@@ -164,7 +172,7 @@ Model saat ini:
 Class
 └─ LearningSession
    ├─ materials (sessionId opsional)
-   ├─ tasks (belum diimplementasikan)
+   ├─ tasks (sessionId opsional)
    ├─ quizzes (sessionId opsional)
    └─ attendance (sessionId opsional)
 ```
@@ -184,7 +192,7 @@ Yang masih diperlukan sebelum production: deployment backend/frontend terbaru da
 
 ## Tugas dan submission
 
-Belum diimplementasikan.
+Sudah diimplementasikan untuk teks, lampiran, atau gabungan; termasuk tenggat, status, pengumpulan siswa, penilaian guru, feedback, return-for-revision, dan snapshot revisi. Pengaitan `sessionId` bersifat opsional serta divalidasi server-side.
 
 Entity yang disarankan:
 
@@ -248,7 +256,7 @@ Sebelum menambah modul besar, selesaikan gate berikut:
 6. jalankan `npm run validate`;
 7. jalankan Worker tests;
 8. jalankan SAM validation/build;
-9. buat CI untuk seluruh validation;
+9. tinjau hasil CI untuk seluruh validation;
 10. lakukan E2E browser untuk class, material upload, attendance, self-paced quiz, live quiz, dan AI draft;
 11. load-test live answers berdasarkan target peserta;
 12. dokumentasikan batas peserta dan failure/recovery behavior.
@@ -258,7 +266,7 @@ Setelah gate ini lulus, urutan pengembangan yang direkomendasikan:
 ```text
 13. Live scoring + leaderboard + result
 14. Learning Sessions
-15. Tasks + submissions + grading
+15. Rubrik tugas, analytics, dan peningkatan pengalaman revisi
 16. Quiz Bank / catalog - implementasi lokal selesai, deployment dan E2E masih diperlukan
 17. Progress analytics + teacher reports
 18. Notifications / schedules

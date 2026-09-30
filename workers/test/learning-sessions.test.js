@@ -1,0 +1,5 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { validateLearningSessionInput, validateLearningSessionOrder } from '../src/validation/learning-sessions.js';
+test('learning session input validates date and lifecycle status', () => { assert.deepEqual(validateLearningSessionInput({ title: '  Pertemuan  1 ', description: '  Bahas energi ', meetingDate: '2026-10-01', status: 'published' }), { title: 'Pertemuan 1', description: 'Bahas energi', meetingDate: '2026-10-01', status: 'published' }); assert.throws(() => validateLearningSessionInput({ title: 'x', meetingDate: '2026-02-31' }), (error) => error.code === 'VALIDATION_ERROR'); });
+test('learning session order rejects duplicate and unbounded IDs', () => { assert.deepEqual(validateLearningSessionOrder({ sessionIds: ['session-1', 'session-2'] }), { sessionIds: ['session-1', 'session-2'] }); assert.throws(() => validateLearningSessionOrder({ sessionIds: ['session-1', 'session-1'] }), (error) => error.code === 'VALIDATION_ERROR'); });

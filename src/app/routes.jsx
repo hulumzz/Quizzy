@@ -14,6 +14,7 @@ const Landing = lazy(() => import('../pages/Landing'));
 const QuizJoin = lazy(() => import('../pages/QuizJoin'));
 const StudentDashboard = lazy(() => import('../pages/student/StudentDashboard'));
 const StudentClasses = lazy(() => import('../pages/student/StudentClasses'));
+const FaceProfile = lazy(() => import('../pages/student/FaceProfile'));
 const TeacherDashboard = lazy(() => import('../pages/teacher/TeacherDashboard'));
 const TeacherClasses = lazy(() => import('../pages/teacher/TeacherClasses'));
 const TeacherAttendance = lazy(() => import('../pages/teacher/TeacherAttendance'));
@@ -74,6 +75,7 @@ export default function AppRoutes() {
 
         <Route element={<RequireAuth><AppShell /></RequireAuth>}>
           <Route path="profile" element={<Profile />} />
+          <Route path="profile/face" element={<RequireRole role="student"><FaceProfile /></RequireRole>} />
           <Route path="teacher" element={<RequireRole role="teacher"><Navigate to="home" replace /></RequireRole>} />
           <Route path="teacher/home" element={<RequireRole role="teacher"><TeacherDashboard /></RequireRole>} />
           <Route path="teacher/classes" element={<RequireRole role="teacher"><TeacherClasses /></RequireRole>} />

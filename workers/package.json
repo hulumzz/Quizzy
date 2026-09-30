@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "check": "node scripts/check.js",
+    "migrate:local": "wrangler d1 migrations apply nalaro --local",
+    "migrate:remote": "wrangler d1 migrations apply nalaro --remote"
   },
   "dependencies": {
     "hono": "^4.13.5"
   },
   "devDependencies": {
-    "wrangler": "^4.136.3"
+    "wrangler": "^4.144.0"
   }
 }

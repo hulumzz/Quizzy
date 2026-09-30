@@ -78,6 +78,7 @@ test('queued answer scores a correct answer on the server before it is persisted
 test('only the reveal state exposes the correct answer to public quiz players', () => {
   const repository = new LiveQuizRepository({ tableName: 'QuizzyTable', quizRepository: {}, documentClient: {} });
   const base = { id: 'session-1', joinCode: 'AB2CDE', title: 'Kuis', currentQuestionIndex: 0, questions: [{ id: 'q-1', type: 'multiple_choice', prompt: 'Pilih', choices: ['A', 'B'], correctAnswer: 'A', explanation: 'Karena A', points: 1 }], stateVersion: 1 };
+  assert.deepEqual(Object.fromEntries(['id', 'sessionId'].map((key) => [key, repository.publicState({ ...base, phase: 'lobby' })[key]])), { id: 'session-1', sessionId: 'session-1' });
   assert.equal(repository.publicState({ ...base, phase: 'question' }).question.correctAnswer, undefined);
   assert.deepEqual(repository.publicState({ ...base, phase: 'reveal' }).question, { id: 'q-1', type: 'multiple_choice', prompt: 'Pilih', choices: ['A', 'B'], correctAnswer: 'A', explanation: 'Karena A', points: 1 });
 });
