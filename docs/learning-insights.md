@@ -133,3 +133,7 @@ Nalaro tidak menghukum siswa karena aktivitas yang sudah lewat sebelum bergabung
 Nalaro Live belum menjadi sumber Learning Insights karena hasil Live masih hidup sementara di Durable Object. Setelah hasil Live dipersistenkan ke D1, source tersebut dapat ditambahkan ke engine tanpa mengubah UI atau model analitik utama.
 
 Tidak ada AI/LLM yang menghitung skor. Narrative insight saat ini dihasilkan secara deterministik dari evidence. Jika AI summary ditambahkan nanti, statistik tetap menjadi authority.
+
+## Performa
+
+Learning Insights membaca data authoritative secara batch saat dashboard dibuka. Tidak ada tabel cache yang perlu disinkronkan. Migration 0009 menambahkan index baca pada pola class/student/session agar query analitik tetap ringan ketika histori kelas bertambah.
