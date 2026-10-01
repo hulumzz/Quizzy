@@ -129,7 +129,7 @@ function summarizeScope({
     ...gradedTaskSubmissions.map((item) => ({ source: 'task', sourceId: item.task_id, label: item.task_title, score: Number(item.score), occurredAt: item.graded_at || item.submitted_at, sessionId: item.session_id || null })),
     ...revisionRows.flatMap((item) => {
       const previous = parseJson(item.previous_json, {});
-      return Number.isFinite(Number(previous.score))
+      return previous.score !== null && previous.score !== undefined && Number.isFinite(Number(previous.score))
         ? [{ source: 'task_revision', sourceId: item.task_id, label: item.task_title, score: Number(previous.score), occurredAt: item.created_at, sessionId: item.session_id || null }]
         : [];
     }),
