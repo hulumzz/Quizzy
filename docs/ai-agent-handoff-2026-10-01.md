@@ -318,7 +318,7 @@ Jangan klaim branch ini lulus CI/production hanya dari keberadaan test.
 Pada pekerjaan 1 Okt:
 - source dan kontrak direview;
 - test source ditulis;
-- GitHub Actions PR #7 run #10 kembali gagal sebelum memperoleh runner: job `validate` selesai failure dengan `steps=null`; pola yang sama terjadi pada PR sebelumnya;
+- GitHub Actions PR #7 yang diamati (run #10 dan #11) sama-sama gagal sebelum memperoleh runner: job `validate` selesai failure dengan `steps=null`; pola yang sama terjadi pada PR sebelumnya;
 - snapshot branch belum berhasil didownload ke runtime lokal untuk menjalankan npm test;
 - migration remote dan deployment belum dilakukan;
 - browser/multi-device WebSocket test belum dilakukan.
