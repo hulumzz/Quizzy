@@ -82,6 +82,15 @@ Terakhir diperiksa: 30 September 2026. Dokumen ini adalah catatan kerja yang har
 
 Tambahkan entri terbaru di paling atas setelah setiap tugas. Sertakan perubahan, berkas penting, tes yang benar-benar dijalankan, status commit/push/deploy, dan hal yang masih terbuka.
 
+### 1 Okt 2026 — Quiz hardening dan UX interaktif
+
+- Branch `fix/quiz-hardening-ux` dan PR #5 menutup kebocoran answer-key pada payload siswa untuk hotspot dan susun-urutan, menambahkan status attempt siswa, validasi opsi pilihan ganda unik, serta regression test Worker.
+- Self-paced quiz sekarang memiliki autosave per tab, restore setelah refresh, navigasi keyboard, transisi antar-soal, pilihan jawaban interaktif, status progres yang lebih jelas, dan tampilan hasil yang lebih ekspresif.
+- Nalaro Live mendapat recovery host setelah refresh, timer/progress visual, auto-reveal ketika deadline habis dari sisi host, mode layar penuh, join flow dua tahap, transisi fase, feedback jawaban terkunci, dan animasi leaderboard/hasil.
+- Dokumentasi `face-attendance-mvp.md` ditambahkan untuk menegaskan bahwa tantangan gerak kepala saat ini adalah MVP dan belum merupakan anti-spoof/liveness tingkat tinggi.
+- GitHub Actions pada PR dan dua run `main` sebelumnya gagal sebelum runner/step dijalankan (`runner_id=0`, `steps=null`). Karena itu lint/build/test untuk branch ini **belum dapat diklaim lulus dari CI**. Review kontrak source dilakukan, tetapi browser/perangkat nyata tetap menjadi gate berikutnya.
+- Belum diubah pada PR ini: trusted server-side teacher/student role enforcement, transport WebSocket Nalaro Live, dan penyimpanan hasil Live permanen.
+
 ### 30 Sep 2026 — Dokumen status hidup
 
 - Menyatukan riwayat, fitur, target migrasi, keputusan meninggalkan data DynamoDB, dan gate beta berdasarkan source saat ini.
