@@ -144,6 +144,17 @@ export class LiveQuizRoom {
     try { ws.send(JSON.stringify(payload)); } catch { /* closed socket */ }
   }
 
+  participantResult(state, participantId) {
+    const ranked = leaderboard(this.people());
+    return {
+      sessionId: state.id,
+      title: state.title,
+      participant: ranked.find((person) => person.id === participantId),
+      totalPoints: state.questions.reduce((total, q) => total + Number(q.points || 0), 0),
+      questionCount: state.questions.length,
+    };
+  }
+
   broadcast(state) {
     if (!this.ctx.getWebSockets) return;
     const publicPayload = JSON.stringify({ type: 'state', state: this.publicState(state) });
@@ -154,7 +165,13 @@ export class LiveQuizRoom {
         if (attachment.role === 'host') {
           hostPayload ||= JSON.stringify({ type: 'state', state: this.hostState(state) });
           ws.send(hostPayload);
-        } else ws.send(publicPayload);
+        } else {
+          ws.send(publicPayload);
+          if (attachment.role === 'participant' && state.phase === 'finished') {
+            const result = this.participantResult(state, attachment.participantId);
+            if (result.participant) ws.send(JSON.stringify({ type: 'result', result }));
+          }
+        }
       } catch { /* disconnected socket */ }
     }
   }
@@ -195,7 +212,7 @@ export class LiveQuizRoom {
     ws.serializeAttachment({ role: 'participant', participantId: participant.id });
     const state = this.load();
     this.sendSocket(ws, { type: 'state', state: this.publicState(state) });
-    if (state.phase === 'finished') this.sendSocket(ws, { type: 'result', result: this.result(input) });
+    if (state.phase === 'finished') this.sendSocket(ws, { type: 'result', result: this.participantResult(state, participant.id) });
   }
 
   async webSocketMessage(ws, message) {
@@ -401,14 +418,7 @@ export class LiveQuizRoom {
     const state = this.load();
     if (state.phase !== 'finished') throw conflict('LIVE_RESULT_NOT_READY', 'Hasil tersedia setelah host mengakhiri sesi.');
     this.requireParticipant(input);
-    const ranked = leaderboard(this.people());
-    return {
-      sessionId: state.id,
-      title: state.title,
-      participant: ranked.find((person) => person.id === input.participantId),
-      totalPoints: state.questions.reduce((total, q) => total + Number(q.points || 0), 0),
-      questionCount: state.questions.length,
-    };
+    return this.participantResult(state, input.participantId);
   }
 
   async alarm() {
