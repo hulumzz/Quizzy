@@ -94,7 +94,7 @@ function summarizeScope({
   const discussionRows = discussions.filter((item) => item.user_id === studentId && materialIds.has(item.material_id));
   const discussionMaterials = new Set(discussionRows.map((item) => item.material_id));
 
-  const scopedAttendance = attendanceSessions.filter((item) => inScope(item.session_id));
+  const scopedAttendance = attendanceSessions.filter((item) => inScope(item.session_id) && Date.parse(item.ended_at || 0) >= joinedAtMs);
   const attendanceIds = new Set(scopedAttendance.map((item) => item.id));
   const ownCheckins = checkins.filter((item) => item.user_id === studentId && attendanceIds.has(item.attendance_id));
   const attendanceRate = rate(ownCheckins.length, scopedAttendance.length);
