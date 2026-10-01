@@ -4,3 +4,12 @@
 @media(max-width:760px){.qz-insight-method{grid-template-columns:auto minmax(0,1fr)}.qz-insight-method>.qz-badge{grid-column:1/-1;justify-self:start}.qz-insight-metrics,.qz-insight-metrics--detail,.qz-insight-status-grid,.qz-insight-session-grid,.qz-insight-list,.qz-insight-evidence-grid{grid-template-columns:1fr 1fr}.qz-insight-section__head{align-items:start;flex-direction:column;gap:.25rem}.qz-insight-students>button{grid-template-columns:auto minmax(0,1fr) auto}.qz-insight-student-scores{grid-column:2/-1;grid-template-columns:1fr 1fr}.qz-insight-students>button>svg{grid-column:3;grid-row:1}.qz-insight-student-detail{max-height:75vh}}
 @media(max-width:520px){.qz-insight-metrics,.qz-insight-metrics--detail,.qz-insight-status-grid,.qz-insight-session-grid,.qz-insight-list,.qz-insight-evidence-grid{grid-template-columns:1fr}.qz-insight-students>button{grid-template-columns:auto minmax(0,1fr)}.qz-insight-students>button>svg{display:none}.qz-insight-student-scores{grid-column:1/-1}.qz-insight-evidence-list>div{grid-template-columns:72px minmax(0,1fr) 40px}}
 @media(prefers-reduced-motion:reduce){.qz-insight-metric,.qz-insight-students>button,.qz-insight-meter__track i{transition:none}}
+
+/* Card content layout: Card wraps children inside .qz-card__body. */
+.qz-insight-method{display:block;padding:0}.qz-insight-method>.qz-card__body{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:.9rem;align-items:start;padding:1rem 1.1rem}
+.qz-insight-metric{display:block;padding:0}.qz-insight-metric>.qz-card__body{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.75rem;align-items:start;min-height:130px;padding:1rem}
+.qz-insight-status{display:block;padding:0}.qz-insight-status>.qz-card__body{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:1rem}
+.qz-insight-session{display:block;padding:0}.qz-insight-session>.qz-card__body{display:grid;gap:.8rem;padding:1rem}
+.qz-insight-unmapped{display:block;padding:0}.qz-insight-unmapped>.qz-card__body{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.75rem;align-items:start;padding:1rem}
+.qz-insight-dialog{width:min(960px,calc(100vw - 2rem))}
+@media(max-width:760px){.qz-insight-method>.qz-card__body{grid-template-columns:auto minmax(0,1fr)}.qz-insight-method>.qz-card__body>.qz-badge{grid-column:1/-1;justify-self:start}}
