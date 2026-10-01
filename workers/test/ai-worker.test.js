@@ -3,7 +3,22 @@ import test from 'node:test';
 import { generateKeyPairSync, sign } from 'node:crypto';
 import app from '../src/index.js';
 
-const environment = { ALLOWED_ORIGINS: 'https://app.quizzy.test', FIREBASE_PROJECT_ID: 'quizzy-test' };
+const verifiedTeacherDb = {
+  prepare(sql) {
+    let values = [];
+    return {
+      bind(...next) { values = next; return this; },
+      async first() {
+        if (/SELECT role, role_verified, role_verified_at FROM users/i.test(sql)) {
+          return { role: 'teacher', role_verified: 1, role_verified_at: new Date().toISOString(), uid: values[0] };
+        }
+        return null;
+      },
+      async run() { return { meta: { changes: 1 } }; },
+    };
+  },
+};
+const environment = { ALLOWED_ORIGINS: 'https://app.quizzy.test', FIREBASE_PROJECT_ID: 'quizzy-test', DB: verifiedTeacherDb };
 const request = (path, options = {}) => new Request(`https://quizzy.skripzy-app.workers.dev${path}`, options);
 
 test('healthcheck is public and does not expose configuration', async () => {

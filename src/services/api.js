@@ -53,6 +53,49 @@ export async function apiRequest(path, { method = 'GET', body, signal, headers =
   return payload.data;
 }
 
+export async function optionalAuthApiRequest(path, { method = 'GET', body, signal } = {}) {
+  if (!appEnv.apiUrl) throw new ApiError('Layanan Nalaro Class belum dikonfigurasi.', { code: 'API_NOT_CONFIGURED' });
+  let token = '';
+  try { token = await getAuthToken(); } catch { /* public flow remains available */ }
+  let response;
+  try {
+    response = await fetch(`${appEnv.apiUrl}${path}`, {
+      method,
+      headers: {
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...(body ? { 'content-type': 'application/json' } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal,
+    });
+  } catch (error) {
+    if (error.name === 'AbortError') throw error;
+    throw new ApiError('Tidak dapat terhubung ke layanan Nalaro Class.', { code: 'NETWORK_ERROR' });
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new ApiError(payload.error?.message || 'Permintaan belum dapat diproses.', { code: payload.error?.code || 'API_ERROR', status: response.status, details: payload.error?.details, requestId: response.headers.get('x-request-id') });
+  return payload.data;
+}
+
+export async function apiDownload(path, { signal } = {}) {
+  if (!appEnv.apiUrl) throw new ApiError('Layanan Nalaro Class belum dikonfigurasi.', { code: 'API_NOT_CONFIGURED' });
+  let token;
+  try { token = await getAuthToken(); }
+  catch (error) { throw new ApiError('Sesi masuk tidak tersedia.', { code: error.code || 'AUTH_REQUIRED', status: 401 }); }
+  let response;
+  try {
+    response = await fetch(`${appEnv.apiUrl}${path}`, { headers: { authorization: `Bearer ${token}` }, signal });
+  } catch (error) {
+    if (error.name === 'AbortError') throw error;
+    throw new ApiError('Tidak dapat terhubung ke layanan Nalaro Class.', { code: 'NETWORK_ERROR' });
+  }
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new ApiError(payload.error?.message || 'Unduhan belum dapat diproses.', { code: payload.error?.code || 'API_ERROR', status: response.status, details: payload.error?.details });
+  }
+  return { blob: await response.blob(), disposition: response.headers.get('content-disposition') || '' };
+}
+
 export async function publicApiRequest(path, { method = 'GET', body, signal } = {}) {
   if (!appEnv.apiUrl) throw new ApiError('Layanan Nalaro Class belum dikonfigurasi.', { code: 'API_NOT_CONFIGURED' });
   let response;

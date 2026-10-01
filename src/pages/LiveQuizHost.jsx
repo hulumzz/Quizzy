@@ -4,7 +4,20 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Link, useParams } from 'react-router-dom';
 import { Button, Card, Input, PageHeader, buttonClassName } from '../components/ui';
 import { resolveLiveSessionId } from '../features/quiz/runtime';
-import { advanceGeneralLiveSession, advanceLiveSession, createGeneralLiveSession, createLiveSession, getGeneralLiveHostSession, getLiveHostSession, liveQuizErrorMessage } from '../services/live-quiz.service';
+import {
+  advanceGeneralLiveSession,
+  advanceLiveSession,
+  createGeneralLiveHostSocketTicket,
+  createGeneralLiveSession,
+  createLiveHostSocketTicket,
+  createLiveSession,
+  getGeneralLiveHostSession,
+  getLiveHostSession,
+  liveQuizErrorMessage,
+  openLiveSocket,
+  retryGeneralLivePersistence,
+  retryLivePersistence,
+} from '../services/live-quiz.service';
 
 const hostStorageKey = ({ general, classId, quizId }) => `nalaro.live.host.${general ? 'general' : classId}.${quizId}`;
 
@@ -18,6 +31,7 @@ export default function LiveQuizHost({ scope = 'class' }) {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [realtimeStatus, setRealtimeStatus] = useState('idle');
   const autoAdvancedQuestionRef = useRef('');
   const storageKey = useMemo(() => hostStorageKey({ general, classId, quizId }), [classId, general, quizId]);
   const backPath = general ? '/teacher/general-quizzes' : `/teacher/classes/${classId}/quizzes`;
@@ -25,6 +39,8 @@ export default function LiveQuizHost({ scope = 'class' }) {
 
   const fetchHostState = (sessionId) => general ? getGeneralLiveHostSession(sessionId) : getLiveHostSession(classId, sessionId);
   const advanceHostState = (sessionId, name) => general ? advanceGeneralLiveSession(sessionId, name) : advanceLiveSession(classId, sessionId, name);
+  const createSocketTicket = (sessionId) => general ? createGeneralLiveHostSocketTicket(sessionId) : createLiveHostSocketTicket(classId, sessionId);
+  const retryPersistence = (sessionId) => general ? retryGeneralLivePersistence(sessionId) : retryLivePersistence(classId, sessionId);
 
   useEffect(() => {
     const saved = sessionStorage.getItem(storageKey);
@@ -45,21 +61,58 @@ export default function LiveQuizHost({ scope = 'class' }) {
   }, [liveSessionId, storageKey]);
 
   useEffect(() => {
-    if (!liveSessionId) return undefined;
+    if (!liveSessionId) { setRealtimeStatus('idle'); return undefined; }
     let active = true;
-    const refresh = () => fetchHostState(liveSessionId)
-      .then((next) => { if (active) { setSession(next); setError(''); } })
-      .catch((caught) => {
+    let closeSocket = null;
+    let retryTimer = null;
+
+    const scheduleReconnect = () => {
+      if (!active || retryTimer) return;
+      retryTimer = window.setTimeout(() => {
+        retryTimer = null;
+        void connect();
+      }, 1400);
+    };
+
+    const connect = async () => {
+      if (!active) return;
+      setRealtimeStatus('connecting');
+      try {
+        const socketAuth = await createSocketTicket(liveSessionId);
         if (!active) return;
-        if (caught?.status === 404) {
-          sessionStorage.removeItem(storageKey);
-          setSession(null);
-        }
+        closeSocket?.();
+        closeSocket = openLiveSocket(liveSessionId, {
+          hostTicket: socketAuth.ticket,
+          onState: (next) => {
+            if (!active) return;
+            setSession(next);
+            setError('');
+          },
+          onStatus: (status) => {
+            if (!active) return;
+            setRealtimeStatus(status);
+            if (status === 'disconnected' || status === 'error') scheduleReconnect();
+          },
+          onError: (socketError) => {
+            if (!active) return;
+            setError(socketError?.message || 'Koneksi realtime host belum dapat dipulihkan.');
+          },
+        });
+      } catch (caught) {
+        if (!active) return;
+        setRealtimeStatus('error');
         setError(liveQuizErrorMessage(caught));
-      });
-    const timer = window.setInterval(refresh, session?.phase === 'question' ? 1000 : 1800);
-    return () => { active = false; window.clearInterval(timer); };
-  }, [classId, general, liveSessionId, session?.phase, storageKey]);
+        scheduleReconnect();
+      }
+    };
+
+    void connect();
+    return () => {
+      active = false;
+      if (retryTimer) window.clearTimeout(retryTimer);
+      closeSocket?.();
+    };
+  }, [classId, general, liveSessionId]);
 
   useEffect(() => {
     if (session?.phase !== 'question') return undefined;
@@ -85,6 +138,14 @@ export default function LiveQuizHost({ scope = 'class' }) {
       if (name === 'advance' && session?.phase === 'question') autoAdvancedQuestionRef.current = '';
       setError(liveQuizErrorMessage(caught));
     } finally { setBusy(false); }
+  };
+
+  const retrySave = async () => {
+    if (!liveSessionId) return;
+    setBusy(true); setError('');
+    try { setSession(await retryPersistence(liveSessionId)); }
+    catch (caught) { setError(liveQuizErrorMessage(caught)); }
+    finally { setBusy(false); }
   };
 
   const resetHostSession = () => {
@@ -125,12 +186,13 @@ export default function LiveQuizHost({ scope = 'class' }) {
   };
 
   const phaseKey = `${session?.phase || 'create'}:${session?.question?.id || 'none'}`;
+  const realtimeLabel = realtimeStatus === 'connected' ? 'Realtime tersambung' : realtimeStatus === 'connecting' ? 'Menyambungkan realtime…' : realtimeStatus === 'error' ? 'Realtime mencoba pulih' : '';
 
-  return <div className="qz-dashboard qz-enter"><PageHeader eyebrow={general ? 'Host kuis umum' : 'Nalaro Live'} title={session?.title || 'Mulai kuis live'} description="Bagikan QR atau kode sesi. Saat kuis berjalan, jawaban akan terbuka otomatis ketika waktu habis." actions={<><Button variant="ghost" onClick={toggleFullscreen}>Mode layar penuh</Button><Link className={buttonClassName({ variant: 'secondary' })} to={backPath}>Kembali</Link></>} />
+  return <div className="qz-dashboard qz-enter"><PageHeader eyebrow={general ? 'Host kuis umum' : 'Nalaro Live'} title={session?.title || 'Mulai kuis live'} description="Bagikan QR atau kode sesi. State peserta sekarang dikirim realtime melalui WebSocket, sementara skor tetap dihitung server." actions={<><Button variant="ghost" onClick={toggleFullscreen}>Mode layar penuh</Button><Link className={buttonClassName({ variant: 'secondary' })} to={backPath}>Kembali</Link></>} />
     {error ? <div className="qz-inline-state qz-inline-state--error" role="alert">{error}</div> : null}
     {recovering ? <Card className="qz-live-create"><h2>Memulihkan sesi...</h2><p>Jika sesi Live sebelumnya masih aktif, host akan tersambung kembali otomatis.</p></Card> : !session ? <Card className="qz-live-create"><span className="qz-live-create__spark">✦</span><h2>Siapkan arena</h2><p>Pilih durasi, buat sesi, lalu tampilkan QR di layar kelas. Skor dan deadline tetap dihitung server.</p><Input label="Durasi per soal (detik)" type="number" min="5" max="300" value={duration} onChange={(event) => setDuration(event.target.value)} /><Button disabled={busy} onClick={create}>{busy ? 'Membuat arena...' : 'Buat sesi live'}</Button></Card> : <div className="qz-live-host">
-      <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }}><Card className="qz-live-code"><div><span className="qz-eyebrow">KODE KUIS</span><strong>{session.code}</strong><p>{session.participantCount} peserta bergabung</p><button type="button" className="qz-live-link" onClick={copyJoin}>{copied ? '✓ Tautan tersalin' : 'Salin tautan gabung'}</button></div><QRCodeSVG value={joinUrl} size={164} level="M" includeMargin /></Card></motion.div>
+      <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }}><Card className="qz-live-code"><div><span className="qz-eyebrow">KODE KUIS</span><strong>{session.code}</strong><p>{session.participantCount} peserta bergabung</p><button type="button" className="qz-live-link" onClick={copyJoin}>{copied ? '✓ Tautan tersalin' : 'Salin tautan gabung'}</button>{realtimeLabel ? <small className={`qz-live-realtime qz-live-realtime--${realtimeStatus}`}>{realtimeLabel}</small> : null}</div><QRCodeSVG value={joinUrl} size={164} level="M" includeMargin /></Card></motion.div>
       <AnimatePresence mode="wait" initial={false}><motion.div key={phaseKey} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}><Card className="qz-live-stage"><div className="qz-live-stage__meta"><span className={`qz-live-phase qz-live-phase--${session.phase}`}>{session.phase === 'lobby' ? 'Lobi terbuka' : session.phase === 'question' ? `Soal ${session.questionIndex + 1}` : session.phase === 'reveal' ? 'Jawaban & papan skor' : 'Selesai'}</span><span>{session.questionCount} soal</span>{session.phase === 'question' ? <><span>{session.answeredCount}/{session.participantCount} menjawab</span><span className={`qz-live-host-timer${seconds <= 5 ? ' is-urgent' : ''}`}>{seconds === 0 ? 'Waktu habis' : `${seconds} detik`}</span></> : null}</div>{session.phase === 'question' ? <div className="qz-live-host-progress" aria-hidden="true"><b style={{ width: `${timerPercent}%` }} /></div> : null}<h2>{session.question?.prompt || 'Tunggu peserta bergabung, lalu mulai saat siap.'}</h2>{session.question?.choices ? <div className="qz-live-choice-preview">{session.question.choices.map((choice, index) => <span key={choice}><i>{String.fromCharCode(65 + index)}</i>{choice}</span>)}</div> : null}{['question', 'reveal'].includes(session.phase) && Object.keys(session.optionCounts || {}).length ? <div className="qz-live-distribution">{Object.entries(session.optionCounts).map(([choice, count]) => <div key={choice}><span>{choice}</span><b style={{ width: `${Math.round((count / Math.max(session.answeredCount, 1)) * 100)}%` }} /><strong>{count}</strong></div>)}</div> : null}{session.phase === 'reveal' && session.question ? <><motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} className="qz-live-reveal"><strong>Jawaban benar: {Array.isArray(session.question.correctAnswer) ? 'Susunan yang ditetapkan guru' : String(session.question.correctAnswer)}</strong>{session.question.explanation ? <p>{session.question.explanation}</p> : null}</motion.div>{leaderboard.length ? <ol className="qz-live-leaderboard">{leaderboard.slice(0, 5).map((participant, index) => <motion.li initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }} key={participant.id}><b>#{participant.rank}</b><span>{participant.name}</span><strong>{participant.score} poin</strong></motion.li>)}</ol> : null}</> : null}<div className="qz-live-host__actions">{session.phase !== 'finished' ? <Button disabled={busy} onClick={() => action('advance')}>{busy ? 'Memperbarui...' : buttonLabel}</Button> : null}{session.phase !== 'finished' ? <Button variant="secondary" disabled={busy} onClick={() => action('finish')}>Akhiri sesi</Button> : null}</div></Card></motion.div></AnimatePresence>
-      <Card className="qz-live-participants"><div className="qz-live-participants__heading"><h2>Peserta</h2><strong>{session.participants?.length || 0}</strong></div><div>{session.participants?.length ? session.participants.map((participant, index) => <motion.span initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: Math.min(index * 0.025, 0.3) }} key={participant.id}>{participant.name}{session.phase === 'finished' ? ` · ${participant.score} poin` : ''}</motion.span>) : <p>Belum ada peserta. Tampilkan QR atau kode di layar host.</p>}</div></Card>{session.phase === 'finished' ? <Card className="qz-live-results"><div className="qz-result-burst" aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <i key={index} />)}</div><span className="qz-eyebrow">PAPAN SKOR AKHIR</span><h2>Selamat untuk para pemain!</h2>{session.leaderboard?.length ? <ol>{session.leaderboard.slice(0, 10).map((participant) => <li key={participant.id}><b>#{participant.rank}</b><span>{participant.name}</span><strong>{participant.score} poin</strong></li>)}</ol> : <p>Belum ada jawaban yang selesai diproses.</p>}<div className="qz-live-results__actions"><Button onClick={resetHostSession}>Buat sesi baru</Button><Link className={buttonClassName({ variant: 'secondary' })} to={backPath}>Kembali ke daftar kuis</Link></div></Card> : null}
+      <Card className="qz-live-participants"><div className="qz-live-participants__heading"><h2>Peserta</h2><strong>{session.participants?.length || 0}</strong></div><div>{session.participants?.length ? session.participants.map((participant, index) => <motion.span initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: Math.min(index * 0.025, 0.3) }} key={participant.id}>{participant.name}{session.phase === 'finished' ? ` · ${participant.score} poin` : ''}</motion.span>) : <p>Belum ada peserta. Tampilkan QR atau kode di layar host.</p>}</div></Card>{session.phase === 'finished' ? <Card className="qz-live-results"><div className="qz-result-burst" aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <i key={index} />)}</div><span className="qz-eyebrow">PAPAN SKOR AKHIR</span><h2>Selamat untuk para pemain!</h2>{session.persistenceStatus === 'persisted' ? <div className="qz-live-persistence qz-live-persistence--success">✓ Hasil Live tersimpan permanen untuk laporan guru.</div> : session.persistenceStatus === 'failed' ? <div className="qz-live-persistence qz-live-persistence--error">Hasil sesi selesai, tetapi penyimpanan D1 perlu diulang.</div> : <div className="qz-live-persistence">Mengamankan hasil Live…</div>}{session.leaderboard?.length ? <ol>{session.leaderboard.slice(0, 10).map((participant) => <li key={participant.id}><b>#{participant.rank}</b><span>{participant.name}</span><strong>{participant.score} poin</strong></li>)}</ol> : <p>Belum ada jawaban yang selesai diproses.</p>}<div className="qz-live-results__actions">{session.persistenceStatus === 'failed' ? <Button disabled={busy} variant="secondary" onClick={retrySave}>{busy ? 'Menyimpan ulang…' : 'Coba simpan hasil lagi'}</Button> : null}<Button onClick={resetHostSession}>Buat sesi baru</Button><Link className={buttonClassName({ variant: 'secondary' })} to={backPath}>Kembali ke daftar kuis</Link></div></Card> : null}
     </div>}</div>;
 }

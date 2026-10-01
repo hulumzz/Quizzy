@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Link, useParams } from 'react-router-dom';
 import { Button, Card, PageHeader, buttonClassName } from '../components/ui';
 import { shuffledItemIds } from '../features/quiz/runtime';
-import { answerLiveQuestion, getLiveParticipantResult, getLiveSession, liveQuizErrorMessage } from '../services/live-quiz.service';
+import { answerLiveQuestion, getLiveParticipantResult, getLiveSession, liveQuizErrorMessage, openLiveSocket } from '../services/live-quiz.service';
 
 const storageKey = (code) => `quizzy.live.${code.toUpperCase()}`;
 
@@ -38,18 +38,71 @@ export default function LiveQuizPlayer() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [now, setNow] = useState(Date.now());
+  const [realtimeStatus, setRealtimeStatus] = useState('connecting');
   const participant = useMemo(() => {
-    try { return JSON.parse(sessionStorage.getItem(storageKey(code)) || 'null'); } catch { return null; }
+    try {
+      const stored = JSON.parse(sessionStorage.getItem(storageKey(code)) || 'null');
+      return stored?.id && !stored.participantId ? { ...stored, participantId: stored.id } : stored;
+    } catch { return null; }
   }, [code]);
 
   useEffect(() => {
     let active = true;
-    const load = () => getLiveSession(code).then((next) => { if (active) { setState(next); setError(''); } }).catch((caught) => { if (active) setError(liveQuizErrorMessage(caught)); });
-    load();
-    const poll = window.setInterval(load, 1000);
-    const clock = window.setInterval(() => setNow(Date.now()), 200);
-    return () => { active = false; window.clearInterval(poll); window.clearInterval(clock); };
+    getLiveSession(code)
+      .then((next) => { if (active) setState(next); })
+      .catch((caught) => { if (active) setError(liveQuizErrorMessage(caught)); });
+    return () => { active = false; };
   }, [code]);
+
+  useEffect(() => {
+    if (!participant) return undefined;
+    let active = true;
+    let closeSocket = null;
+    let retryTimer = null;
+    const scheduleReconnect = () => {
+      if (!active || retryTimer) return;
+      retryTimer = window.setTimeout(() => {
+        retryTimer = null;
+        connect();
+      }, 1200);
+    };
+    const connect = () => {
+      if (!active) return;
+      setRealtimeStatus('connecting');
+      closeSocket?.();
+      closeSocket = openLiveSocket(code, {
+        participant,
+        onState: (next) => {
+          if (!active) return;
+          setState(next);
+          setError('');
+        },
+        onResult: (next) => {
+          if (active) setResult(next);
+        },
+        onStatus: (status) => {
+          if (!active) return;
+          setRealtimeStatus(status);
+          if (status === 'disconnected' || status === 'error') scheduleReconnect();
+        },
+        onError: (socketError) => {
+          if (!active) return;
+          setError(socketError?.message || 'Koneksi realtime peserta belum dapat dipulihkan.');
+        },
+      });
+    };
+    connect();
+    return () => {
+      active = false;
+      if (retryTimer) window.clearTimeout(retryTimer);
+      closeSocket?.();
+    };
+  }, [code, participant]);
+
+  useEffect(() => {
+    const clock = window.setInterval(() => setNow(Date.now()), 200);
+    return () => window.clearInterval(clock);
+  }, []);
 
   useEffect(() => {
     setReceipt(null);
@@ -62,13 +115,13 @@ export default function LiveQuizPlayer() {
   const locked = Boolean(receipt) || seconds === 0;
 
   useEffect(() => {
-    if (state?.phase !== 'finished' || !participant) return undefined;
-    let cancelled = false;
-    const loadResult = () => getLiveParticipantResult(code, participant).then((next) => { if (!cancelled) setResult(next); }).catch((caught) => { if (!cancelled && caught?.code !== 'LIVE_RESULT_NOT_READY') setError(liveQuizErrorMessage(caught)); });
-    loadResult();
-    const timer = window.setInterval(loadResult, 1000);
-    return () => { cancelled = true; window.clearInterval(timer); };
-  }, [code, participant, state?.phase]);
+    if (state?.phase !== 'finished' || result || !participant || realtimeStatus === 'connected') return undefined;
+    let active = true;
+    getLiveParticipantResult(code, participant)
+      .then((next) => { if (active) setResult(next); })
+      .catch((caught) => { if (active && caught?.code !== 'LIVE_RESULT_NOT_READY') setError(liveQuizErrorMessage(caught)); });
+    return () => { active = false; };
+  }, [code, participant, realtimeStatus, result, state?.phase]);
 
   const submit = async () => {
     if (!participant || !state?.question || locked) return;
@@ -80,7 +133,9 @@ export default function LiveQuizPlayer() {
   if (!participant) return <div className="qz-live-public"><PageHeader title="Sesi peserta tidak ditemukan" description="Masuk kembali menggunakan kode kuis dan nama yang sama." /><Link to={`/quiz/join/${code || ''}`} className={buttonClassName()}>Kembali ke gabung kuis</Link></div>;
 
   const phaseKey = `${state?.phase || 'loading'}:${state?.question?.id || 'none'}`;
-  return <div className="qz-live-public qz-live-public--play qz-enter"><PageHeader eyebrow={`Halo, ${participant.name}`} title={state?.title || 'Menyiapkan kuis'} description={state?.phase === 'lobby' ? 'Kamu sudah masuk. Tunggu host memulai kuis.' : 'Jawab dari perangkatmu. Layar akan mengikuti host secara otomatis.'} />{error ? <div className="qz-inline-state qz-inline-state--error" role="alert">{error}</div> : null}<AnimatePresence mode="wait" initial={false}><motion.div key={phaseKey} initial={{ opacity: 0, scale: 0.97, y: 18 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, y: -12 }} transition={{ duration: 0.22 }}>
+  const connectionCopy = realtimeStatus === 'connected' ? 'Realtime tersambung' : realtimeStatus === 'connecting' ? 'Menyambungkan realtime…' : 'Mencoba menyambung ulang…';
+
+  return <div className="qz-live-public qz-live-public--play qz-enter"><PageHeader eyebrow={`Halo, ${participant.name}`} title={state?.title || 'Menyiapkan kuis'} description={state?.phase === 'lobby' ? 'Kamu sudah masuk. Tunggu host memulai kuis.' : 'Jawab dari perangkatmu. Perubahan soal dikirim realtime dari host.'} />{error ? <div className="qz-inline-state qz-inline-state--error" role="alert">{error}</div> : null}<div className={`qz-live-connection qz-live-connection--${realtimeStatus}`}>{connectionCopy}</div><AnimatePresence mode="wait" initial={false}><motion.div key={phaseKey} initial={{ opacity: 0, scale: 0.97, y: 18 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.98, y: -12 }} transition={{ duration: 0.22 }}>
     {state?.phase === 'question' && state.question ? <Card className="qz-live-player-card"><div className={`qz-live-timer-ring${seconds <= 5 ? ' is-urgent' : ''}`} style={{ '--timer-progress': `${timerProgress * 3.6}deg` }}><div><strong>{seconds}</strong><span>{seconds === 0 ? 'habis' : 'detik'}</span></div></div><div className="qz-live-question-meta"><span className="qz-eyebrow">SOAL {state.questionIndex + 1} DARI {state.questionCount}</span><span>{state.question.points} poin</span></div><h1>{state.question.prompt}</h1><LiveInteractiveAnswer question={state.question} value={answer} onChange={setAnswer} disabled={locked} />{receipt ? <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="qz-live-answer-locked" role="status"><strong>✓ Jawaban terkunci</strong><span>Sudah aman di server. Tunggu host membuka pembahasan.</span></motion.div> : seconds === 0 ? <div className="qz-live-timeout" role="status"><strong>Waktu habis</strong><span>Menunggu host membuka jawaban.</span></div> : <Button block disabled={!hasAnswer(answer)} onClick={submit}>Kunci jawaban</Button>}</Card>
       : state?.phase === 'reveal' && state.question ? <Card className="qz-live-reveal qz-live-reveal--player"><motion.span initial={{ rotate: -30, scale: 0 }} animate={{ rotate: 0, scale: 1 }} className="qz-live-wait__spark">✦</motion.span><span className="qz-eyebrow">JAWABAN & PEMBAHASAN</span><h2>{state.question.prompt}</h2><strong>Jawaban benar: {Array.isArray(state.question.correctAnswer) ? 'Susunan yang ditetapkan guru' : String(state.question.correctAnswer)}</strong><p>{receipt ? 'Jawabanmu sudah terkunci dan skor resmi dihitung server.' : 'Kamu belum mengunci jawaban pada soal ini.'}</p>{state.question.explanation ? <p>{state.question.explanation}</p> : null}</Card>
         : state?.phase === 'finished' && result ? <Card className="qz-live-result"><div className="qz-result-burst" aria-hidden="true">{Array.from({ length: 8 }, (_, index) => <i key={index} />)}</div><span className="qz-live-wait__spark">✦</span><span className="qz-eyebrow">PERINGKAT AKHIR</span><h2>Keren, {result.participant.name}!</h2><strong>{result.participant.score} poin</strong><p>{result.participant.correctCount} jawaban benar dari {result.questionCount} soal · Peringkat #{result.participant.rank}</p></Card>

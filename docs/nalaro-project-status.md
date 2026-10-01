@@ -1,6 +1,6 @@
 # Status dan riwayat pengerjaan Nalaro Class
 
-Terakhir diperiksa: 30 September 2026. Dokumen ini adalah catatan kerja yang harus diperbarui setelah setiap tugas selesai. Status mengacu pada kode di repository `hulumzz/Quizzy` dan bukti pengujian yang disebutkan; keberadaan kode tidak otomatis berarti fitur sudah lolos uji produksi.
+Terakhir diperiksa: 1 Oktober 2026. Dokumen ini adalah catatan kerja yang harus diperbarui setelah setiap tugas selesai. Status mengacu pada kode di repository `hulumzz/Quizzy` dan bukti pengujian yang disebutkan; keberadaan kode tidak otomatis berarti fitur sudah lolos uji produksi.
 
 ## Aturan pembaruan oleh AI
 
@@ -21,7 +21,7 @@ Terakhir diperiksa: 30 September 2026. Dokumen ini adalah catatan kerja yang har
 
 **Tahap: API inti sudah diimplementasikan pada Worker/D1; verifikasi cutover browser dan sejumlah fitur lanjutan belum selesai.** Jangan menyebut seluruh migrasi dan fitur `100%`.
 
-- Worker `nalaro-api` melayani route LMS, upload signature, AI, dan source Learning Insights pada branch fitur. Migrasi D1 produksi yang tercatat masih `0001`–`0008`; migration `0009_learning_analytics_indexes.sql` ada di branch fitur dan belum diterapkan remote. Worker memakai Firebase ID token, D1 binding `DB`, dan Durable Object `LIVE_QUIZ`.
+- Worker `nalaro-api` melayani route LMS, upload signature, AI, Learning Insights, dan Nalaro Live. Pada branch integrasi `feat/live-security-realtime`, role teacher/student diverifikasi server dari profil Firestore immutable lalu dicache 24 jam di D1; Live memakai WebSocket Durable Object dan hasil akhirnya dipersistenkan ke D1. Produksi remote masih pada migrasi `0001`–`0008`; `0009`–`0011` belum diterapkan remote.
 - Pages `https://nalaroclass.pages.dev` dan Worker `https://nalaro-api.uniquefactuhl.workers.dev` tersedia. Pada 30 September 2026, halaman depan memberi HTTP 200 dan preflight dari origin Pages ke `/classes?scope=joined` memberi HTTP 204 dengan header CORS yang benar. Ini belum membuktikan alur login atau tampilan kelas.
 - Uji API terautentikasi sebelumnya lulus untuk kelas, kuis/hasil, tugas/penilaian, Bank Kuis, kuis umum, signature unggahan, beberapa fase Nalaro Live, dan AI. Akun serta data uji dibersihkan; D1 kemudian memiliki 0 kelas. Rincian ada di [status migrasi Cloudflare](cloudflare-backend-migration-status.md).
 - Frontend lokal dan `.env.example` menunjuk Worker lewat `VITE_API_URL`/`VITE_AI_URL`. Variabel build Pages dan kesamaan source dengan repository GitHub lain yang terhubung ke Pages belum diverifikasi dari browser produksi.
@@ -43,7 +43,7 @@ Terakhir diperiksa: 30 September 2026. Dokumen ini adalah catatan kerja yang har
 
 | Area | Status saat ini | Acuan utama |
 | --- | --- | --- |
-| Login, profil, peran guru/siswa | Ada di kode; Firebase Auth dipertahankan | `src/pages/Auth.jsx`, `src/pages/Profile.jsx` |
+| Login, profil, peran guru/siswa | Firebase Auth dipertahankan. Branch integrasi menambah enforcement server-side: role dibaca dari profil Firestore milik UID yang sama, dicache terbatas di D1, dan mutation route sensitif memeriksa teacher/student | `workers/src/services/account-role.js`, `workers/src/middleware/auth.js`, `firestore.rules` |
 | Kelas dan anggota | Buat, gabung, daftar, detail, dan daftar anggota ada; pengaturan anggota lanjutan belum ada | `workers/src/routes/classes.js`, `src/app/routes.jsx` |
 | Materi, progres, bookmark, diskusi | Ada di frontend dan Worker; upload memakai signature Cloudinary | `workers/src/routes/materials.js`, `workers/src/routes/discussions.js` |
 | Pertemuan pembelajaran | Ada, termasuk pengaitan materi/kuis/presensi/tugas | `workers/src/routes/learning-sessions.js` |
@@ -51,9 +51,9 @@ Terakhir diperiksa: 30 September 2026. Dokumen ini adalah catatan kerja yang har
 | Kuis kelas dan kuis umum | Editor, publikasi, percobaan, penilaian, hasil, impor/ekspor ada | `workers/src/routes/quizzes.js`, `workers/src/routes/general-quizzes.js` |
 | Tugas | Pengumpulan, lampiran, nilai, feedback, revisi, dan riwayat revisi ada | `workers/src/routes/tasks.js` |
 | Bank Kuis | Publikasi katalog, salin sebagai draf, penarikan, impor/ekspor ada; moderasi/rating/analytics belum ada | `workers/src/routes/quiz-bank.js` |
-| Nalaro Live | Sesi, kode/QR, jawaban, skor server, reveal, dan papan skor ada. Frontend masih polling REST tiap 1–2 detik; WebSocket dan hasil permanen/ekspor guru belum ada | `workers/src/durable/LiveQuizRoom.js`, `src/pages/LiveQuizHost.jsx`, `src/pages/LiveQuizPlayer.jsx` |
+| Nalaro Live | Branch integrasi mengganti polling state utama dengan WebSocket Durable Object + reconnect, mempertahankan scoring REST/server-side, mempersistenkan hasil final ke D1, menyediakan laporan/CSV kelas dan kuis umum, serta retry persist | `workers/src/durable/LiveQuizRoom.js`, `workers/src/repositories/live-result.repository.js`, `src/pages/LiveQuizHost.jsx`, `src/pages/LiveQuizPlayer.jsx` |
 | AI Assist | Gateway dan draf materi/kuis yang ditinjau guru ada; feedback penilaian di layanan AI belum terhubung sebagai alur UI tugas | `workers/src/routes/ai.js`, `workers/src/services/ai.js`, `src/components/AiAssistModal.jsx` |
-| Learning Insights | Ada di branch `feat/learning-insights`: analitik kelas/siswa yang explainable dari kuis, tugas/revisi, presensi, materi, dan diskusi; Learning Session menjadi unit topik. Belum dideploy/diuji browser produksi | `workers/src/repositories/learning-analytics.repository.js`, `src/pages/ClassAnalytics.jsx`, `docs/learning-insights.md` |
+| Learning Insights | Ada di branch `feat/learning-insights` dan diperluas di branch integrasi: analitik explainable dari kuis mandiri, Nalaro Live siswa terautentikasi, tugas/revisi, presensi, materi, dan diskusi; Learning Session menjadi unit topik. Belum dideploy/diuji browser produksi | `workers/src/repositories/learning-analytics.repository.js`, `src/pages/ClassAnalytics.jsx`, `docs/learning-insights.md` |
 
 ## Pekerjaan tersisa
 
@@ -69,8 +69,6 @@ Terakhir diperiksa: 30 September 2026. Dokumen ini adalah catatan kerja yang har
 
 - [ ] Hubungkan agenda/jadwal nyata; widget dashboard masih menyatakan “Agenda belum tersedia”.
 - [ ] Tambahkan pengaturan anggota kelas lanjutan bila diperlukan, misalnya mengeluarkan anggota atau mengubah hak akses; route sekarang baru menyediakan daftar anggota.
-- [ ] Jika target realtime awal tetap berlaku, implementasikan WebSocket pada Durable Object dan frontend. Pengalaman live sekarang memakai polling REST.
-- [ ] Simpan rekap akhir Nalaro Live secara permanen dan sediakan ekspor/laporan guru. Room sekarang kedaluwarsa setelah 12 jam.
 - [ ] Pengembangan setelah beta: laporan progres guru, notifikasi/jadwal, rubrik tugas, moderasi/pencarian/rating Bank Kuis, dan preview PPT/PPTX hasil konversi. Ini roadmap, bukan syarat untuk menyatakan API inti sudah bermigrasi.
 
 ## Bukti validasi dan batasnya
@@ -91,6 +89,18 @@ Tambahkan entri terbaru di paling atas setelah setiap tugas. Sertakan perubahan,
 - Dokumentasi `face-attendance-mvp.md` ditambahkan untuk menegaskan bahwa tantangan gerak kepala saat ini adalah MVP dan belum merupakan anti-spoof/liveness tingkat tinggi.
 - GitHub Actions pada PR dan dua run `main` sebelumnya gagal sebelum runner/step dijalankan (`runner_id=0`, `steps=null`). Karena itu lint/build/test untuk branch ini **belum dapat diklaim lulus dari CI**. Review kontrak source dilakukan, tetapi browser/perangkat nyata tetap menjadi gate berikutnya.
 - Belum diubah pada PR ini: trusted server-side teacher/student role enforcement, transport WebSocket Nalaro Live, dan penyimpanan hasil Live permanen.
+
+### 1 Okt 2026 — Role enforcement + WebSocket Live + hasil Live permanen
+
+- PR #7 / branch integrasi `feat/live-security-realtime` dibangun di atas `feat/learning-insights` (stacked PR #6). Perubahan Live yang relevan dari PR #5 juga dibawa agar UX/realtime tidak meregresikan hardening kuis sebelumnya.
+- Role teacher/student kini diperiksa Worker dari profil Firestore milik Firebase UID yang sama. D1 hanya mempercayai role setelah verifikasi dan cache direvalidasi maksimal 24 jam. Route create/manage kelas, materi, kuis, tugas, presensi, Bank Kuis, AI Assist, Learning Insights, dan host Live diberi boundary teacher/student yang eksplisit.
+- Nalaro Live memakai WebSocket Durable Object Hibernation untuk delivery state realtime. Host memakai tiket socket satu kali; peserta dapat mengautentikasi socket dengan participant token. REST tetap dipakai untuk mutation/answer sehingga scoring tetap server-authoritative.
+- Hasil sesi Live final disimpan idempotent ke D1 melalui migration `0011_live_quiz_results.sql`: metadata sesi, ranking peserta, dan ringkasan benar/poin per soal. Raw answer tidak disalin ke D1 report. Host dapat retry jika persist gagal; alarm DO mencoba menyimpan lagi sebelum room kedaluwarsa.
+- Guru dapat membuka riwayat Live permanen, detail akurasi/ranking, dan ekspor CSV dari Kuis kelas; kuis umum juga mendapat riwayat/detail/CSV.
+- Join Live tetap publik. Jika request membawa Firebase token siswa yang verified dan siswa memang anggota kelas, result dipetakan ke `student_id`; peserta publik tidak pernah ditebak identitasnya dari nama.
+- Learning Insights sekarang memakai Live terautentikasi sebagai strong evidence dengan bobot mastery 0,90. Hasil Live publik tetap hanya laporan dan tidak masuk profil analitik siswa.
+- Test source ditambah/diupdate untuk trusted role cache, Live persistence/report, privacy payload hotspot/arrange, participant reconnect, participant ID contract, dan integrasi Live → Learning Insights. Smoke script produksi juga diperbarui untuk membuat/menghapus profil role Firestore uji.
+- **Belum dideploy**: migration `0009`, `0010`, `0011`, Worker terbaru, dan frontend terbaru belum diterapkan ke remote. GitHub Actions PR #7 yang diamati (run #10 dan #11) sama-sama selesai `failure` sebelum satu pun step dijalankan (`steps=null`); jangan menyebut branch ini lulus CI/production sebelum validasi nyata dilakukan.
 
 ### 1 Okt 2026 — Nalaro Learning Insights
 
@@ -113,4 +123,5 @@ Tambahkan entri terbaru di paling atas setelah setiap tugas. Sertakan perubahan,
 - [Status migrasi Cloudflare](cloudflare-backend-migration-status.md): bukti deployment dan smoke test terakhir.
 - [Batasan presensi wajah](face-attendance-mvp.md): desain dan risiko MVP.
 - [Metodologi Learning Insights](learning-insights.md): sumber evidence, formula, fairness, confidence, dan batas implementasi.
+- [Handoff AI agent 1 Okt 2026](ai-agent-handoff-2026-10-01.md): arsitektur terbaru, branch stack, role enforcement, realtime Live, persistence, migrasi, merge/deploy order, dan gate validasi.
 - [Arsitektur terdahulu](architecture-status.md), [roadmap fase 10+](phase-10-and-learning-roadmap.md), dan [handoff awal](github-agent-handoff-2026-09-24.md): riwayat/baseline yang sebagian masih menjelaskan arsitektur AWS lama.

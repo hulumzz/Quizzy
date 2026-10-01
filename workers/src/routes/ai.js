@@ -1,6 +1,6 @@
 import { badRequest, HttpError } from '../http/errors.js';
 import { json } from '../http/response.js';
-import { getAuth } from '../middleware/auth.js';
+import { assertAccountRole, getAuth } from '../middleware/auth.js';
 import { generateAiResponse } from '../services/ai.js';
 import { verifyFirebaseToken } from '../services/firebase-auth.js';
 
@@ -11,7 +11,9 @@ const MAX_INSTRUCTION_CHARS = 500;
 async function requireAiAuth(c, next) {
   if (!c.env.FIREBASE_PROJECT_ID) throw new HttpError(503, 'AI_NOT_CONFIGURED', 'Asisten AI belum dikonfigurasi.');
   try {
-    c.set('auth', await verifyFirebaseToken(c.req.header('authorization'), c.env.FIREBASE_PROJECT_ID));
+    const authorization = c.req.header('authorization');
+    c.set('auth', await verifyFirebaseToken(authorization, c.env.FIREBASE_PROJECT_ID));
+    c.set('authToken', authorization);
   } catch (error) {
     if (error?.status === 401) throw new HttpError(401, 'AUTH_REQUIRED', 'Masuk diperlukan untuk menggunakan asisten AI.');
     throw error;
@@ -22,6 +24,7 @@ async function requireAiAuth(c, next) {
 export function registerAiRoutes(app) {
   app.post('/api/ai/assist', requireAiAuth, async (c) => {
     const user = getAuth(c);
+    await assertAccountRole(c, 'teacher');
     if (!c.env.AI_RATE_LIMITER || !c.env.GROQ_API_KEY) throw new HttpError(503, 'AI_NOT_CONFIGURED', 'Asisten AI belum dikonfigurasi.');
     const rate = await c.env.AI_RATE_LIMITER.limit({ key: user.uid });
     if (!rate.success) throw new HttpError(429, 'AI_RATE_LIMITED', 'Asisten sedang digunakan. Coba lagi dalam satu menit.');
