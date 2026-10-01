@@ -1,6 +1,6 @@
 import { badRequest, forbidden, HttpError } from '../http/errors.js';
 import { json } from '../http/response.js';
-import { getAuth, requireAuth } from '../middleware/auth.js';
+import { assertAccountRole, getAuth, requireAuth } from '../middleware/auth.js';
 import { ClassRepository } from '../repositories/class.repository.js';
 import { AttendanceRepository } from '../repositories/attendance.repository.js';
 import { LearningSessionRepository } from '../repositories/learning-session.repository.js';
@@ -15,8 +15,8 @@ function repository(c) { const classes = new ClassRepository(c.env.DB); return n
 export function registerAttendanceRoutes(app) {
   const base = '/classes/:classId/attendance'; const classId = (c) => validateClassId(c.req.param('classId')); const identity = (c) => { const auth = getAuth(c); if (auth.signInProvider === 'anonymous') throw forbidden('Akun tamu tidak dapat menggunakan presensi.'); return auth; };
   app.get(base, requireAuth, async (c) => { const auth = identity(c); return json(c, 200, { data: { attendance: await repository(c).list(classId(c), auth.uid) } }); });
-  app.post(base, requireAuth, async (c) => { const auth = identity(c); const attendance = await repository(c).create({ classId: classId(c), ownerId: auth.uid, ...validateAttendanceInput(await body(c)) }); return json(c, 201, { data: { attendance } }); });
+  app.post(base, requireAuth, async (c) => { const auth = identity(c); await assertAccountRole(c, 'teacher'); const attendance = await repository(c).create({ classId: classId(c), ownerId: auth.uid, ...validateAttendanceInput(await body(c)) }); return json(c, 201, { data: { attendance } }); });
   app.get(`${base}/:attendanceId`, requireAuth, async (c) => { const auth = identity(c); return json(c, 200, { data: { attendance: await repository(c).detail(classId(c), validateAttendanceId(c.req.param('attendanceId')), auth.uid) } }); });
-  app.put(`${base}/:attendanceId/status`, requireAuth, async (c) => { const auth = identity(c); const attendance = await repository(c).setStatus({ classId: classId(c), attendanceId: validateAttendanceId(c.req.param('attendanceId')), ownerId: auth.uid, ...validateAttendanceStatus(await body(c)) }); return json(c, 200, { data: { attendance } }); });
-  app.post(`${base}/:attendanceId/check-in`, requireAuth, async (c) => { const auth = identity(c); const checkIn = await repository(c).checkIn({ classId: classId(c), attendanceId: validateAttendanceId(c.req.param('attendanceId')), uid: auth.uid, name: displayName(auth), ...validateCheckIn(await body(c)) }); return json(c, 200, { data: { checkIn } }); });
+  app.put(`${base}/:attendanceId/status`, requireAuth, async (c) => { const auth = identity(c); await assertAccountRole(c, 'teacher'); const attendance = await repository(c).setStatus({ classId: classId(c), attendanceId: validateAttendanceId(c.req.param('attendanceId')), ownerId: auth.uid, ...validateAttendanceStatus(await body(c)) }); return json(c, 200, { data: { attendance } }); });
+  app.post(`${base}/:attendanceId/check-in`, requireAuth, async (c) => { const auth = identity(c); await assertAccountRole(c, 'student'); const checkIn = await repository(c).checkIn({ classId: classId(c), attendanceId: validateAttendanceId(c.req.param('attendanceId')), uid: auth.uid, name: displayName(auth), ...validateCheckIn(await body(c)) }); return json(c, 200, { data: { checkIn } }); });
 }

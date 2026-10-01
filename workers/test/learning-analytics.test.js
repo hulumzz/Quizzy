@@ -117,3 +117,44 @@ test('analytics measures score gain after revision without inflating mastery his
   assert.equal(own.profile.revisionResponse.averageGain, 20);
   assert.equal(own.profile.revisionResponse.improvedCount, 1);
 });
+
+
+test('authenticated Nalaro Live result becomes strong Learning Insights evidence', async (t) => {
+  const fixture = createD1Fixture(); t.after(fixture.close);
+  const { sqlite, db } = fixture;
+  sqlite.prepare("UPDATE class_members SET joined_at='2026-08-01T00:00:00.000Z' WHERE class_id='class-1' AND user_id='student-1'").run();
+  sqlite.prepare("INSERT INTO learning_sessions(id,class_id,owner_id,title,description,meeting_date,status,sort_order,published_at,created_at,updated_at) VALUES('s-live','class-1','teacher-1','Pecahan','','2026-09-20','published',1,'2026-09-19','2026-09-19','2026-09-19')").run();
+  sqlite.prepare(`INSERT INTO live_quiz_sessions(id,code,scope,class_id,learning_session_id,quiz_id,owner_id,title,questions_json,question_count,total_points,participant_count,started_at,finished_at,created_at,persisted_at)
+    VALUES('LIVE23','LIVE23','class','class-1','s-live','quiz-live','teacher-1','Live Pecahan','[]',5,100,1,'2026-09-20T01:00:00Z','2026-09-20T01:10:00Z','2026-09-20T00:59:00Z','2026-09-20T01:10:01Z')`).run();
+  sqlite.prepare(`INSERT INTO live_quiz_results(live_session_id,participant_id,student_id,participant_name,score,correct_count,rank,joined_at)
+    VALUES('LIVE23','p1','student-1','Siswa',80,4,1,'2026-09-20T01:00:10Z')`).run();
+
+  const repository = new LearningAnalyticsRepository({ db, classRepository: new ClassRepository(db) });
+  const own = await repository.getStudent('class-1', 'student-1', 'student-1', { now: new Date('2026-10-01T00:00:00.000Z') });
+
+  assert.equal(own.profile.rates.liveAverage, 80);
+  assert.equal(own.profile.mastery, 80);
+  assert.equal(own.profile.counts.liveQuizzesCompleted, 1);
+  assert.equal(own.profile.strongEvidenceCount, 1);
+  assert.equal(own.profile.status.key, 'insufficient');
+  assert.equal(own.profile.sessionAnalytics[0].title, 'Pecahan');
+  assert.equal(own.profile.sessionAnalytics[0].mastery, 80);
+  assert.ok(own.profile.recentEvidence.some((item) => item.sourceLabel === 'Nalaro Live'));
+});
+
+test('anonymous Live participant never becomes student Learning Insights evidence', async (t) => {
+  const fixture = createD1Fixture(); t.after(fixture.close);
+  const { sqlite, db } = fixture;
+  sqlite.prepare("UPDATE class_members SET joined_at='2026-08-01T00:00:00.000Z' WHERE class_id='class-1' AND user_id='student-1'").run();
+  sqlite.prepare(`INSERT INTO live_quiz_sessions(id,code,scope,class_id,quiz_id,owner_id,title,questions_json,question_count,total_points,participant_count,finished_at,created_at,persisted_at)
+    VALUES('PUB234','PUB234','class','class-1','quiz-live','teacher-1','Live Publik','[]',5,100,1,'2026-09-20T01:10:00Z','2026-09-20T00:59:00Z','2026-09-20T01:10:01Z')`).run();
+  sqlite.prepare(`INSERT INTO live_quiz_results(live_session_id,participant_id,student_id,participant_name,score,correct_count,rank,joined_at)
+    VALUES('PUB234','p-public',NULL,'Siswa',100,5,1,'2026-09-20T01:00:10Z')`).run();
+
+  const repository = new LearningAnalyticsRepository({ db, classRepository: new ClassRepository(db) });
+  const own = await repository.getStudent('class-1', 'student-1', 'student-1', { now: new Date('2026-10-01T00:00:00.000Z') });
+
+  assert.equal(own.profile.rates.liveAverage, null);
+  assert.equal(own.profile.counts.liveQuizzesCompleted, 0);
+  assert.equal(own.profile.mastery, null);
+});
