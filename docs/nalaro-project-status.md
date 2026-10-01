@@ -103,4 +103,5 @@ Tambahkan entri terbaru di paling atas setelah setiap tugas. Sertakan perubahan,
 
 - [Status migrasi Cloudflare](cloudflare-backend-migration-status.md): bukti deployment dan smoke test terakhir.
 - [Batasan presensi wajah](face-attendance-mvp.md): desain dan risiko MVP.
+- [Metodologi Learning Insights](learning-insights.md): sumber evidence, formula, fairness, confidence, dan batas implementasi.
 - [Arsitektur terdahulu](architecture-status.md), [roadmap fase 10+](phase-10-and-learning-roadmap.md), dan [handoff awal](github-agent-handoff-2026-09-24.md): riwayat/baseline yang sebagian masih menjelaskan arsitektur AWS lama.
