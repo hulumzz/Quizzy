@@ -41,7 +41,8 @@ export async function resolveAccountRole({ db, identity, authorization, projectI
 
   const cached = await db.prepare('SELECT role, role_verified, role_verified_at FROM users WHERE id=?1').bind(identity.uid).first();
   const verifiedAt = Date.parse(cached?.role_verified_at || '');
-  if (cached?.role_verified === 1 && VALID_ROLES.has(cached.role) && Number.isFinite(verifiedAt) && Date.now() - verifiedAt < ROLE_CACHE_TTL_MS) return cached.role;
+  const nowMs = Date.parse(now);
+  if (cached?.role_verified === 1 && VALID_ROLES.has(cached.role) && Number.isFinite(verifiedAt) && Number.isFinite(nowMs) && nowMs - verifiedAt < ROLE_CACHE_TTL_MS) return cached.role;
 
   const profile = await fetchTrustedProfile({ authorization, projectId, uid: identity.uid, fetchImpl });
   await db.prepare(`INSERT INTO users(id,email,name,role,created_at,updated_at,role_verified,role_verified_at)
