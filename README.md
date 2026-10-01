@@ -1,6 +1,6 @@
 # Nalaro Class
 
-Nalaro Class adalah LMS berbasis React untuk kelas, materi, diskusi, presensi, tugas, kuis mandiri, dan Nalaro Live.
+Nalaro Class adalah LMS berbasis React untuk kelas, materi, diskusi, presensi, tugas, kuis mandiri, Nalaro Live, dan Learning Insights yang membaca perkembangan belajar dari evidence kelas.
 
 ## Arsitektur
 
