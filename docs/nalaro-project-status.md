@@ -83,7 +83,7 @@ Tambahkan entri terbaru di paling atas setelah setiap tugas. Sertakan perubahan,
 
 ### 1 Okt 2026 — Role enforcement + WebSocket Live + hasil Live permanen
 
-- Branch integrasi `feat/live-security-realtime` dibangun di atas `feat/learning-insights`. Perubahan Live yang relevan dari PR #5 juga dibawa agar UX/realtime tidak meregresikan hardening kuis sebelumnya.
+- PR #7 / branch integrasi `feat/live-security-realtime` dibangun di atas `feat/learning-insights` (stacked PR #6). Perubahan Live yang relevan dari PR #5 juga dibawa agar UX/realtime tidak meregresikan hardening kuis sebelumnya.
 - Role teacher/student kini diperiksa Worker dari profil Firestore milik Firebase UID yang sama. D1 hanya mempercayai role setelah verifikasi dan cache direvalidasi maksimal 24 jam. Route create/manage kelas, materi, kuis, tugas, presensi, Bank Kuis, AI Assist, Learning Insights, dan host Live diberi boundary teacher/student yang eksplisit.
 - Nalaro Live memakai WebSocket Durable Object Hibernation untuk delivery state realtime. Host memakai tiket socket satu kali; peserta dapat mengautentikasi socket dengan participant token. REST tetap dipakai untuk mutation/answer sehingga scoring tetap server-authoritative.
 - Hasil sesi Live final disimpan idempotent ke D1 melalui migration `0011_live_quiz_results.sql`: metadata sesi, ranking peserta, dan ringkasan benar/poin per soal. Raw answer tidak disalin ke D1 report. Host dapat retry jika persist gagal; alarm DO mencoba menyimpan lagi sebelum room kedaluwarsa.
@@ -91,7 +91,7 @@ Tambahkan entri terbaru di paling atas setelah setiap tugas. Sertakan perubahan,
 - Join Live tetap publik. Jika request membawa Firebase token siswa yang verified dan siswa memang anggota kelas, result dipetakan ke `student_id`; peserta publik tidak pernah ditebak identitasnya dari nama.
 - Learning Insights sekarang memakai Live terautentikasi sebagai strong evidence dengan bobot mastery 0,90. Hasil Live publik tetap hanya laporan dan tidak masuk profil analitik siswa.
 - Test source ditambah/diupdate untuk trusted role cache, Live persistence/report, privacy payload hotspot/arrange, participant reconnect, participant ID contract, dan integrasi Live → Learning Insights. Smoke script produksi juga diperbarui untuk membuat/menghapus profil role Firestore uji.
-- **Belum dideploy**: migration `0009`, `0010`, `0011`, Worker terbaru, dan frontend terbaru belum diterapkan ke remote. GitHub Actions sebelumnya berulang kali gagal sebelum runner menjalankan step; jangan menyebut branch ini lulus CI/production sebelum validasi nyata dilakukan.
+- **Belum dideploy**: migration `0009`, `0010`, `0011`, Worker terbaru, dan frontend terbaru belum diterapkan ke remote. GitHub Actions PR #7 run #10 kembali selesai `failure` sebelum satu pun step dijalankan (`steps=null`); jangan menyebut branch ini lulus CI/production sebelum validasi nyata dilakukan.
 
 ### 1 Okt 2026 — Nalaro Learning Insights
 
