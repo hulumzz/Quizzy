@@ -107,7 +107,7 @@ function summarizeScope({
   const taskIds = new Set(scopedTasks.map((item) => item.id));
   const ownTaskSubmissions = taskSubmissions.filter((item) => item.student_id === studentId && taskIds.has(item.task_id));
   const submissionByTask = new Map(ownTaskSubmissions.map((item) => [item.task_id, item]));
-  const eligibleTasks = scopedTasks.filter((item) => Date.parse(item.due_at) <= nowMs || submissionByTask.has(item.id));
+  const eligibleTasks = scopedTasks.filter((item) => submissionByTask.has(item.id) || (Date.parse(item.due_at) <= nowMs && Date.parse(item.due_at) >= joinedAtMs));
   const submittedEligibleTasks = eligibleTasks.filter((item) => submissionByTask.has(item.id));
   const onTimeSubmissions = submittedEligibleTasks.filter((item) => !Boolean(submissionByTask.get(item.id)?.late));
   const taskCompletionRate = rate(submittedEligibleTasks.length, eligibleTasks.length);
