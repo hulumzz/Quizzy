@@ -189,6 +189,7 @@ function summarizeScope({
     consistency: Number.isFinite(consistency) ? consistency : null,
     engagement: Number.isFinite(engagement) ? engagement : null,
     trend,
+    revisionResponse,
     confidence,
     status,
     strongEvidenceCount: strongCount,
