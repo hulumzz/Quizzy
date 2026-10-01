@@ -277,7 +277,8 @@ export class LiveQuizRoom {
     const participantToken = token();
     if (existing) {
       this.sql('UPDATE participants SET name=?2,token=?3 WHERE id=?1', existing.id, name, participantToken);
-      return { participant: { id: existing.id, name, participantToken }, state: this.publicState(state) };
+      this.broadcast(state);
+      return { participant: { id: existing.id, participantId: existing.id, name, participantToken }, state: this.publicState(state) };
     }
 
     const id = crypto.randomUUID();
@@ -289,7 +290,7 @@ export class LiveQuizRoom {
       this.save(state);
     });
     this.broadcast(state);
-    return { participant: { id, name, participantToken }, state: this.publicState(state) };
+    return { participant: { id, participantId: id, name, participantToken }, state: this.publicState(state) };
   }
 
   async persistFinalResults(state) {
