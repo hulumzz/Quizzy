@@ -1,6 +1,6 @@
 # Status dan riwayat pengerjaan Nalaro Class
 
-Terakhir diperiksa: 2 Oktober 2026. Dokumen ini adalah catatan kerja yang harus diperbarui setelah setiap tugas selesai. Status mengacu pada kode di repository `hulumzz/Quizzy` dan bukti pengujian yang disebutkan; keberadaan kode tidak otomatis berarti fitur sudah lolos uji produksi.
+Terakhir diperiksa: 2 Oktober 2026. Dokumen ini adalah catatan kerja yang harus diperbarui setelah setiap tugas selesai. Status mengacu pada kode di repository `hulumzz/Quizzy` dan `khoirulzz/nalaroclass` dan bukti pengujian yang disebutkan; keberadaan kode tidak otomatis berarti fitur sudah lolos uji produksi.
 
 ## Aturan pembaruan oleh AI
 
@@ -21,12 +21,14 @@ Terakhir diperiksa: 2 Oktober 2026. Dokumen ini adalah catatan kerja yang harus 
 
 **Tahap: RELEASE CANDIDATE yang sudah live dan teruji API/browser produksi.** Gate akhir yang belum terpenuhi adalah uji Live pada perangkat fisik berbeda; kamera/GPS presensi opsional juga belum diuji. Rincian dan rollback ada di [laporan release Oktober](production-release-2026-10.md).
 
-- PR #5/#6/#7 sudah diintegrasikan ke main. Source runtime final `1fa2f20` sudah di-push ke remote `url` dan `pages`; Pages membangun repo `khoirulzz/nalaroclass` branch main. Sepuluh variabel build API/AI/Firebase produksi dibandingkan dengan lokal dan cocok tanpa mencetak nilainya.
+- PR #5/#6/#7 sudah diintegrasikan ke main. Source runtime final `d91d115` sudah di-push ke remote `url` dan `pages`; Pages membangun repo `khoirulzz/nalaroclass` branch main. Sepuluh variabel build API/AI/Firebase produksi dibandingkan dengan lokal dan cocok tanpa mencetak nilainya.
 - Worker `nalaro-api` versi `247b0f1c-4018-428c-bf5b-ba3f294c67a6` terdeploy dengan keep-vars. D1 remote sudah sampai `0012`, tidak ada pending migration, FK check bersih, backup sebelum migrasi disimpan lokal/ignored.
-- Pages https://nalaroclass.pages.dev sudah menayangkan aplikasi final pada deployment `c7128f7a-2d31-4205-a263-bdd3c6bcf4c4`. Commit dokumentasi/alat smoke berikutnya tidak mengubah bundle aplikasi; status deployment terbaru diperiksa setelah push akhir.
+- Pages https://nalaroclass.pages.dev sudah menayangkan aplikasi final pada deployment `f8b81d3a-7790-48a4-8d85-682aa597b577`. Commit dokumentasi/alat smoke berikutnya tidak mengubah bundle aplikasi; status deployment terbaru diperiksa setelah push akhir.
 - API produksi lulus untuk LMS, role negatif, AI, Live socket 1 host + 4 pemain, rejoin/token rotation, receipt recovery, hasil D1/CSV, dan Learning Insights. Browser Chrome desktop/mobile viewport lulus untuk login, kelas, materi/diskusi, kuis, unggahan file nyata/tugas/nilai, presensi online, Bank Kuis, Insights, dan Live/reconnect/deadline/final result.
 - Snapshot Live pending tidak masuk mastery/laporan, identitas publik tidak dicocokkan berdasarkan nama, dan anchor role D1 mencegah pergantian role lewat profil yang dibuat ulang.
 - Kamera/GPS/ponsel fisik, browser Safari, serta load test di atas 4 pemain belum terukur. AWS legacy tetap ada; frontend produksi memakai Worker dan tidak ada AWS yang dihapus.
+
+- CI repo Pages lulus. CI `hulumzz/Quizzy` tidak mulai karena GitHub mengunci akun akibat billing; pemulihan akun oleh pemilik diperlukan.
 
 ## Riwayat pengerjaan
 
@@ -81,6 +83,16 @@ Terakhir diperiksa: 2 Oktober 2026. Dokumen ini adalah catatan kerja yang harus 
 - HTTP/CORS dan tes otomatis tidak menggantikan uji UI browser, transfer Cloudinary nyata, perangkat kamera/lokasi, atau uji beban live.
 
 ## Riwayat perubahan
+
+### 2 Okt 2026 - Release candidate live dan verifikasi akhir
+
+- Source aplikasi final `d91d115` disinkronkan ke `url/main` dan `pages/main`; Worker `247b0f1c-4018-428c-bf5b-ba3f294c67a6` dan Pages aplikasi `f8b81d3a-7790-48a4-8d85-682aa597b577` sukses. Dokumentasi/alat smoke akhir ikut commit berikutnya; deployment dari push akhir diperiksa sebelum laporan final.
+- Smoke browser lengkap exit 0 pada `1fa2f20`: membuat/join kelas via UI, Insights kosong, label/angka Insights, autosave+refresh+hasil kuis, TXT Cloudinary nyata, tugas/nilai/feedback, presensi online, Bank Kuis, dan Live 1 host+4 browser context. Host finish saat satu pemain offline; score individual dan evidence Live D1 tetap benar.
+- Source `d91d115` hanya merapikan padding UI Insights dan alat smoke. API/socket/auth smoke serta uji UI Insights desktop/mobile terarah diulang dan exit 0; screenshot label/angka/padding diperiksa. Akun/profil, D1, dan semua aset uji dibersihkan.
+- `npm.cmd run validate` PASS (10 frontend,126 backend legacy,46 Worker), lint/build setelah layout PASS, syntax 48 source/script, diff check, backup/migrasi remote hingga `0012`, deploy keep-vars, dan secret-value scan tracked source/dist tanpa kecocokan. CI repo Pages PASS pada source yang sama; CI repo asal belum dapat mulai karena account lock billing GitHub.
+- Berkas penting: `workers/scripts/smoke-auth.mjs`, `smoke-live-sockets.mjs`, `smoke-browser.mjs`, `src/styles/learning-insights.css`, `LiveQuizHost.jsx`, migration `0012`, repository Live/kuis/analytics, `README.md`, `update.md`, handoff, serta `docs/production-release-2026-10.md`.
+- Status RC: tidak ada P0/P1 yang masih diketahui dari audit/pengujian ini, tetapi perangkat fisik/jaringan Wi-Fi nyata, kamera/GPS opsional, dan kapasitas besar belum diverifikasi. AWS tidak dihapus; rollback kode/Pages didokumentasikan tanpa reset D1. Histori lama tetap dipertahankan.
+
 
 ### 2 Okt 2026 - Sinkronisasi repository, deploy, dan smoke produksi
 
@@ -153,8 +165,6 @@ Tambahkan entri terbaru di paling atas setelah setiap tugas. Sertakan perubahan,
 
 ### Snapshot posisi sebelum integrasi release (riwayat, bukan status aktif)
 
-## Posisi saat ini
-
 **Tahap: API inti sudah diimplementasikan pada Worker/D1; verifikasi cutover browser dan sejumlah fitur lanjutan belum selesai.** Jangan menyebut seluruh migrasi dan fitur `100%`.
 
 - Worker `nalaro-api` melayani route LMS, upload signature, AI, Learning Insights, dan Nalaro Live. Pada branch integrasi `feat/live-security-realtime`, role teacher/student diverifikasi server dari profil Firestore immutable lalu dicache 24 jam di D1; Live memakai WebSocket Durable Object dan hasil akhirnya dipersistenkan ke D1. Produksi remote masih pada migrasi `0001`–`0008`; `0009`–`0011` belum diterapkan remote.
@@ -162,4 +172,3 @@ Tambahkan entri terbaru di paling atas setelah setiap tugas. Sertakan perubahan,
 - Uji API terautentikasi sebelumnya lulus untuk kelas, kuis/hasil, tugas/penilaian, Bank Kuis, kuis umum, signature unggahan, beberapa fase Nalaro Live, dan AI. Akun serta data uji dibersihkan; D1 kemudian memiliki 0 kelas. Rincian ada di [status migrasi Cloudflare](cloudflare-backend-migration-status.md).
 - Frontend lokal dan `.env.example` menunjuk Worker lewat `VITE_API_URL`/`VITE_AI_URL`. Variabel build Pages dan kesamaan source dengan repository GitHub lain yang terhubung ke Pages belum diverifikasi dari browser produksi.
 - Kode AWS Lambda, DynamoDB, SQS, dan SAM masih ada di `backend/`. Infrastruktur lama belum dinonaktifkan.
-

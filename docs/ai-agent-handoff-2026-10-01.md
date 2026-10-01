@@ -1,4 +1,17 @@
 # AI Agent Handoff — Nalaro Class / Quizzy
+
+## Pembaruan release 2 Oktober 2026
+
+Main sudah mengintegrasikan PR #5/#6/#7 dengan otorisasi pengguna pada `readthis.md`; instruksi lama di bawah tentang menunggu merge tidak berlaku untuk release ini. Remote `pages` sudah menunjuk `khoirulzz/nalaroclass`, dan kedua repository disinkronkan. Frontend Pages memakai Worker produksi, Firebase Auth/Firestore, Cloudinary, serta Durable Object WebSocket + D1 hasil Live.
+
+Worker `247b0f1c-4018-428c-bf5b-ba3f294c67a6`, D1 hingga `0012`, dan Pages aplikasi `f8b81d3a-7790-48a4-8d85-682aa597b577` / source `d91d115` sudah terdeploy. Validasi lokal dan API/browser Chrome desktop/mobile viewport lulus, termasuk unggahan file nyata dan Live 1 host + 4 pemain, recovery, deadline tanpa host, persistence/CSV/Insights.
+
+Status **RELEASE CANDIDATE**: perangkat fisik/jaringan nyata dan kamera/GPS opsional belum diuji; kapasitas di atas 4 pemain belum diukur. Mulai dari [status aktif](nalaro-project-status.md) dan [laporan release/rollback](production-release-2026-10.md). Bagian lama di bawah dipertahankan sebagai histori, bukan bukti deployment terkini.
+
+CI pada repo Pages lulus; CI repo asal `hulumzz/Quizzy` belum dapat mulai karena account lock terkait billing GitHub. Tidak ada perubahan paket berbayar.
+
+## Handoff awal 1 Oktober (histori)
+
 Tanggal: 1 Oktober 2026
 
 Dokumen ini adalah handoff terbaru setelah migrasi backend Cloudflare, hardening kuis, Nalaro Learning Insights, server-side role enforcement, persistensi hasil Nalaro Live, dan WebSocket realtime.

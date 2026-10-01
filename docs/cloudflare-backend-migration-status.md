@@ -1,5 +1,16 @@
 # Status migrasi backend ke Cloudflare
 
+## Pembaruan 2 Oktober 2026
+
+API/browser produksi dan sinkronisasi Pages telah diuji. Remote D1 sudah sampai `0012`; Worker `247b0f1c-4018-428c-bf5b-ba3f294c67a6`, Pages aplikasi `f8b81d3a-7790-48a4-8d85-682aa597b577` / source `d91d115`. Upload TXT Cloudinary nyata, Live socket/browser 1 host+4 pemain, reconnect/deadline/persistence/CSV/Insights, serta cleanup lulus. Canonical/sitemap sudah menggunakan nalaroclass.pages.dev.
+
+Status RC; perangkat fisik/kamera/GPS/load besar belum diuji. Bukti dan rollback ada di [laporan release](production-release-2026-10.md). Tidak ada penghapusan AWS/data pengguna atau reset database. Bagian 30 September berikut dipertahankan sebagai snapshot historis, bukan schema/deployment aktif.
+
+CI pada repo Pages lulus; CI repo asal `hulumzz/Quizzy` belum dapat mulai karena account lock terkait billing GitHub. Tidak ada perubahan paket berbayar.
+
+## Snapshot 30 September 2026 (histori)
+
+
 Terakhir diperbarui: 30 September 2026.
 
 ## Arsitektur sasaran

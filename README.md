@@ -2,12 +2,14 @@
 
 Nalaro Class adalah LMS berbasis React untuk kelas, materi, diskusi, presensi, tugas, kuis mandiri, Nalaro Live, dan Learning Insights yang membaca perkembangan belajar dari evidence kelas.
 
+Live: [nalaroclass.pages.dev](https://nalaroclass.pages.dev). Status 2 Oktober 2026: **RELEASE CANDIDATE** dengan API dan browser produksi teruji; perangkat fisik/jaringan nyata serta kamera/GPS opsional belum diverifikasi. Lihat [laporan release, bukti tes, dan rollback](docs/production-release-2026-10.md).
+
 ## Arsitektur
 
-- React + Vite untuk antarmuka guru dan siswa.
+- React + Vite pada Cloudflare Pages `nalaroclass`, production branch `main` dari `khoirulzz/nalaroclass`.
 - Firebase Auth untuk identitas; role teacher/student diverifikasi ulang oleh Worker dari profil Firestore immutable dan dicache terbatas di D1.
 - Cloudflare Worker + D1 untuk API LMS dan hasil Live permanen; sesi Nalaro Live aktif memakai Durable Object SQLite + WebSocket realtime.
-- AWS Lambda + DynamoDB masih tersedia sambil menunggu verifikasi cutover dan rencana penonaktifan; data LMS lama diputuskan tidak dipindahkan.
+- Frontend produksi memakai Worker. Kode/infrastruktur AWS Lambda + DynamoDB masih disimpan sebagai legacy; penonaktifan terpisah dan data LMS lama tidak dipindahkan.
 - Cloudinary untuk unggahan langsung dari browser dengan signature backend.
 - Worker juga menjadi gateway AI, tanpa API key di browser.
 
@@ -31,6 +33,10 @@ git diff --check
 ```
 
 `validate` menjalankan lint, build, test frontend/backend/Worker, dan syntax check backend. `validate:infra` menjalankan SAM lint dan build tanpa melakukan deployment.
+
+`validate:infra` hanya diperlukan jika mengubah infrastruktur AWS legacy. Release Cloudflare diuji dengan `validate`, Worker dry run, migrasi remote, dan smoke produksi. Cara mengulang smoke guru/siswa/Live/browser serta batas buktinya ada pada [laporan release](docs/production-release-2026-10.md).
+
+Remote Git: `url` = `hulumzz/Quizzy`, `pages` = `khoirulzz/nalaroclass`. Kirim commit yang sudah divalidasi ke keduanya dengan `git push url main` dan `git push pages main`; push `pages/main` memicu build Pages. Worker dideploy terpisah memakai `--keep-vars`.
 
 ## Status produk
 
