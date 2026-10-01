@@ -1,4 +1,4 @@
-import { CalendarDays } from 'lucide-react';
+import { BarChart3, CalendarDays } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { AttendanceIcon, ClassesIcon, DiscussionIcon, MaterialIcon, QuizIcon, TaskIcon } from '../icons';
 
@@ -14,6 +14,7 @@ export default function ClassWorkspaceNav({ role, classId }) {
       <NavLink to={`${base}/quizzes`}><QuizIcon size={18} /> Kuis</NavLink>
       <NavLink to={`${base}/tasks`}><TaskIcon size={18} /> Tugas</NavLink>
       <NavLink to={`${base}/attendance`}><AttendanceIcon size={18} /> Presensi</NavLink>
+      <NavLink to={`${base}/analytics`}><BarChart3 size={18} /> Analitik</NavLink>
     </nav>
   );
 }

@@ -1,6 +1,6 @@
 # Nalaro Class
 
-Nalaro Class adalah LMS berbasis React untuk kelas, materi, diskusi, presensi, tugas, kuis mandiri, dan Nalaro Live.
+Nalaro Class adalah LMS berbasis React untuk kelas, materi, diskusi, presensi, tugas, kuis mandiri, Nalaro Live, dan Learning Insights yang membaca perkembangan belajar dari evidence kelas.
 
 ## Arsitektur
 
@@ -38,5 +38,6 @@ git diff --check
 - Nalaro Live menyediakan lobi, kode/QR, jawaban terkunci, pembahasan, papan skor host, dan peringkat akhir peserta.
 - Tugas mendukung tenggat waktu lokal, pengaitan ke Pertemuan Pembelajaran, upload Cloudinary, penilaian, feedback, serta snapshot revisi.
 - Presensi wajah MVP bersifat opsional: embedding dan pencocokan 1:1 berjalan di browser, tanpa menyimpan foto/video. Lihat [batasan dan alurnya](docs/face-attendance-mvp.md).
+- Nalaro Learning Insights menggabungkan kuis, tugas, revisi, presensi, progres materi, dan diskusi menjadi mastery, tren, konsistensi, keterlibatan, serta keyakinan data yang dapat dijelaskan. Lihat [metodologi Learning Insights](docs/learning-insights.md).
 
 Mulai dari [status dan riwayat pengerjaan Nalaro Class](docs/nalaro-project-status.md) untuk posisi terkini, fitur yang sudah ada, pekerjaan tersisa, dan catatan pembaruan setiap tugas. Bukti migrasi backend tersedia di [status migrasi Cloudflare](docs/cloudflare-backend-migration-status.md). [Arsitektur terdahulu](docs/architecture-status.md) menyimpan baseline pengembangan sebelumnya.

@@ -21,7 +21,7 @@ Terakhir diperiksa: 30 September 2026. Dokumen ini adalah catatan kerja yang har
 
 **Tahap: API inti sudah diimplementasikan pada Worker/D1; verifikasi cutover browser dan sejumlah fitur lanjutan belum selesai.** Jangan menyebut seluruh migrasi dan fitur `100%`.
 
-- Worker `nalaro-api` melayani route LMS, upload signature, dan AI. Migrasi D1 `0001`–`0008` tercatat pada database remote. Worker memakai Firebase ID token, D1 binding `DB`, dan Durable Object `LIVE_QUIZ`.
+- Worker `nalaro-api` melayani route LMS, upload signature, AI, dan source Learning Insights pada branch fitur. Migrasi D1 produksi yang tercatat masih `0001`–`0008`; migration `0009_learning_analytics_indexes.sql` ada di branch fitur dan belum diterapkan remote. Worker memakai Firebase ID token, D1 binding `DB`, dan Durable Object `LIVE_QUIZ`.
 - Pages `https://nalaroclass.pages.dev` dan Worker `https://nalaro-api.uniquefactuhl.workers.dev` tersedia. Pada 30 September 2026, halaman depan memberi HTTP 200 dan preflight dari origin Pages ke `/classes?scope=joined` memberi HTTP 204 dengan header CORS yang benar. Ini belum membuktikan alur login atau tampilan kelas.
 - Uji API terautentikasi sebelumnya lulus untuk kelas, kuis/hasil, tugas/penilaian, Bank Kuis, kuis umum, signature unggahan, beberapa fase Nalaro Live, dan AI. Akun serta data uji dibersihkan; D1 kemudian memiliki 0 kelas. Rincian ada di [status migrasi Cloudflare](cloudflare-backend-migration-status.md).
 - Frontend lokal dan `.env.example` menunjuk Worker lewat `VITE_API_URL`/`VITE_AI_URL`. Variabel build Pages dan kesamaan source dengan repository GitHub lain yang terhubung ke Pages belum diverifikasi dari browser produksi.
@@ -53,6 +53,7 @@ Terakhir diperiksa: 30 September 2026. Dokumen ini adalah catatan kerja yang har
 | Bank Kuis | Publikasi katalog, salin sebagai draf, penarikan, impor/ekspor ada; moderasi/rating/analytics belum ada | `workers/src/routes/quiz-bank.js` |
 | Nalaro Live | Sesi, kode/QR, jawaban, skor server, reveal, dan papan skor ada. Frontend masih polling REST tiap 1–2 detik; WebSocket dan hasil permanen/ekspor guru belum ada | `workers/src/durable/LiveQuizRoom.js`, `src/pages/LiveQuizHost.jsx`, `src/pages/LiveQuizPlayer.jsx` |
 | AI Assist | Gateway dan draf materi/kuis yang ditinjau guru ada; feedback penilaian di layanan AI belum terhubung sebagai alur UI tugas | `workers/src/routes/ai.js`, `workers/src/services/ai.js`, `src/components/AiAssistModal.jsx` |
+| Learning Insights | Ada di branch `feat/learning-insights`: analitik kelas/siswa yang explainable dari kuis, tugas/revisi, presensi, materi, dan diskusi; Learning Session menjadi unit topik. Belum dideploy/diuji browser produksi | `workers/src/repositories/learning-analytics.repository.js`, `src/pages/ClassAnalytics.jsx`, `docs/learning-insights.md` |
 
 ## Pekerjaan tersisa
 
@@ -91,6 +92,15 @@ Tambahkan entri terbaru di paling atas setelah setiap tugas. Sertakan perubahan,
 - GitHub Actions pada PR dan dua run `main` sebelumnya gagal sebelum runner/step dijalankan (`runner_id=0`, `steps=null`). Karena itu lint/build/test untuk branch ini **belum dapat diklaim lulus dari CI**. Review kontrak source dilakukan, tetapi browser/perangkat nyata tetap menjadi gate berikutnya.
 - Belum diubah pada PR ini: trusted server-side teacher/student role enforcement, transport WebSocket Nalaro Live, dan penyimpanan hasil Live permanen.
 
+### 1 Okt 2026 — Nalaro Learning Insights
+
+- Branch `feat/learning-insights` menambahkan engine analitik kelas/siswa yang membaca data authoritative D1 tanpa cache analitik terpisah.
+- Mastery hanya memakai hasil kuis dan tugas bernilai; presensi, progres materi, diskusi, task completion, dan ketepatan waktu membentuk konsistensi/keterlibatan tetapi tidak menaikkan mastery.
+- Learning Session menjadi unit analitik per topik. Editor materi, kuis, tugas, dan presensi diberi guidance agar aktivitas dipetakan ke pertemuan.
+- Ditambahkan fairness siswa baru, analisis respons revisi, confidence/keyakinan data, status perkembangan non-ranking, insight deterministik, dashboard guru, analitik pribadi siswa, dan detail evidence.
+- Migration `0009_learning_analytics_indexes.sql` menambah index baca saja; tidak membuat source of truth baru.
+- Test source untuk formula, akses, siswa baru, data engagement-only, tugas belum dinilai, dan revisi sudah ditambahkan, tetapi **belum diklaim lulus** pada sesi ini karena workflow GitHub sebelumnya gagal sebelum runner menjalankan step. Deploy Worker/D1/Pages belum dilakukan.
+
 ### 30 Sep 2026 — Dokumen status hidup
 
 - Menyatukan riwayat, fitur, target migrasi, keputusan meninggalkan data DynamoDB, dan gate beta berdasarkan source saat ini.
@@ -102,4 +112,5 @@ Tambahkan entri terbaru di paling atas setelah setiap tugas. Sertakan perubahan,
 
 - [Status migrasi Cloudflare](cloudflare-backend-migration-status.md): bukti deployment dan smoke test terakhir.
 - [Batasan presensi wajah](face-attendance-mvp.md): desain dan risiko MVP.
+- [Metodologi Learning Insights](learning-insights.md): sumber evidence, formula, fairness, confidence, dan batas implementasi.
 - [Arsitektur terdahulu](architecture-status.md), [roadmap fase 10+](phase-10-and-learning-roadmap.md), dan [handoff awal](github-agent-handoff-2026-09-24.md): riwayat/baseline yang sebagian masih menjelaskan arsitektur AWS lama.
