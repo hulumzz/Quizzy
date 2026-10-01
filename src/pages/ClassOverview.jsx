@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { BarChart3 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import ClassWorkspaceNav from '../components/classroom/ClassWorkspaceNav';
 import { ClassesIcon, MaterialIcon, MembersIcon } from '../components/icons';
@@ -67,6 +68,11 @@ export default function ClassOverview({ role }) {
         <section>
           <SectionHeader title="Materi dan aktivitas" description="Konten pembelajaran untuk kelas ini." action={<Link to={`/${role}/classes/${classId}/materials`} className={buttonClassName({ variant: 'secondary', size: 'sm' })}>Buka materi</Link>} />
           <Card className="qz-class-empty"><EmptyState icon={MaterialIcon} title="Materi kelas siap digunakan" description={role === 'teacher' ? 'Susun, simpan sebagai draf, dan terbitkan konten pembelajaran dari satu ruang.' : 'Baca konten yang telah diterbitkan guru dan lanjutkan progres belajarmu.'} action={<Link to={`/${role}/classes/${classId}/materials`} className={buttonClassName()}>Lihat materi kelas</Link>} /></Card>
+        </section>
+
+        <section>
+          <SectionHeader title="Learning Insights" description={role === 'teacher' ? 'Baca pemahaman, tren, konsistensi, dan keterlibatan seluruh siswa dari evidence kelas.' : 'Lihat perkembangan belajarmu dari kuis, tugas, materi, presensi, dan diskusi.'} action={<Link to={`/${role}/classes/${classId}/analytics`} className={buttonClassName({ variant: 'secondary', size: 'sm' })}>Buka analitik</Link>} />
+          <Card className="qz-class-empty"><EmptyState icon={BarChart3} title={role === 'teacher' ? 'Analitik belajar kelas' : 'Analitik belajarmu'} description={role === 'teacher' ? 'Nalaro menggabungkan evidence pembelajaran tanpa membuat ranking kemampuan siswa.' : 'Lihat apa yang sudah kuat, tren terbaru, dan topik yang masih perlu diperkuat.'} action={<Link to={`/${role}/classes/${classId}/analytics`} className={buttonClassName()}>Lihat Learning Insights</Link>} /></Card>
         </section>
 
         <section>
