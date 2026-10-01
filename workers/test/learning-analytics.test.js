@@ -76,3 +76,44 @@ test('analytics keeps mastery empty when only engagement evidence exists', async
   assert.equal(own.profile.status.key, 'insufficient');
   assert.equal(own.profile.counts.materialsCompleted, 1);
 });
+
+
+test('analytics ignores attendance and overdue tasks from before membership started', async (t) => {
+  const fixture = createD1Fixture(); t.after(fixture.close);
+  const { sqlite, db } = fixture;
+  sqlite.prepare("UPDATE class_members SET joined_at='2026-09-30T00:00:00.000Z' WHERE class_id='class-1' AND user_id='student-1'").run();
+  sqlite.prepare("INSERT INTO attendance_sessions(id,class_id,owner_id,title,location_mode,status,ended_at,created_at,updated_at) VALUES('old-a','class-1','teacher-1','Presensi lama','online','ended','2026-09-10','2026-09-10','2026-09-10')").run();
+  sqlite.prepare("INSERT INTO tasks(id,class_id,owner_id,title,instructions,due_at,response_mode,status,published_at,created_at,updated_at) VALUES('old-t','class-1','teacher-1','Tugas lama','','2026-09-15','text','published','2026-09-01','2026-09-01','2026-09-01')").run();
+  const repository = new LearningAnalyticsRepository({ db, classRepository: new ClassRepository(db) });
+  const own = await repository.getStudent('class-1', 'student-1', 'student-1', { now: new Date('2026-10-01T00:00:00.000Z') });
+  assert.equal(own.profile.counts.attendanceExpected, 0);
+  assert.equal(own.profile.counts.tasksEligible, 0);
+  assert.equal(own.profile.consistency, null);
+});
+
+test('ungraded task supports consistency but never becomes zero mastery', async (t) => {
+  const fixture = createD1Fixture(); t.after(fixture.close);
+  const { sqlite, db } = fixture;
+  sqlite.prepare("UPDATE class_members SET joined_at='2026-08-01T00:00:00.000Z' WHERE class_id='class-1' AND user_id='student-1'").run();
+  sqlite.prepare("INSERT INTO tasks(id,class_id,owner_id,title,instructions,due_at,response_mode,status,published_at,created_at,updated_at) VALUES('t1','class-1','teacher-1','Tugas','','2026-09-15','text','published','2026-09-01','2026-09-01','2026-09-01')").run();
+  sqlite.prepare("INSERT INTO task_submissions(task_id,student_id,class_id,student_name,text_answer,attachments_json,status,late,submitted_at,attempt_number,revision_count,score,feedback,updated_at) VALUES('t1','student-1','class-1','Siswa','Jawaban','[]','submitted',0,'2026-09-10',1,0,NULL,'','2026-09-10')").run();
+  const repository = new LearningAnalyticsRepository({ db, classRepository: new ClassRepository(db) });
+  const own = await repository.getStudent('class-1', 'student-1', 'student-1', { now: new Date('2026-10-01T00:00:00.000Z') });
+  assert.equal(own.profile.mastery, null);
+  assert.equal(own.profile.counts.tasksGraded, 0);
+  assert.equal(own.profile.rates.taskCompletion, 100);
+});
+
+test('analytics measures score gain after revision without inflating mastery history', async (t) => {
+  const fixture = createD1Fixture(); t.after(fixture.close);
+  const { sqlite, db } = fixture;
+  sqlite.prepare("UPDATE class_members SET joined_at='2026-08-01T00:00:00.000Z' WHERE class_id='class-1' AND user_id='student-1'").run();
+  sqlite.prepare("INSERT INTO tasks(id,class_id,owner_id,title,instructions,due_at,response_mode,status,published_at,created_at,updated_at) VALUES('t1','class-1','teacher-1','Tugas Revisi','','2026-09-20','text','published','2026-09-01','2026-09-01','2026-09-01')").run();
+  sqlite.prepare("INSERT INTO task_submissions(task_id,student_id,class_id,student_name,text_answer,attachments_json,status,late,submitted_at,attempt_number,revision_count,score,feedback,graded_at,updated_at) VALUES('t1','student-1','class-1','Siswa','Jawaban revisi','[]','graded',0,'2026-09-18',2,1,85,'Bagus','2026-09-19','2026-09-19')").run();
+  sqlite.prepare("INSERT INTO task_submission_revisions(id,task_id,student_id,previous_json,created_at) VALUES('r1','t1','student-1',?1,'2026-09-17')").run(JSON.stringify({ status: 'graded', score: 65, feedback: 'Perbaiki', textAnswer: 'Jawaban lama', attachments: [], submittedAt: '2026-09-10', attemptNumber: 1 }));
+  const repository = new LearningAnalyticsRepository({ db, classRepository: new ClassRepository(db) });
+  const own = await repository.getStudent('class-1', 'student-1', 'student-1', { now: new Date('2026-10-01T00:00:00.000Z') });
+  assert.equal(own.profile.mastery, 85);
+  assert.equal(own.profile.revisionResponse.averageGain, 20);
+  assert.equal(own.profile.revisionResponse.improvedCount, 1);
+});
