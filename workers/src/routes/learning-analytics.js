@@ -1,4 +1,4 @@
-import { forbidden } from '../http/errors.js';
+import { badRequest, forbidden } from '../http/errors.js';
 import { json } from '../http/response.js';
 import { getAuth, requireAuth } from '../middleware/auth.js';
 import { ClassRepository } from '../repositories/class.repository.js';
