@@ -239,10 +239,13 @@ function studentInsights(profile) {
   if (profile.trend.direction === 'declining') insights.push({ tone: 'attention', title: 'Performa terbaru menurun', body: `Aktivitas penilaian terbaru turun sekitar ${Math.abs(profile.trend.delta)} poin. Periksa apakah topik terbaru membutuhkan dukungan tambahan.` });
   if (Number.isFinite(profile.revisionResponse?.averageGain) && profile.revisionResponse.averageGain >= 5) insights.push({ tone: 'positive', title: 'Revisi memberi dampak positif', body: `Nilai setelah revisi meningkat rata-rata ${profile.revisionResponse.averageGain} poin pada tugas yang memiliki data sebelum dan sesudah feedback.` });
 
+  if (profile.weakestSession && profile.weakestSession.mastery < 65) insights.push({ tone: 'attention', title: `Topik yang perlu diperkuat: ${profile.weakestSession.title}`, body: `Evidence penilaian pada pertemuan ini berada di sekitar ${Math.round(profile.weakestSession.mastery)}. Gunakan hasil kuis/tugas pada topik tersebut sebagai titik awal tindak lanjut.` });
+  else if (profile.strongestSession && profile.strongestSession.mastery >= 80) insights.push({ tone: 'positive', title: `Topik kuat: ${profile.strongestSession.title}`, body: `Evidence penilaian pada pertemuan ini berada di sekitar ${Math.round(profile.strongestSession.mastery)}.` });
+
   if (Number.isFinite(profile.engagement) && profile.engagement < 50) insights.push({ tone: 'attention', title: 'Keterlibatan masih rendah', body: 'Progres materi, kehadiran, tugas, atau diskusi belum konsisten. Gunakan detail evidence untuk melihat sumber utamanya.' });
   else if (Number.isFinite(profile.engagement) && profile.engagement >= 80) insights.push({ tone: 'positive', title: 'Keterlibatan belajar tinggi', body: 'Aktivitas materi, tugas, presensi, dan diskusi menunjukkan keterlibatan yang konsisten.' });
 
-  return insights.slice(0, 3);
+  return insights.slice(0, 4);
 }
 
 function compactStudent(profile) {
