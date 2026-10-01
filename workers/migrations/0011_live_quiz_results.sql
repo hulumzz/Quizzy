@@ -7,6 +7,7 @@ CREATE TABLE live_quiz_sessions (
   quiz_id TEXT NOT NULL,
   owner_id TEXT NOT NULL,
   title TEXT NOT NULL,
+  questions_json TEXT NOT NULL,
   question_count INTEGER NOT NULL,
   total_points INTEGER NOT NULL,
   participant_count INTEGER NOT NULL,
