@@ -13,7 +13,7 @@ const newQuestion = (index) => ({ id: `q-${Date.now()}-${index}`, type: 'multipl
 const typeDefaults = (type) => ({ type, choices: type === 'multiple_choice' ? ['', ''] : [], correctAnswer: type === 'true_false' ? true : '', items: type === 'arrange' ? [{ id: 'item-1', text: '' }, { id: 'item-2', text: '' }, { id: 'item-3', text: '' }] : [], correctOrder: type === 'arrange' ? ['item-1', 'item-2', 'item-3'] : [], imageUrl: '', hotspots: [], tolerancePercent: 2 });
 const questionReady = (question) => {
   if (String(question.prompt || '').trim().length < 3) return false;
-  if (question.type === 'multiple_choice') return question.choices?.filter(Boolean).length >= 2 && question.choices.length <= 6 && question.choices.includes(question.correctAnswer);
+  if (question.type === 'multiple_choice') { const choices = (question.choices || []).map((choice) => String(choice || '').trim()); return choices.filter(Boolean).length >= 2 && choices.length <= 6 && new Set(choices).size === choices.length && choices.includes(String(question.correctAnswer || '').trim()); }
   if (question.type === 'short_answer') return Boolean(String(question.correctAnswer || '').trim());
   if (question.type === 'arrange') return question.items?.length >= 3 && question.items.every((item) => item.text) && question.correctOrder?.length === question.items.length;
   if (question.type === 'image_hotspot') return Boolean(question.imageUrl) && question.hotspots?.filter((item) => item.correct).length === 1;
