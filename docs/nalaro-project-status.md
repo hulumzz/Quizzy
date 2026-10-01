@@ -53,6 +53,7 @@ Terakhir diperiksa: 30 September 2026. Dokumen ini adalah catatan kerja yang har
 | Bank Kuis | Publikasi katalog, salin sebagai draf, penarikan, impor/ekspor ada; moderasi/rating/analytics belum ada | `workers/src/routes/quiz-bank.js` |
 | Nalaro Live | Sesi, kode/QR, jawaban, skor server, reveal, dan papan skor ada. Frontend masih polling REST tiap 1–2 detik; WebSocket dan hasil permanen/ekspor guru belum ada | `workers/src/durable/LiveQuizRoom.js`, `src/pages/LiveQuizHost.jsx`, `src/pages/LiveQuizPlayer.jsx` |
 | AI Assist | Gateway dan draf materi/kuis yang ditinjau guru ada; feedback penilaian di layanan AI belum terhubung sebagai alur UI tugas | `workers/src/routes/ai.js`, `workers/src/services/ai.js`, `src/components/AiAssistModal.jsx` |
+| Learning Insights | Ada di branch `feat/learning-insights`: analitik kelas/siswa yang explainable dari kuis, tugas/revisi, presensi, materi, dan diskusi; Learning Session menjadi unit topik. Belum dideploy/diuji browser produksi | `workers/src/repositories/learning-analytics.repository.js`, `src/pages/ClassAnalytics.jsx`, `docs/learning-insights.md` |
 
 ## Pekerjaan tersisa
 
