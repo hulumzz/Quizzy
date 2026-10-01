@@ -135,6 +135,22 @@ function summarizeScope({
     }),
   ];
   const trend = calculateTrend(scoredTimeline);
+  const revisionGains = gradedTaskSubmissions.flatMap((submission) => {
+    const previousScores = revisionRows
+      .filter((item) => item.task_id === submission.task_id)
+      .map((item) => parseJson(item.previous_json, {}).score)
+      .filter((score) => score !== null && score !== undefined && Number.isFinite(Number(score)))
+      .map(Number);
+    if (!previousScores.length) return [];
+    return [Number(submission.score) - previousScores.at(-1)];
+  });
+  const revisionGainAverage = average(revisionGains);
+  const revisionResponse = {
+    averageGain: Number.isFinite(revisionGainAverage) ? round(revisionGainAverage) : null,
+    measuredCount: revisionGains.length,
+    improvedCount: revisionGains.filter((gain) => gain > 0).length,
+    label: !revisionGains.length ? 'Belum ada data revisi' : revisionGainAverage >= 5 ? 'Membaik setelah feedback' : revisionGainAverage <= -5 ? 'Belum membaik setelah revisi' : 'Relatif stabil setelah revisi',
+  };
 
   const consistency = weightedAverage([
     { value: attendanceRate, weight: 0.55 },
