@@ -29,7 +29,7 @@ function confidenceScore({ strongCount, supportCount, sourceCount }) {
 
 export function calculateTrend(events) {
   const values = [...events]
-    .filter((event) => Number.isFinite(Number(event.score)) && event.occurredAt)
+    .filter((event) => event.score !== null && event.score !== undefined && Number.isFinite(Number(event.score)) && event.occurredAt)
     .sort((a, b) => String(a.occurredAt).localeCompare(String(b.occurredAt)));
   if (values.length < 2) return { direction: 'insufficient', delta: null, label: 'Belum cukup data', evidenceCount: values.length, confidence: 'rendah' };
 
