@@ -21,7 +21,7 @@ Terakhir diperiksa: 30 September 2026. Dokumen ini adalah catatan kerja yang har
 
 **Tahap: API inti sudah diimplementasikan pada Worker/D1; verifikasi cutover browser dan sejumlah fitur lanjutan belum selesai.** Jangan menyebut seluruh migrasi dan fitur `100%`.
 
-- Worker `nalaro-api` melayani route LMS, upload signature, dan AI. Migrasi D1 `0001`–`0008` tercatat pada database remote. Worker memakai Firebase ID token, D1 binding `DB`, dan Durable Object `LIVE_QUIZ`.
+- Worker `nalaro-api` melayani route LMS, upload signature, AI, dan source Learning Insights pada branch fitur. Migrasi D1 produksi yang tercatat masih `0001`–`0008`; migration `0009_learning_analytics_indexes.sql` ada di branch fitur dan belum diterapkan remote. Worker memakai Firebase ID token, D1 binding `DB`, dan Durable Object `LIVE_QUIZ`.
 - Pages `https://nalaroclass.pages.dev` dan Worker `https://nalaro-api.uniquefactuhl.workers.dev` tersedia. Pada 30 September 2026, halaman depan memberi HTTP 200 dan preflight dari origin Pages ke `/classes?scope=joined` memberi HTTP 204 dengan header CORS yang benar. Ini belum membuktikan alur login atau tampilan kelas.
 - Uji API terautentikasi sebelumnya lulus untuk kelas, kuis/hasil, tugas/penilaian, Bank Kuis, kuis umum, signature unggahan, beberapa fase Nalaro Live, dan AI. Akun serta data uji dibersihkan; D1 kemudian memiliki 0 kelas. Rincian ada di [status migrasi Cloudflare](cloudflare-backend-migration-status.md).
 - Frontend lokal dan `.env.example` menunjuk Worker lewat `VITE_API_URL`/`VITE_AI_URL`. Variabel build Pages dan kesamaan source dengan repository GitHub lain yang terhubung ke Pages belum diverifikasi dari browser produksi.
