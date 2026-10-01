@@ -129,7 +129,7 @@ export default function ClassAnalytics({ role }) {
     <div className="qz-insight-metrics">
       <MetricCard icon={BrainCircuit} label="Pemahaman kelas" value={summary.masteryAvailable ? scoreText(summary.mastery) : '—'} caption={`${summary.masteryAvailable}/${analytics.class.studentsCount} siswa memiliki evidence penilaian`} accent="primary" />
       <MetricCard icon={Gauge} label="Konsistensi" value={summary.consistencyAvailable ? scoreText(summary.consistency) : '—'} caption={summary.consistencyAvailable ? 'Kehadiran, tugas, ketepatan waktu' : 'Belum cukup aktivitas terukur'} />
-      <MetricCard icon={Activity} label="Keterlibatan" value={analytics.class.studentsCount ? scoreText(summary.engagement) : '—'} caption="Materi, diskusi, tugas, presensi" />
+      <MetricCard icon={Activity} label="Keterlibatan" value={summary.engagementAvailable ? scoreText(summary.engagement) : '—'} caption={summary.engagementAvailable ? 'Materi, diskusi, tugas, presensi' : 'Belum cukup aktivitas terukur'} />
       <MetricCard icon={summary.trendDelta < -5 ? TrendingDown : TrendingUp} label="Tren kelas" value={Number.isFinite(summary.trendDelta) ? `${summary.trendDelta > 0 ? '+' : ''}${summary.trendDelta}` : '—'} caption={Number.isFinite(summary.trendDelta) ? 'Perubahan evidence terbaru' : 'Belum cukup data'} accent={summary.trendDelta < -5 ? 'warning' : 'default'} />
       <MetricCard icon={BookOpenCheck} label="Evidence" value={summary.evidenceCount} caption={`Confidence kelas ${summary.confidence.label} · ${Math.round(summary.confidence.value)}%`} />
     </div>
