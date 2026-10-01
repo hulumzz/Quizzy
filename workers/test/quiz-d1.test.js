@@ -21,6 +21,9 @@ test('D1 quiz preserves immediate and fetched review and owner export', async (t
   const submitted = await repository.submit({ classId: 'class-1', quizId: quiz.id, uid: 'student-1', answers: [{ questionId: 'q1', answer: ['a', 'c', 'b'] }] });
   assert.deepEqual(submitted.review[0].answer, ['Awal', 'Tutup', 'Akhir']);
   assert.deepEqual(submitted.review[0].correctAnswer, ['Awal', 'Akhir', 'Tutup']);
+  const listedForStudent = await repository.list('class-1', 'student-1');
+  assert.equal(listedForStudent[0].attempt.score, submitted.score);
+  assert.equal(listedForStudent[0].attempt.submittedAt, submitted.submittedAt);
   assert.deepEqual((await repository.getResult('class-1', quiz.id, 'student-1')).review, submitted.review);
   assert.equal((await repository.getResult('class-1', quiz.id, 'teacher-1'))[0].studentName, 'Siswa');
   assert.equal((await repository.exportForOwner('class-1', quiz.id, 'teacher-1')).quiz.status, 'draft');
