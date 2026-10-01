@@ -306,7 +306,8 @@ export class LearningAnalyticsRepository {
 
   buildStudent(dataset, member, now = new Date()) {
     const sessionsById = new Map(dataset.sessions.map((item) => [item.id, item]));
-    const base = summarizeScope({ studentId: member.user_id, nowMs: now.getTime(), sessionsById, ...dataset });
+    const joinedAtMs = Date.parse(member.joined_at || 0) || 0;
+    const base = summarizeScope({ studentId: member.user_id, joinedAtMs, nowMs: now.getTime(), sessionsById, ...dataset });
     const sessionAnalytics = dataset.sessions.map((session) => {
       const metrics = summarizeScope({ studentId: member.user_id, sessionId: session.id, nowMs: now.getTime(), sessionsById, ...dataset });
       return {
