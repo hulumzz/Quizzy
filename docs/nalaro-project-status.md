@@ -91,7 +91,7 @@ Tambahkan entri terbaru di paling atas setelah setiap tugas. Sertakan perubahan,
 - Join Live tetap publik. Jika request membawa Firebase token siswa yang verified dan siswa memang anggota kelas, result dipetakan ke `student_id`; peserta publik tidak pernah ditebak identitasnya dari nama.
 - Learning Insights sekarang memakai Live terautentikasi sebagai strong evidence dengan bobot mastery 0,90. Hasil Live publik tetap hanya laporan dan tidak masuk profil analitik siswa.
 - Test source ditambah/diupdate untuk trusted role cache, Live persistence/report, privacy payload hotspot/arrange, participant reconnect, participant ID contract, dan integrasi Live → Learning Insights. Smoke script produksi juga diperbarui untuk membuat/menghapus profil role Firestore uji.
-- **Belum dideploy**: migration `0009`, `0010`, `0011`, Worker terbaru, dan frontend terbaru belum diterapkan ke remote. GitHub Actions PR #7 run #10 kembali selesai `failure` sebelum satu pun step dijalankan (`steps=null`); jangan menyebut branch ini lulus CI/production sebelum validasi nyata dilakukan.
+- **Belum dideploy**: migration `0009`, `0010`, `0011`, Worker terbaru, dan frontend terbaru belum diterapkan ke remote. GitHub Actions PR #7 yang diamati (run #10 dan #11) sama-sama selesai `failure` sebelum satu pun step dijalankan (`steps=null`); jangan menyebut branch ini lulus CI/production sebelum validasi nyata dilakukan.
 
 ### 1 Okt 2026 — Nalaro Learning Insights
 
