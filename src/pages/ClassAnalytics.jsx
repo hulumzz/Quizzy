@@ -65,7 +65,7 @@ function EvidenceBreakdown({ profile }) {
 
 function StudentProfile({ profile }) {
   return <div className="qz-insight-student-detail">
-    <div className="qz-insight-profile-head"><div className="qz-insight-profile-avatar">{profile.name?.charAt(0)?.toUpperCase() || 'S'}</div><div><h2>{profile.name}</h2><div className="qz-insight-profile-badges"><Badge tone={statusTone[profile.status?.key] || 'neutral'}>{profile.status?.label || 'Belum cukup data'}</Badge><Badge tone="neutral">Confidence {profile.confidence?.label || 'rendah'} · {Math.round(profile.confidence?.value || 0)}%</Badge></div></div></div>
+    <div className="qz-insight-profile-head"><div className="qz-insight-profile-avatar">{profile.name?.charAt(0)?.toUpperCase() || 'S'}</div><div><h2>{profile.name}</h2><div className="qz-insight-profile-badges"><Badge tone={statusTone[profile.status?.key] || 'neutral'}>{profile.status?.label || 'Belum cukup data'}</Badge><Badge tone="neutral">Keyakinan data {profile.confidence?.label || 'rendah'} · {Math.round(profile.confidence?.value || 0)}%</Badge></div></div></div>
     <div className="qz-insight-metrics qz-insight-metrics--detail">
       <MetricCard icon={BrainCircuit} label="Pemahaman" value={scoreText(profile.mastery)} caption="Kuis + tugas bernilai" accent="primary" />
       <MetricCard icon={Gauge} label="Konsistensi" value={scoreText(profile.consistency)} caption="Presensi + tugas + ketepatan waktu" />
