@@ -36,7 +36,7 @@ function HotspotAnswer({ question, value, onChange }) {
       y: Math.max(0, Math.min(100, ((event.clientY - box.top) / box.height) * 100)),
     });
   };
-  return <div className="qz-hotspot-answer qz-hotspot-answer--interactive" onClick={choose} role="button" tabIndex="0" onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') event.currentTarget.click(); }}><img src={question.imageUrl} alt="Gambar untuk dijawab" /><span className="qz-hotspot-answer__hint">Klik titik yang menurutmu paling tepat</span>{value && typeof value === 'object' ? <i style={{ left: `${value.x}%`, top: `${value.y}%` }} /> : null}</div>;
+  return <div className="qz-hotspot-answer qz-hotspot-answer--interactive" onClick={choose}><img src={question.imageUrl} alt="Gambar untuk dijawab" /><span className="qz-hotspot-answer__hint">Klik titik yang menurutmu paling tepat</span>{value && typeof value === 'object' ? <i style={{ left: `${value.x}%`, top: `${value.y}%` }} /> : null}</div>;
 }
 
 function AnswerInput({ question, value, onChange }) {
