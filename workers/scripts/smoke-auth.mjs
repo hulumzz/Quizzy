@@ -107,7 +107,7 @@ function cleanupDatabase() {
 
 async function expectDenied(label, method, route, token, body, expected = 403) {
   const response = await fetch(`${workerUrl}${route}`, { method,
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+    headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
   assert.equal(response.status, expected, `${label}: expected HTTP ${expected}, received ${response.status}`);
   console.log(`${label}: denied HTTP ${expected}`);
 }
@@ -197,6 +197,13 @@ try {
   const privateState = await call('participant state recovery', 'POST', `/live-quizzes/${live.code}/state`, null, joined.participant);
   assert.equal(privateState.session.receipt.accepted, true);
   assert.equal(privateState.session.receipt.correct, undefined);
+  await expectDenied('duplicate Live answer', 'POST', `/live-quizzes/${live.code}/answer`, null, { ...joined.participant, questionId: 'q1', answer: 'Five' }, 409);
+  const previousParticipant = { ...joined.participant };
+  const rejoined = await call('authenticated Live rejoin', 'POST', `/live-quizzes/${live.code}/join`, studentToken, { name: 'Smoke Student Reconnected' });
+  assert.equal(rejoined.participant.id, previousParticipant.id);
+  assert.notEqual(rejoined.participant.participantToken, previousParticipant.participantToken);
+  await expectDenied('invalidated participant token', 'POST', `/live-quizzes/${live.code}/state`, null, previousParticipant, 403);
+  Object.assign(joined.participant, rejoined.participant);
   await sockets.reconnect();
   await call('live reveal', 'POST', `/classes/${classroom.id}/live-sessions/${live.id}/action`, teacherToken, { action: 'advance' });
   await sockets.expectPhase('reveal');

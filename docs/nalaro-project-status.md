@@ -79,6 +79,15 @@ Terakhir diperiksa: 2 Oktober 2026. Dokumen ini adalah catatan kerja yang harus 
 
 ## Riwayat perubahan
 
+### 2 Okt 2026 - Sinkronisasi repository, deploy, dan smoke produksi
+
+- Remote `pages` menunjuk `https://github.com/khoirulzz/nalaroclass.git`. `main` pada remote `url` dan `pages` sudah menerima integrasi hingga `e5cd06d`; Pages berhasil membangun commit itu pada deployment `1bfa4c7d-9406-48a0-ba33-f21949f5c373`. Seluruh variabel build produksi Firebase/API/AI cocok dengan konfigurasi lokal, dibandingkan di proses tanpa mencetak nilainya.
+- Worker versi `247b0f1c-4018-428c-bf5b-ba3f294c67a6` terdeploy dengan `--keep-vars`. API produksi lulus untuk LMS, AI, role negatif, duplicate attempt, Live 1 host + 4 pemain, rejoin siswa yang sama dengan rotasi token, penolakan token lama, laporan D1, CSV, dan Learning Insights.
+- `workers/scripts/smoke-browser.mjs` menjalankan Chrome terpasang melalui Playwright sementara setelah Browser in-app tidak tersedia. Login guru/siswa, modul kelas, materi/diskusi, refresh progres/hasil kuis, unggahan TXT nyata ke Cloudinary, pengumpulan/penilaian tugas, presensi online, Bank Kuis, serta Live 1 host + 4 browser context lulus pada Pages produksi. Offline/disconnect, reload jawaban terkunci, deadline saat host keluar, dan hasil final D1 ikut diperiksa. Akun/profil, data D1, dan aset Cloudinary uji dibersihkan; fixture file dari percobaan gagal alat uji juga telah dihapus setelah kontennya diverifikasi.
+- Pengujian browser memakai desktop 1440x900 dan viewport ponsel 390x844/360x800. Ini bukan uji ponsel fisik, kamera/GPS nyata, Safari, atau pengukuran kapasitas kelas besar.
+- Pemeriksaan screenshot menemukan tata letak kartu Insights belum mengikuti wrapper `Card`; label/angka diperbaiki dan alat uji menambah pemeriksaan posisi. Recovery host kuis umum dipisahkan per akun dan storage yang tidak tersedia tidak mematikan sesi.
+- `npm.cmd run validate` kembali lulus (10 frontend, 126 backend, 46 Worker; syntax check 48 source/script), lint tanpa warning, build, serta `git diff --check` lulus. Perbaikan tampilan dan alat uji final akan disinkronkan; pemeriksaan Pages akhir masih berjalan. Laporan release dan daftar gate aktual akan diperbarui pada entri akhir.
+
 ### 2 Okt 2026 ? Integrasi release dan hardening sebelum deploy
 
 - PR #5, #6, #7 diintegrasikan berurutan pada `main` lokal dengan merge commit; konflik route/dokumen/Live diselesaikan sambil mempertahankan hardening kuis, Learning Insights, WebSocket, dan laporan permanen. Riwayat lama dipertahankan.

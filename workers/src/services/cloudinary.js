@@ -13,7 +13,7 @@ export class CloudinaryUploadSigner {
 
   async signedUpload({ folder, resourceType }) {
     if (!this.cloudName || !this.apiKey || !this.apiSecret) throw new HttpError(503, 'UPLOAD_NOT_CONFIGURED', 'Layanan unggahan belum dikonfigurasi.');
-    const parameters = { folder, overwrite: 'false', timestamp: Math.floor(this.now() / 1000), unique_filename: 'true', use_filename: 'true' };
+    const parameters = { folder, overwrite: 'false', return_delete_token: 'true', timestamp: Math.floor(this.now() / 1000), unique_filename: 'true', use_filename: 'true' };
     const payload = Object.entries(parameters).sort(([left], [right]) => left.localeCompare(right)).map(([key, value]) => `${key}=${value}`).join('&');
     return { provider: 'cloudinary', cloudName: this.cloudName, apiKey: this.apiKey, resourceType, signatureAlgorithm: 'sha256', signature: await sha256(`${payload}${this.apiSecret}`), parameters };
   }

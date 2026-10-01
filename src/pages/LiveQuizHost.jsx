@@ -21,7 +21,9 @@ import {
   retryLivePersistence,
 } from '../services/live-quiz.service';
 
-const hostStorageKey = ({ general, classId, quizId }) => `nalaro.live.host.${general ? 'general' : classId}.${quizId}`;
+const hostStorageKey = ({ userId, general, classId, quizId }) => `nalaro.live.host.${userId}.${general ? 'general' : classId}.${quizId}`;
+const savedHostSession = (key) => { try { return sessionStorage.getItem(key); } catch { return null; } };
+const storeHostSession = (key, id) => { try { if (id) sessionStorage.setItem(key, id); else sessionStorage.removeItem(key); } catch { /* Live remains usable when browser storage is unavailable. */ } };
 
 function LiveQuizHostContent({ userId, scope = 'class' }) {
   const { classId, quizId } = useParams();
@@ -34,7 +36,7 @@ function LiveQuizHostContent({ userId, scope = 'class' }) {
   const [copied, setCopied] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [realtimeStatus, setRealtimeStatus] = useState('idle');
-  const storageKey = useMemo(() => hostStorageKey({ general, classId: `${userId}.${classId}`, quizId }), [classId, general, quizId, userId]);
+  const storageKey = useMemo(() => hostStorageKey({ userId, general, classId, quizId }), [classId, general, quizId, userId]);
   const backPath = general ? '/teacher/general-quizzes' : `/teacher/classes/${classId}/quizzes`;
   const liveSessionId = resolveLiveSessionId(session);
 
@@ -44,13 +46,13 @@ function LiveQuizHostContent({ userId, scope = 'class' }) {
   const retryPersistence = (sessionId) => general ? retryGeneralLivePersistence(sessionId) : retryLivePersistence(classId, sessionId);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem(storageKey);
+    const saved = savedHostSession(storageKey);
     if (!saved) { setRecovering(false); return undefined; }
     let active = true;
     fetchHostState(saved)
       .then((next) => { if (active) setSession((previous) => latestLiveState(previous, next)); })
       .catch((caught) => {
-        if (caught?.status === 404 || caught?.status === 403) sessionStorage.removeItem(storageKey);
+        if (caught?.status === 404 || caught?.status === 403) storeHostSession(storageKey, null);
         if (active && caught?.status !== 404) setError(liveQuizErrorMessage(caught));
       })
       .finally(() => { if (active) setRecovering(false); });
@@ -58,7 +60,7 @@ function LiveQuizHostContent({ userId, scope = 'class' }) {
   }, [storageKey, fetchHostState]);
 
   useEffect(() => {
-    if (liveSessionId) sessionStorage.setItem(storageKey, liveSessionId);
+    if (liveSessionId) storeHostSession(storageKey, liveSessionId);
   }, [liveSessionId, storageKey]);
 
   useEffect(() => {
@@ -126,7 +128,7 @@ function LiveQuizHostContent({ userId, scope = 'class' }) {
     try {
       const next = general ? await createGeneralLiveSession(quizId, { questionDurationSeconds: Number(duration) }) : await createLiveSession(classId, quizId, { questionDurationSeconds: Number(duration) });
       setSession((previous) => latestLiveState(previous, next));
-      sessionStorage.setItem(storageKey, resolveLiveSessionId(next));
+      storeHostSession(storageKey, resolveLiveSessionId(next));
     } catch (caught) { setError(liveQuizErrorMessage(caught)); }
     finally { setBusy(false); }
   };
@@ -149,7 +151,7 @@ function LiveQuizHostContent({ userId, scope = 'class' }) {
   };
 
   const resetHostSession = () => {
-    sessionStorage.removeItem(storageKey);
+    storeHostSession(storageKey, null);
     setSession(null);
     setError('');
     setCopied(false);
@@ -180,7 +182,7 @@ function LiveQuizHostContent({ userId, scope = 'class' }) {
   const phaseKey = `${session?.phase || 'create'}:${session?.question?.id || 'none'}`;
   const realtimeLabel = realtimeStatus === 'connected' ? 'Realtime tersambung' : realtimeStatus === 'connecting' ? 'Menyambungkan realtime…' : realtimeStatus === 'error' ? 'Realtime mencoba pulih' : '';
 
-  return <div className="qz-dashboard qz-enter"><PageHeader eyebrow={general ? 'Host kuis umum' : 'Nalaro Live'} title={session?.title || 'Mulai kuis live'} description="Bagikan QR atau kode sesi. State peserta sekarang dikirim realtime melalui WebSocket, sementara skor tetap dihitung server." actions={<><Button variant="ghost" onClick={toggleFullscreen}>Mode layar penuh</Button><Link className={buttonClassName({ variant: 'secondary' })} to={backPath}>Kembali</Link></>} />
+  return <div className="qz-dashboard qz-enter"><PageHeader eyebrow={general ? 'Host kuis umum' : 'Nalaro Live'} title={session?.title || 'Mulai kuis live'} description="Bagikan QR atau kode sesi. Mulai soal bersama, pantau jawaban peserta, dan lihat papan skor." actions={<><Button variant="ghost" onClick={toggleFullscreen}>Mode layar penuh</Button><Link className={buttonClassName({ variant: 'secondary' })} to={backPath}>Kembali</Link></>} />
     {error ? <div className="qz-inline-state qz-inline-state--error" role="alert">{error}</div> : null}
     {recovering ? <Card className="qz-live-create"><h2>Memulihkan sesi...</h2><p>Jika sesi Live sebelumnya masih aktif, host akan tersambung kembali otomatis.</p></Card> : !session ? <Card className="qz-live-create"><span className="qz-live-create__spark">✦</span><h2>Siapkan arena</h2><p>Pilih durasi, buat sesi, lalu tampilkan QR di layar kelas. Skor dan deadline tetap dihitung server.</p><Input label="Durasi per soal (detik)" type="number" min="5" max="300" value={duration} onChange={(event) => setDuration(event.target.value)} /><Button disabled={busy} onClick={create}>{busy ? 'Membuat arena...' : 'Buat sesi live'}</Button></Card> : <div className="qz-live-host">
       <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }}><Card className="qz-live-code"><div><span className="qz-eyebrow">KODE KUIS</span><strong>{session.code}</strong><p>{session.participantCount} peserta bergabung</p><button type="button" className="qz-live-link" onClick={copyJoin}>{copied ? '✓ Tautan tersalin' : 'Salin tautan gabung'}</button>{realtimeLabel ? <small className={`qz-live-realtime qz-live-realtime--${realtimeStatus}`}>{realtimeLabel}</small> : null}</div><QRCodeSVG value={joinUrl} size={164} level="M" includeMargin /></Card></motion.div>
