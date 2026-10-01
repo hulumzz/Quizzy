@@ -432,6 +432,7 @@ export class LiveQuizRoom {
       const input = await request.json();
       const value = path === '/initialize' ? await this.initialize(input)
         : path === '/public' ? this.publicState(this.load())
+          : path === '/context' ? (() => { const state = this.load(); return { scope: state.scope, classId: state.classId || null }; })()
           : path === '/host' ? (() => { const state = this.load(); this.requireHost(state, input); return this.hostState(state); })()
             : path === '/socket-ticket' ? this.socketTicket(input)
               : path === '/join' ? this.join(input)
