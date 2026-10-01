@@ -323,7 +323,7 @@ export class LearningAnalyticsRepository {
       all("SELECT a.quiz_id,a.student_id,a.score,a.submitted_at,q.title AS quiz_title,q.session_id FROM quiz_attempts a JOIN quizzes q ON q.id=a.quiz_id WHERE a.class_id=?1 AND q.status='published'", classId),
       all("SELECT id,title,session_id,due_at,status FROM tasks WHERE class_id=?1 AND status IN ('published','archived')", classId),
       all("SELECT s.task_id,s.student_id,s.status,s.late,s.submitted_at,s.score,s.graded_at,s.revision_count,t.title AS task_title,t.session_id FROM task_submissions s JOIN tasks t ON t.id=s.task_id WHERE s.class_id=?1 AND t.status<>'deleted'", classId),
-      all("SELECT r.task_id,r.student_id,r.previous_json,r.created_at,t.title AS task_title,t.session_id FROM task_submission_revisions r JOIN tasks t ON t.id=r.task_id WHERE t.class_id=?1 AND t.status<>'deleted'", classId),
+      all("SELECT r.task_id,r.student_id,r.previous_json,r.created_at,t.title AS task_title,t.session_id FROM task_submission_revisions r JOIN tasks t ON t.id=r.task_id WHERE t.class_id=?1 AND t.status<>'deleted' ORDER BY r.created_at ASC", classId),
     ]);
     return { members, sessions, materials, progress, discussions, attendanceSessions, checkins, quizzes, quizAttempts, tasks, taskSubmissions, taskRevisions };
   }
