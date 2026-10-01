@@ -16,14 +16,6 @@
 
 .qz-insight-revision{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.65rem;align-items:center;padding:.75rem .85rem;border:1px solid #b9dfc8;border-radius:.85rem;background:#f2fbf6}.qz-insight-revision>svg{color:#167043}.qz-insight-revision>div{display:grid;gap:.12rem}.qz-insight-revision strong{color:#155f3d;font-size:.82rem}.qz-insight-revision span{color:#47715e;font-size:.74rem}
 
-/* Card inserts a body wrapper: place content layout on that wrapper. */
-.qz-insight-method,.qz-insight-metric,.qz-insight-status,.qz-insight-session,.qz-insight-unmapped{display:block}
-.qz-insight-method>.qz-card__body,.qz-insight-metric>.qz-card__body,.qz-insight-status>.qz-card__body,.qz-insight-session>.qz-card__body,.qz-insight-unmapped>.qz-card__body{padding:0}
-.qz-insight-method>.qz-card__body{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:.9rem;align-items:start}
+/* Keep text layout inside Card's body without changing its existing padding. */
 .qz-insight-method>.qz-card__body>svg{margin-top:.15rem;color:var(--qz-primary)}
-.qz-insight-metric>.qz-card__body{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.75rem;align-items:start}
 .qz-insight-metric>.qz-card__body>div{display:grid;gap:.35rem;min-width:0}
-.qz-insight-status>.qz-card__body{display:flex;align-items:center;justify-content:space-between;gap:.75rem}
-.qz-insight-session>.qz-card__body{display:grid;gap:.8rem}
-.qz-insight-unmapped>.qz-card__body{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.75rem;align-items:start}
-@media(max-width:760px){.qz-insight-method>.qz-card__body{grid-template-columns:auto minmax(0,1fr)}.qz-insight-method>.qz-card__body>.qz-badge{grid-column:1/-1;justify-self:start}}

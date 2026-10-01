@@ -9,6 +9,7 @@ export async function runBrowserSmoke({ teacher, student, classroom, quiz, mater
   const toolsDir = process.env.NALARO_BROWSER_TOOLS || path.join(os.tmpdir(), 'nalaro-release-tools');
   const { chromium } = createRequire(path.join(toolsDir, 'package.json'))('playwright');
   const base = process.env.NALARO_SMOKE_PAGES_URL || 'https://nalaroclass.pages.dev';
+  const insightsOnly = process.env.NALARO_SMOKE_BROWSER_MODE === 'insights';
   const artifacts = path.resolve('workers/.wrangler/release-artifacts');
   await mkdir(artifacts, { recursive: true });
   const browser = await chromium.launch({ headless: true, executablePath: process.env.NALARO_CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe' });
@@ -58,10 +59,28 @@ export async function runBrowserSmoke({ teacher, student, classroom, quiz, mater
     await login(pupil, student, 'student');
     await screenshot(host, 'teacher-desktop');
     await screenshot(pupil, 'student-mobile');
+    await goto(host, '/teacher/classes');
+    await host.getByRole('button', { name: 'Buat kelas', exact: true }).click();
+    await host.getByRole('dialog').getByLabel('Nama kelas', { exact: true }).fill('Kelas browser release');
+    const [classResponse] = await Promise.all([
+      host.waitForResponse((response) => response.url().endsWith('/classes') && response.request().method() === 'POST'),
+      host.getByRole('dialog').getByRole('button', { name: 'Buat kelas', exact: true }).click(),
+    ]);
+    assert.equal(classResponse.status(), 201);
+    const browserClass = (await classResponse.json()).data.class;
+    await goto(pupil, '/student/classes');
+    await pupil.getByRole('button', { name: 'Gabung kelas', exact: true }).click();
+    await pupil.getByRole('dialog').getByLabel('Kode kelas', { exact: true }).fill(browserClass.code);
+    await pupil.getByRole('dialog').getByRole('button', { name: 'Gabung kelas', exact: true }).click();
+    await pupil.getByRole('dialog').waitFor({ state: 'hidden' });
+    await visible(pupil, 'Kelas browser release');
+    await goto(pupil, `/student/classes/${browserClass.id}/analytics`);
+    await visible(pupil, 'Belum cukup data');
+    console.log('Browser teacher create class + student join + empty Insights: PASS');
     const classRoute = (role, suffix) => `/${role}/classes/${classroom.id}/${suffix}`;
     for (const role of ['teacher', 'student']) {
       const page = role === 'teacher' ? host : pupil;
-      for (const suffix of ['overview', 'sessions', 'materials', 'attendance', 'quizzes', 'tasks', 'analytics']) {
+      for (const suffix of insightsOnly ? ['analytics'] : ['overview', 'sessions', 'materials', 'attendance', 'quizzes', 'tasks', 'analytics']) {
         await goto(page, classRoute(role, suffix));
         await page.locator('h1').first().waitFor();
         await page.locator('.qz-skeleton').first().waitFor({ state: 'hidden' }).catch(() => {});
@@ -73,8 +92,16 @@ export async function runBrowserSmoke({ teacher, student, classroom, quiz, mater
       const labelBox = await metric.locator('.qz-insight-metric__icon + div > span').boundingBox();
       const numberBox = await metric.locator('strong').boundingBox();
       assert.ok(numberBox.y >= labelBox.y + labelBox.height - 1, 'Insights metric label and value overlap');
+      const cardBox = await metric.boundingBox();
+      const iconBox = await metric.locator('.qz-insight-metric__icon').boundingBox();
+      assert.ok(iconBox.x - cardBox.x >= 12, 'Insights card content lacks padding');
       await screenshot(page, `${role}-insights`);
       console.log(`Browser ${role} class modules + Insights: PASS`);
+    }
+    if (insightsOnly) {
+      assert.equal(runtimeErrors.length, 0);
+      console.log('Targeted production Insights desktop/mobile layout: PASS');
+      return;
     }
     await goto(pupil, classRoute('student', `materials/${material.id}`));
     await visible(pupil, 'Materi pecahan untuk pengujian release.');
@@ -187,12 +214,20 @@ export async function runBrowserSmoke({ teacher, student, classroom, quiz, mater
     await players[3].locator('.qz-live-reveal').waitFor({ timeout: 75_000 });
     await goto(host, classRoute('teacher', `quizzes/${quiz.id}/live`));
     await host.getByText('4 peserta bergabung', { exact: true }).waitFor();
+    await players[3].context().setOffline(true);
     await host.getByRole('button', { name: 'Akhiri sesi', exact: true }).click();
     await host.getByText('✓ Hasil Live tersimpan permanen untuk laporan guru.', { exact: true }).waitFor();
-    for (const player of players) await player.locator('.qz-live-result').waitFor();
+    await players[3].context().setOffline(false);
+    await players[3].reload({ waitUntil: 'domcontentloaded' });
+    for (const [index, player] of players.entries()) {
+      await player.locator('.qz-live-result').waitFor();
+      assert.equal(await player.locator('.qz-live-result > .qz-card__body > strong').innerText(), index < 3 ? '1 poin' : '0 poin');
+    }
     await screenshot(host, 'live-results-desktop');
     await screenshot(pupil, 'live-results-mobile');
-    console.log('Browser Live 1 host + 4 players, refresh lock, offline recovery, server deadline without host, D1 finish: PASS');
+    const liveInsights = await call('browser Live Insights', 'GET', `/classes/${classroom.id}/analytics/students/${student.localId}`, teacherToken);
+    assert.equal(liveInsights.analytics.profile.counts.liveQuizzesCompleted, 2);
+    console.log('Browser Live 1 host + 4 players, refresh lock, offline recovery, server deadline without host, finish while player offline, D1 result + Insights: PASS');
     assert.equal(runtimeErrors.length, 0, `Browser runtime errors: ${runtimeErrors.join(', ')}`);
     console.log('Production Chrome desktop + mobile viewport smoke: PASS');
   } catch (error) {

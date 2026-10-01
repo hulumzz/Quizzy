@@ -15,17 +15,18 @@ Terakhir diperiksa: 2 Oktober 2026. Dokumen ini adalah catatan kerja yang harus 
 - Target arsitektur: React/Vite di Cloudflare Pages; API LMS dan gateway AI di Worker; data LMS di D1; sesi live aktif di Durable Object SQLite; Firebase Authentication tetap; Cloudinary untuk media.
 - Profil wajah MVP tetap di Firestore dengan aturan akses pemilik. Kamera, embedding, dan pencocokan 1:1 berlangsung di browser; API presensi masih memeriksa auth, keanggotaan, sesi, duplikasi, dan lokasi.
 - Pengguna mengizinkan data LMS lama di DynamoDB ditinggalkan. D1 yang kosong setelah cutover bukan bukti kegagalan migrasi.
-- Push pekerjaan ini ditujukan ke `hulumzz/Quizzy` branch `main`. Proyek Pages `nalaroclass` terhubung ke repository GitHub lain yang akan disesuaikan pengguna. Push ke repository ini **tidak otomatis memperbarui Pages tersebut**.
+- Remote `url` menunjuk `hulumzz/Quizzy` dan remote `pages` menunjuk `khoirulzz/nalaroclass`. Pengguna mengizinkan sinkronisasi keduanya; push `pages/main` terbukti memicu deployment Pages produksi.
 
 ## Posisi saat ini
 
-**Tahap: API inti sudah diimplementasikan pada Worker/D1; verifikasi cutover browser dan sejumlah fitur lanjutan belum selesai.** Jangan menyebut seluruh migrasi dan fitur `100%`.
+**Tahap: RELEASE CANDIDATE yang sudah live dan teruji API/browser produksi.** Gate akhir yang belum terpenuhi adalah uji Live pada perangkat fisik berbeda; kamera/GPS presensi opsional juga belum diuji. Rincian dan rollback ada di [laporan release Oktober](production-release-2026-10.md).
 
-- Worker `nalaro-api` melayani route LMS, upload signature, AI, Learning Insights, dan Nalaro Live. Pada branch integrasi `feat/live-security-realtime`, role teacher/student diverifikasi server dari profil Firestore immutable lalu dicache 24 jam di D1; Live memakai WebSocket Durable Object dan hasil akhirnya dipersistenkan ke D1. Produksi remote masih pada migrasi `0001`–`0008`; `0009`–`0011` belum diterapkan remote.
-- Pages `https://nalaroclass.pages.dev` dan Worker `https://nalaro-api.uniquefactuhl.workers.dev` tersedia. Pada 30 September 2026, halaman depan memberi HTTP 200 dan preflight dari origin Pages ke `/classes?scope=joined` memberi HTTP 204 dengan header CORS yang benar. Ini belum membuktikan alur login atau tampilan kelas.
-- Uji API terautentikasi sebelumnya lulus untuk kelas, kuis/hasil, tugas/penilaian, Bank Kuis, kuis umum, signature unggahan, beberapa fase Nalaro Live, dan AI. Akun serta data uji dibersihkan; D1 kemudian memiliki 0 kelas. Rincian ada di [status migrasi Cloudflare](cloudflare-backend-migration-status.md).
-- Frontend lokal dan `.env.example` menunjuk Worker lewat `VITE_API_URL`/`VITE_AI_URL`. Variabel build Pages dan kesamaan source dengan repository GitHub lain yang terhubung ke Pages belum diverifikasi dari browser produksi.
-- Kode AWS Lambda, DynamoDB, SQS, dan SAM masih ada di `backend/`. Infrastruktur lama belum dinonaktifkan.
+- PR #5/#6/#7 sudah diintegrasikan ke main. Source runtime final `1fa2f20` sudah di-push ke remote `url` dan `pages`; Pages membangun repo `khoirulzz/nalaroclass` branch main. Sepuluh variabel build API/AI/Firebase produksi dibandingkan dengan lokal dan cocok tanpa mencetak nilainya.
+- Worker `nalaro-api` versi `247b0f1c-4018-428c-bf5b-ba3f294c67a6` terdeploy dengan keep-vars. D1 remote sudah sampai `0012`, tidak ada pending migration, FK check bersih, backup sebelum migrasi disimpan lokal/ignored.
+- Pages https://nalaroclass.pages.dev sudah menayangkan aplikasi final pada deployment `c7128f7a-2d31-4205-a263-bdd3c6bcf4c4`. Commit dokumentasi/alat smoke berikutnya tidak mengubah bundle aplikasi; status deployment terbaru diperiksa setelah push akhir.
+- API produksi lulus untuk LMS, role negatif, AI, Live socket 1 host + 4 pemain, rejoin/token rotation, receipt recovery, hasil D1/CSV, dan Learning Insights. Browser Chrome desktop/mobile viewport lulus untuk login, kelas, materi/diskusi, kuis, unggahan file nyata/tugas/nilai, presensi online, Bank Kuis, Insights, dan Live/reconnect/deadline/final result.
+- Snapshot Live pending tidak masuk mastery/laporan, identitas publik tidak dicocokkan berdasarkan nama, dan anchor role D1 mencegah pergantian role lewat profil yang dibuat ulang.
+- Kamera/GPS/ponsel fisik, browser Safari, serta load test di atas 4 pemain belum terukur. AWS legacy tetap ada; frontend produksi memakai Worker dan tidak ada AWS yang dihapus.
 
 ## Riwayat pengerjaan
 
@@ -43,7 +44,7 @@ Terakhir diperiksa: 2 Oktober 2026. Dokumen ini adalah catatan kerja yang harus 
 
 | Area | Status saat ini | Acuan utama |
 | --- | --- | --- |
-| Login, profil, peran guru/siswa | Firebase Auth dipertahankan. Branch integrasi menambah enforcement server-side: role dibaca dari profil Firestore milik UID yang sama, dicache terbatas di D1, dan mutation route sensitif memeriksa teacher/student | `workers/src/services/account-role.js`, `workers/src/middleware/auth.js`, `firestore.rules` |
+| Login, profil, peran guru/siswa | Firebase Auth + role Firestore/D1. Anchor role, race guard, negative API smoke dan login guru/siswa browser produksi lulus | `workers/src/services/account-role.js`, `workers/src/middleware/auth.js`, `firestore.rules` |
 | Kelas dan anggota | Buat, gabung, daftar, detail, dan daftar anggota ada; pengaturan anggota lanjutan belum ada | `workers/src/routes/classes.js`, `src/app/routes.jsx` |
 | Materi, progres, bookmark, diskusi | Ada di frontend dan Worker; upload memakai signature Cloudinary | `workers/src/routes/materials.js`, `workers/src/routes/discussions.js` |
 | Pertemuan pembelajaran | Ada, termasuk pengaitan materi/kuis/presensi/tugas | `workers/src/routes/learning-sessions.js` |
@@ -51,19 +52,21 @@ Terakhir diperiksa: 2 Oktober 2026. Dokumen ini adalah catatan kerja yang harus 
 | Kuis kelas dan kuis umum | Editor, publikasi, percobaan, penilaian, hasil, impor/ekspor ada | `workers/src/routes/quizzes.js`, `workers/src/routes/general-quizzes.js` |
 | Tugas | Pengumpulan, lampiran, nilai, feedback, revisi, dan riwayat revisi ada | `workers/src/routes/tasks.js` |
 | Bank Kuis | Publikasi katalog, salin sebagai draf, penarikan, impor/ekspor ada; moderasi/rating/analytics belum ada | `workers/src/routes/quiz-bank.js` |
-| Nalaro Live | Branch integrasi mengganti polling state utama dengan WebSocket Durable Object + reconnect, mempertahankan scoring REST/server-side, mempersistenkan hasil final ke D1, menyediakan laporan/CSV kelas dan kuis umum, serta retry persist | `workers/src/durable/LiveQuizRoom.js`, `workers/src/repositories/live-result.repository.js`, `src/pages/LiveQuizHost.jsx`, `src/pages/LiveQuizPlayer.jsx` |
+| Nalaro Live | Terdeploy dan teruji produksi dengan socket 1 host + 4 pemain, receipt/reconnect, alarm deadline, hasil complete D1/CSV/Insights. Browser context dan viewport diuji; perangkat fisik dan kapasitas lebih besar belum | `workers/src/durable/LiveQuizRoom.js`, `workers/src/repositories/live-result.repository.js`, `src/pages/LiveQuizHost.jsx`, `src/pages/LiveQuizPlayer.jsx` |
 | AI Assist | Gateway dan draf materi/kuis yang ditinjau guru ada; feedback penilaian di layanan AI belum terhubung sebagai alur UI tugas | `workers/src/routes/ai.js`, `workers/src/services/ai.js`, `src/components/AiAssistModal.jsx` |
-| Learning Insights | Ada di branch `feat/learning-insights` dan diperluas di branch integrasi: analitik explainable dari kuis mandiri, Nalaro Live siswa terautentikasi, tugas/revisi, presensi, materi, dan diskusi; Learning Session menjadi unit topik. Belum dideploy/diuji browser produksi | `workers/src/repositories/learning-analytics.repository.js`, `src/pages/ClassAnalytics.jsx`, `docs/learning-insights.md` |
+| Learning Insights | Terdeploy dan teruji API/browser guru-siswa. Evidence kuis/graded task/Live terautentikasi, fairness, privacy, complete snapshot, dan layout desktop/mobile diperiksa | `workers/src/repositories/learning-analytics.repository.js`, `src/pages/ClassAnalytics.jsx`, `docs/learning-insights.md` |
 
 ## Pekerjaan tersisa
 
 ### Gate cutover dan beta
 
-- [ ] Pastikan repository yang terhubung ke Pages menerima source yang sama dan variabel build Pages menunjuk Worker yang benar; uji dari `nalaroclass.pages.dev` dengan akun guru dan siswa.
-- [ ] Uji browser end to end: login, kelas, materi/diskusi, pertemuan, presensi, kuis, tugas, Bank Kuis, dan AI. Uji transfer **file nyata** ke Cloudinary serta izin lokasi dan kamera pada perangkat yang relevan.
-- [ ] Uji Nalaro Live pada beberapa perangkat, koneksi putus/sambung, kapasitas peserta target, dan perilaku gagal/pulih. Catat batas peserta berdasarkan pengukuran.
-- [ ] Setelah cutover terbukti, putuskan waktu dan prosedur menonaktifkan AWS lama. Kode/infrastruktur AWS belum dibersihkan.
-- [ ] Perbarui URL kanonis, metadata berbagi, dan `public/sitemap.xml` yang masih menunjuk `quizzy-f01.pages.dev` setelah domain final diputuskan.
+- [x] Kedua repository disinkronkan; source/variabel build Pages cocok dengan Worker; deployment Pages sukses.
+- [x] Browser produksi guru/siswa, kelas, materi/diskusi, kuis, tugas/nilai, presensi online, Bank Kuis, Insights, Live diuji. Transfer TXT nyata ke Cloudinary dan cleanup aset lulus.
+- [x] Live 1 host + 4 browser context, reload, offline/socket reconnect, deadline tanpa host, hasil D1/CSV dan identitas/evidence API diperiksa.
+- [x] Canonical, metadata berbagi, sitemap, dan header Pages menggunakan alamat produksi.
+- [ ] Ulangi Live 1 host + 3-5 pemain pada perangkat fisik berbeda/jaringan nyata sebelum menyatakan release final READY. Viewport ponsel tidak menggantikan perangkat fisik.
+- [ ] Uji kamera/GPS nyata jika presensi opsional itu digunakan; ukur kapasitas Live sebelum trafik lebih besar.
+- [ ] Tentukan jadwal/prosedur penonaktifan AWS terpisah setelah cutover diterima; tidak ada penghapusan AWS pada pekerjaan ini.
 
 ### Fitur dan pengembangan lanjutan
 
@@ -146,3 +149,17 @@ Tambahkan entri terbaru di paling atas setelah setiap tugas. Sertakan perubahan,
 - [Metodologi Learning Insights](learning-insights.md): sumber evidence, formula, fairness, confidence, dan batas implementasi.
 - [Handoff AI agent 1 Okt 2026](ai-agent-handoff-2026-10-01.md): arsitektur terbaru, branch stack, role enforcement, realtime Live, persistence, migrasi, merge/deploy order, dan gate validasi.
 - [Arsitektur terdahulu](architecture-status.md), [roadmap fase 10+](phase-10-and-learning-roadmap.md), dan [handoff awal](github-agent-handoff-2026-09-24.md): riwayat/baseline yang sebagian masih menjelaskan arsitektur AWS lama.
+
+
+### Snapshot posisi sebelum integrasi release (riwayat, bukan status aktif)
+
+## Posisi saat ini
+
+**Tahap: API inti sudah diimplementasikan pada Worker/D1; verifikasi cutover browser dan sejumlah fitur lanjutan belum selesai.** Jangan menyebut seluruh migrasi dan fitur `100%`.
+
+- Worker `nalaro-api` melayani route LMS, upload signature, AI, Learning Insights, dan Nalaro Live. Pada branch integrasi `feat/live-security-realtime`, role teacher/student diverifikasi server dari profil Firestore immutable lalu dicache 24 jam di D1; Live memakai WebSocket Durable Object dan hasil akhirnya dipersistenkan ke D1. Produksi remote masih pada migrasi `0001`–`0008`; `0009`–`0011` belum diterapkan remote.
+- Pages `https://nalaroclass.pages.dev` dan Worker `https://nalaro-api.uniquefactuhl.workers.dev` tersedia. Pada 30 September 2026, halaman depan memberi HTTP 200 dan preflight dari origin Pages ke `/classes?scope=joined` memberi HTTP 204 dengan header CORS yang benar. Ini belum membuktikan alur login atau tampilan kelas.
+- Uji API terautentikasi sebelumnya lulus untuk kelas, kuis/hasil, tugas/penilaian, Bank Kuis, kuis umum, signature unggahan, beberapa fase Nalaro Live, dan AI. Akun serta data uji dibersihkan; D1 kemudian memiliki 0 kelas. Rincian ada di [status migrasi Cloudflare](cloudflare-backend-migration-status.md).
+- Frontend lokal dan `.env.example` menunjuk Worker lewat `VITE_API_URL`/`VITE_AI_URL`. Variabel build Pages dan kesamaan source dengan repository GitHub lain yang terhubung ke Pages belum diverifikasi dari browser produksi.
+- Kode AWS Lambda, DynamoDB, SQS, dan SAM masih ada di `backend/`. Infrastruktur lama belum dinonaktifkan.
+
