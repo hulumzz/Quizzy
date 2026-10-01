@@ -9,9 +9,15 @@ const equalToken = (left, right) => {
   return diff === 0;
 };
 const normalize = (value) => String(value ?? '').trim().toLocaleLowerCase('id-ID');
+function publicArrangeItems(q) {
+  const items = [...(q.items || [])];
+  if (items.length < 2) return items;
+  const correctOrder = Array.isArray(q.correctOrder) ? q.correctOrder : [];
+  const exposesCorrectOrder = correctOrder.length === items.length && items.every((item, index) => item.id === correctOrder[index]);
+  return exposesCorrectOrder ? [...items.slice(1), items[0]] : items;
+}
 const safeQuestion = (q) => ({ id: q.id, type: q.type, prompt: q.prompt, choices: q.choices, points: q.points,
-  ...(q.type === 'arrange' ? { items: q.items } : {}), ...(q.imageUrl ? { imageUrl: q.imageUrl } : {}),
-  ...(q.type === 'image_hotspot' ? { tolerancePercent: q.tolerancePercent, hotspots: q.hotspots.map(({ id, label, x, y, width, height }) => ({ id, label, x, y, width, height })) } : {}) });
+  ...(q.type === 'arrange' ? { items: publicArrangeItems(q) } : {}), ...(q.imageUrl ? { imageUrl: q.imageUrl } : {}) });
 const revealedQuestion = (q) => ({ ...safeQuestion(q), correctAnswer: q.type === 'arrange' ? q.correctOrder : q.type === 'image_hotspot' ? 'Area yang ditandai' : q.correctAnswer, explanation: q.explanation || '' });
 function correct(q, answer) {
   if (q.type === 'true_false') return answer === q.correctAnswer;
@@ -60,6 +66,7 @@ export class LiveQuizRoom {
       questionIndex: state.questionIndex, questionCount: state.questions.length,
       question: question ? state.phase === 'reveal' ? revealedQuestion(question) : safeQuestion(question) : null,
       startedAt: state.startedAt, endsAt: state.endsAt, stateVersion: state.stateVersion,
+      questionDurationSeconds: state.questionDurationSeconds,
       participantCount: state.participantCount, answeredCount: state.answeredCount };
   }
   hostState(state) {
