@@ -17,7 +17,7 @@ Pekerjaan terbaru dipisah agar mudah direview:
    - host recovery, timer, animasi, privacy payload hotspot/arrange.
 2. PR #6 — branch `feat/learning-insights`
    - Nalaro Learning Insights v1.
-3. Branch `feat/live-security-realtime`
+3. PR #7 — branch `feat/live-security-realtime` (stacked di atas PR #6)
    - dibuat di atas `feat/learning-insights`;
    - membawa bagian Live yang relevan dari PR #5 agar tidak meregresikan UX;
    - menambahkan trusted role enforcement, WebSocket, persistence/report Live, dan Live → Learning Insights.
@@ -318,7 +318,7 @@ Jangan klaim branch ini lulus CI/production hanya dari keberadaan test.
 Pada pekerjaan 1 Okt:
 - source dan kontrak direview;
 - test source ditulis;
-- GitHub Actions pada PR sebelumnya berulang kali gagal sebelum memperoleh runner (`steps=null`);
+- GitHub Actions PR #7 run #10 kembali gagal sebelum memperoleh runner: job `validate` selesai failure dengan `steps=null`; pola yang sama terjadi pada PR sebelumnya;
 - snapshot branch belum berhasil didownload ke runtime lokal untuk menjalankan npm test;
 - migration remote dan deployment belum dilakukan;
 - browser/multi-device WebSocket test belum dilakukan.
@@ -329,7 +329,7 @@ Karena pekerjaan bertumpuk:
 
 1. review/merge PR #5 untuk seluruh quiz hardening;
 2. review/merge PR #6 untuk Learning Insights;
-3. kemudian review branch/PR `feat/live-security-realtime`.
+3. kemudian review PR #7 / branch `feat/live-security-realtime`. PR #7 saat dibuat memakai base `feat/learning-insights`; setelah PR #6 masuk ke main, retarget PR #7 ke `main` sebelum merge.
 
 Branch ketiga sudah membawa versi Live Host/Player/DO/style yang kompatibel dengan hardening PR #5, tetapi **tidak menggantikan semua perubahan self-paced PR #5**.
 
