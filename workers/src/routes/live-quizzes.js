@@ -78,6 +78,7 @@ async function create(c, scope) {
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const code = liveCode();
+    if (await c.env.DB.prepare('SELECT id FROM live_quiz_sessions WHERE id=?1').bind(code).first()) continue;
     try {
       return await room(c, code, 'initialize', {
         code,
@@ -172,6 +173,7 @@ export function registerLiveQuizRoutes(app) {
   });
   app.post('/live-quizzes/:code/answer', async (c) => json(c, 202, { data: { receipt: await room(c, validateLiveCode(c.req.param('code')), 'answer', validateLiveAnswer(await body(c))) } }));
   app.post('/live-quizzes/:code/result', async (c) => json(c, 200, { data: { result: await room(c, validateLiveCode(c.req.param('code')), 'result', validateLiveParticipantSession(await body(c))) } }));
+  app.post('/live-quizzes/:code/state', async (c) => json(c, 200, { data: { session: await room(c, validateLiveCode(c.req.param('code')), 'participant', validateLiveParticipantSession(await body(c))) } }));
 
   app.get('/classes/:classId/live-results', requireAuth, async (c) => {
     await assertAccountRole(c, 'teacher');

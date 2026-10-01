@@ -17,10 +17,16 @@ export async function exactCors(c, next) {
       vary: 'Origin',
     } });
   }
+  if (c.req.header('upgrade')?.toLowerCase() === 'websocket' && origin && !allowed) {
+    return json(c, 403, { error: { code: 'ORIGIN_FORBIDDEN', message: 'Origin tidak diizinkan.' } });
+  }
   await next();
+  // Preserve the Durable Object's WebSocket handle through the Worker proxy.
+  if (c.res.status === 101) return;
   if (allowed) {
     c.header('access-control-allow-origin', origin);
     c.header('vary', 'Origin');
+    c.header('access-control-expose-headers', 'x-request-id, content-disposition');
   }
   c.header('cache-control', 'no-store');
 }

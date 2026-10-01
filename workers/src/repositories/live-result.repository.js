@@ -11,9 +11,9 @@ export async function persistLiveResultSnapshot(db, snapshot) {
     prompt: q.prompt,
     points: Number(q.points || 0),
   })) : [];
-  await db.prepare(`INSERT INTO live_quiz_sessions(
-      id,code,scope,class_id,learning_session_id,quiz_id,owner_id,title,questions_json,question_count,total_points,participant_count,started_at,finished_at,created_at,persisted_at
-    ) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16)
+  const saved = await db.prepare(`INSERT INTO live_quiz_sessions(
+      id,code,scope,class_id,learning_session_id,quiz_id,owner_id,title,questions_json,question_count,total_points,participant_count,started_at,finished_at,created_at,persisted_at,persistence_status
+    ) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,'pending')
     ON CONFLICT(id) DO UPDATE SET
       participant_count=excluded.participant_count,
       started_at=excluded.started_at,
@@ -21,7 +21,10 @@ export async function persistLiveResultSnapshot(db, snapshot) {
       questions_json=excluded.questions_json,
       question_count=excluded.question_count,
       total_points=excluded.total_points,
-      persisted_at=excluded.persisted_at`)
+      persisted_at=excluded.persisted_at,
+      persistence_status='pending'
+    WHERE live_quiz_sessions.owner_id=excluded.owner_id
+      AND live_quiz_sessions.quiz_id=excluded.quiz_id`)
     .bind(
       snapshot.id,
       snapshot.code,
@@ -40,6 +43,7 @@ export async function persistLiveResultSnapshot(db, snapshot) {
       snapshot.createdAt,
       now,
     ).run();
+  if (!saved.meta?.changes) throw new Error('Live session identity conflicts with an existing report');
 
   const participantStatements = (snapshot.participants || []).map((participant) => db.prepare(`INSERT INTO live_quiz_results(
       live_session_id,participant_id,student_id,participant_name,score,correct_count,rank,joined_at
@@ -65,6 +69,8 @@ export async function persistLiveResultSnapshot(db, snapshot) {
 
   for (const group of chunks(participantStatements)) await db.batch(group);
   for (const group of chunks(answerStatements)) await db.batch(group);
+  await db.prepare("UPDATE live_quiz_sessions SET persistence_status='complete',persisted_at=?2 WHERE id=?1 AND owner_id=?3 AND quiz_id=?4")
+    .bind(snapshot.id, now, snapshot.ownerId, snapshot.quizId).run();
   return { persistedAt: now, participants: participantStatements.length, answers: answerStatements.length };
 }
 
@@ -112,13 +118,13 @@ export class LiveResultRepository {
 
   async listClass(classId, ownerId) {
     await this.requireClassOwner(classId, ownerId);
-    const rows = (await this.db.prepare('SELECT * FROM live_quiz_sessions WHERE class_id=?1 ORDER BY finished_at DESC LIMIT 100').bind(classId).all()).results || [];
+    const rows = (await this.db.prepare("SELECT * FROM live_quiz_sessions WHERE class_id=?1 AND persistence_status='complete' ORDER BY finished_at DESC LIMIT 100").bind(classId).all()).results || [];
     return rows.map(publicSession);
   }
 
   async getClass(classId, liveSessionId, ownerId) {
     await this.requireClassOwner(classId, ownerId);
-    const row = await this.db.prepare('SELECT * FROM live_quiz_sessions WHERE id=?1 AND class_id=?2').bind(liveSessionId, classId).first();
+    const row = await this.db.prepare("SELECT * FROM live_quiz_sessions WHERE id=?1 AND class_id=?2 AND persistence_status='complete'").bind(liveSessionId, classId).first();
     if (!row) throw notFound('Hasil Nalaro Live tidak ditemukan.');
     const participants = (await this.db.prepare('SELECT * FROM live_quiz_results WHERE live_session_id=?1 ORDER BY rank ASC, joined_at ASC').bind(liveSessionId).all()).results || [];
     const questionRows = (await this.db.prepare(`SELECT question_id,
@@ -145,12 +151,12 @@ export class LiveResultRepository {
   }
 
   async listGeneral(ownerId) {
-    const rows = (await this.db.prepare("SELECT * FROM live_quiz_sessions WHERE owner_id=?1 AND scope='general' ORDER BY finished_at DESC LIMIT 100").bind(ownerId).all()).results || [];
+    const rows = (await this.db.prepare("SELECT * FROM live_quiz_sessions WHERE owner_id=?1 AND scope='general' AND persistence_status='complete' ORDER BY finished_at DESC LIMIT 100").bind(ownerId).all()).results || [];
     return rows.map(publicSession);
   }
 
   async getGeneral(liveSessionId, ownerId) {
-    const row = await this.db.prepare("SELECT * FROM live_quiz_sessions WHERE id=?1 AND owner_id=?2 AND scope='general'").bind(liveSessionId, ownerId).first();
+    const row = await this.db.prepare("SELECT * FROM live_quiz_sessions WHERE id=?1 AND owner_id=?2 AND scope='general' AND persistence_status='complete'").bind(liveSessionId, ownerId).first();
     if (!row) throw notFound('Hasil Nalaro Live tidak ditemukan.');
     const participants = (await this.db.prepare('SELECT * FROM live_quiz_results WHERE live_session_id=?1 ORDER BY rank ASC, joined_at ASC').bind(liveSessionId).all()).results || [];
     return { ...publicSession(row), participants: participants.map(publicParticipant) };
@@ -159,8 +165,9 @@ export class LiveResultRepository {
 
 export function liveResultCsv(result) {
   const escape = (value) => {
-    const text = String(value ?? '');
-    return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    const raw = String(value ?? '');
+    const text = /^[\s]*[=+@-]/.test(raw) ? `'${raw}` : raw;
+    return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
   };
   const rows = [['Peringkat', 'Nama', 'Student ID', 'Skor', 'Benar', 'Waktu Bergabung']];
   for (const participant of result.participants || []) rows.push([

@@ -10,7 +10,7 @@ const verifiedTeacherDb = {
       bind(...next) { values = next; return this; },
       async first() {
         if (/SELECT role, role_verified, role_verified_at FROM users/i.test(sql)) {
-          return { role: 'teacher', role_verified: 1, role_verified_at: new Date().toISOString(), uid: values[0] };
+          return { role: 'teacher', role_verified: 1, role_verified_at: new Date(Date.now() - 1000).toISOString(), uid: values[0] };
         }
         return null;
       },

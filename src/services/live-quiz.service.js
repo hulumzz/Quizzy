@@ -1,4 +1,5 @@
 import { appEnv } from '../config/env';
+import { connectLiveSocket } from '../features/quiz/live-connection';
 import { apiDownload, apiRequest, optionalAuthApiRequest, publicApiRequest } from './api';
 
 const codePath = (code) => `/live-quizzes/${encodeURIComponent(code.trim().toUpperCase())}`;
@@ -7,17 +8,18 @@ const generalHostPath = (sessionId) => `/general-quizzes/live-sessions/${encodeU
 
 export async function createLiveSession(classId, quizId, input = {}) { const data = await apiRequest(`/classes/${encodeURIComponent(classId)}/quizzes/${encodeURIComponent(quizId)}/live-sessions`, { method: 'POST', body: input }); return data.session; }
 export async function getLiveHostSession(classId, sessionId, options = {}) { const data = await apiRequest(hostPath(classId, sessionId), options); return data.session; }
-export async function advanceLiveSession(classId, sessionId, action = 'advance') { const data = await apiRequest(`${hostPath(classId, sessionId)}/action`, { method: 'POST', body: { action } }); return data.session; }
+export async function advanceLiveSession(classId, sessionId, action = 'advance', expected = {}) { const data = await apiRequest(`${hostPath(classId, sessionId)}/action`, { method: 'POST', body: { action, ...expected } }); return data.session; }
 export async function createLiveHostSocketTicket(classId, sessionId) { const data = await apiRequest(`${hostPath(classId, sessionId)}/socket-ticket`, { method: 'POST', body: {} }); return data.socket; }
 export async function retryLivePersistence(classId, sessionId) { const data = await apiRequest(`${hostPath(classId, sessionId)}/persist`, { method: 'POST', body: {} }); return data.session; }
 
 export async function createGeneralLiveSession(quizId, input = {}) { const data = await apiRequest(`/general-quizzes/${encodeURIComponent(quizId)}/live-sessions`, { method: 'POST', body: input }); return data.session; }
 export async function getGeneralLiveHostSession(sessionId, options = {}) { const data = await apiRequest(generalHostPath(sessionId), options); return data.session; }
-export async function advanceGeneralLiveSession(sessionId, action = 'advance') { const data = await apiRequest(`${generalHostPath(sessionId)}/action`, { method: 'POST', body: { action } }); return data.session; }
+export async function advanceGeneralLiveSession(sessionId, action = 'advance', expected = {}) { const data = await apiRequest(`${generalHostPath(sessionId)}/action`, { method: 'POST', body: { action, ...expected } }); return data.session; }
 export async function createGeneralLiveHostSocketTicket(sessionId) { const data = await apiRequest(`${generalHostPath(sessionId)}/socket-ticket`, { method: 'POST', body: {} }); return data.socket; }
 export async function retryGeneralLivePersistence(sessionId) { const data = await apiRequest(`${generalHostPath(sessionId)}/persist`, { method: 'POST', body: {} }); return data.session; }
 
 export async function getLiveSession(code, options = {}) { const data = await publicApiRequest(codePath(code), options); return data.session; }
+export async function getLiveParticipantState(code, participant) { const data = await publicApiRequest(`${codePath(code)}/state`, { method: 'POST', body: participant }); return data.session; }
 export async function joinLiveSession(code, name) { return optionalAuthApiRequest(`${codePath(code)}/join`, { method: 'POST', body: { name } }); }
 export async function answerLiveQuestion(code, payload) { const data = await publicApiRequest(`${codePath(code)}/answer`, { method: 'POST', body: payload }); return data.receipt; }
 export async function getLiveParticipantResult(code, participant) { const data = await publicApiRequest(`${codePath(code)}/result`, { method: 'POST', body: participant }); return data.result; }
@@ -55,27 +57,8 @@ function socketUrl(code) {
   return root.toString();
 }
 
-export function openLiveSocket(code, { hostTicket, participant, onState, onResult, onStatus, onError } = {}) {
-  const socket = new WebSocket(socketUrl(code));
-  socket.addEventListener('open', () => {
-    onStatus?.('connected');
-    if (hostTicket) socket.send(JSON.stringify({ type: 'auth-host', ticket: hostTicket }));
-    else if (participant?.participantId && participant?.participantToken) socket.send(JSON.stringify({ type: 'auth-participant', ...participant }));
-  });
-  socket.addEventListener('message', (event) => {
-    let payload;
-    try { payload = JSON.parse(event.data); } catch { return; }
-    if (payload.type === 'state' && payload.state) {
-      if (!hostTicket || Array.isArray(payload.state.participants)) onState?.(payload.state);
-    }
-    if (payload.type === 'result' && payload.result) onResult?.(payload.result);
-    if (payload.type === 'error') onError?.(payload.error);
-  });
-  socket.addEventListener('close', () => onStatus?.('disconnected'));
-  socket.addEventListener('error', () => onStatus?.('error'));
-  return () => {
-    if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) socket.close(1000, 'page closed');
-  };
+export function openLiveSocket(code, options = {}) {
+  return connectLiveSocket(socketUrl(code), options);
 }
 
 export function liveQuizErrorMessage(error) {

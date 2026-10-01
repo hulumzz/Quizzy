@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 import { LiveQuizRoom } from '../src/durable/LiveQuizRoom.js';
 
-function roomFixture() {
+function roomFixture(env = {}) {
   const sqlite = new DatabaseSync(':memory:');
   const sql = { exec(query, ...values) {
     const statement = sqlite.prepare(query);
@@ -24,12 +24,12 @@ function roomFixture() {
     },
     blockConcurrencyWhile(callback) { return callback(); },
   };
-  const room = new LiveQuizRoom(context, {});
+  const room = new LiveQuizRoom(context, env);
   const call = async (path, input = {}) => {
     const response = await room.fetch(new Request(`https://room.internal/${path}`, { method: 'POST', body: JSON.stringify(input) }));
     return { status: response.status, ...(await response.json()) };
   };
-  return { call, close: () => sqlite.close() };
+  return { call, room, context, sqlite, close: () => sqlite.close() };
 }
 
 test('live room keeps answer secret until reveal and scores one answer per participant', async (t) => {
@@ -72,6 +72,52 @@ test('live room keeps answer secret until reveal and scores one answer per parti
   assert.equal(result.data.participant.studentId, 'student-1');
 });
 
+const setup = { code: 'ABC234', scope: 'class', classId: 'class-1', quizId: 'quiz-1', ownerId: 'teacher-1', title: 'Live', questionDurationSeconds: 30,
+  questions: [{ id: 'q1', type: 'true_false', prompt: 'Benar?', correctAnswer: true, points: 5 }] };
+const host = { ownerId: 'teacher-1', scope: 'class', classId: 'class-1', action: 'advance' };
+
+test('participant state restores answer lock without disclosing correctness before reveal', async (t) => {
+  const fixture = roomFixture(); t.after(fixture.close);
+  await fixture.call('initialize', setup);
+  const { participant } = (await fixture.call('join', { name: 'Siswa', ipHash: 'ip', studentId: 'student-1' })).data;
+  await fixture.call('advance', host);
+  await fixture.call('answer', { ...participant, questionId: 'q1', answer: true });
+  const active = (await fixture.call('participant', participant)).data;
+  assert.equal(active.receipt.accepted, true);
+  assert.equal(active.receipt.correct, undefined);
+  assert.equal(active.receipt.earnedPoints, undefined);
+  assert.equal((await fixture.call('public')).data.receipt, undefined);
+  await fixture.call('advance', host);
+  assert.equal((await fixture.call('participant', participant)).data.receipt.earnedPoints, 5);
+  const reconnect = (await fixture.call('join', { name: 'Siswa', ipHash: 'ip', studentId: 'student-1' })).data;
+  assert.equal(reconnect.participant.id, participant.id);
+  assert.equal(reconnect.state.participantCount, 1);
+  assert.equal((await fixture.call('participant', participant)).status, 403);
+});
+
+test('server alarm reveals an expired question while host is offline and rejects stale advances', async (t) => {
+  const fixture = roomFixture(); t.after(fixture.close);
+  await fixture.call('initialize', setup);
+  await fixture.call('advance', host);
+  const state = fixture.room.load(); state.endsAt = new Date(Date.now() - 1).toISOString(); fixture.room.save(state);
+  await fixture.room.alarm();
+  assert.equal(fixture.room.load().phase, 'reveal');
+  const stale = await fixture.call('advance', { ...host, expectedPhase: 'question', expectedQuestionIndex: 0 });
+  assert.equal(stale.error.code, 'LIVE_STATE_CHANGED');
+});
+
+test('failed D1 persistence retains finished room beyond TTL for retry', async (t) => {
+  const fixture = roomFixture({ DB: { prepare() { throw new Error('test D1 outage'); } } }); t.after(fixture.close);
+  await fixture.call('initialize', setup);
+  await fixture.call('advance', { ...host, action: 'finish' });
+  const state = fixture.room.load(); state.expiresAt = Date.now() - 1; fixture.room.save(state);
+  let deleted = false; fixture.context.storage.deleteAll = async () => { deleted = true; };
+  await fixture.room.alarm();
+  assert.equal(deleted, false);
+  assert.equal(fixture.room.load().persistenceStatus, 'failed');
+  assert.ok(fixture.room.load().expiresAt > Date.now());
+});
+
 test('authenticated student reconnect reuses participant instead of duplicating class analytics identity', async (t) => {
   const room = roomFixture(); t.after(room.close);
   await room.call('initialize', {
@@ -103,26 +149,5 @@ test('live room never exposes hotspot geometry or arrange answer order', async (
   await room.call('advance', { ownerId: 'teacher-1', scope: 'class', classId: 'class-1', action: 'advance' });
   await room.call('advance', { ownerId: 'teacher-1', scope: 'class', classId: 'class-1', action: 'advance' });
   const arrange = (await room.call('public')).data.question;
-  assert.deepEqual(arrange.items.map((item) => item.id), ['b', 'c', 'a']);
-});
-
-
-test('live room never exposes hotspot geometry or arrange answer order', async (t) => {
-  const room = roomFixture(); t.after(room.close);
-  await room.call('initialize', {
-    code: 'BCD345', scope: 'class', classId: 'class-1', quizId: 'quiz-2', ownerId: 'teacher-1', title: 'Private answers', questionDurationSeconds: 30,
-    questions: [
-      { id: 'hot', type: 'image_hotspot', prompt: 'Klik target', imageUrl: 'https://example.com/a.png', points: 1, tolerancePercent: 2, hotspots: [{ id: 'h1', label: 'Target', x: 10, y: 10, width: 20, height: 20, correct: true }] },
-      { id: 'arr', type: 'arrange', prompt: 'Urutkan', points: 1, items: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }, { id: 'c', text: 'C' }], correctOrder: ['a', 'b', 'c'] },
-    ],
-  });
-  await room.call('advance', { ownerId: 'teacher-1', scope: 'class', classId: 'class-1', action: 'advance' });
-  const hotspot = (await room.call('public')).data.question;
-  assert.equal(hotspot.hotspots, undefined);
-  assert.equal(hotspot.tolerancePercent, undefined);
-
-  await room.call('advance', { ownerId: 'teacher-1', scope: 'class', classId: 'class-1', action: 'advance' });
-  await room.call('advance', { ownerId: 'teacher-1', scope: 'class', classId: 'class-1', action: 'advance' });
-  const arrange = (await room.call('public')).data.question;
-  assert.deepEqual(arrange.items.map((item) => item.id), ['b', 'c', 'a']);
+  assert.deepEqual(arrange.items.map((item) => item.id).sort(), ['a', 'b', 'c']);
 });

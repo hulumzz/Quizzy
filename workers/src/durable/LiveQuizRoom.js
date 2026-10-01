@@ -1,3 +1,4 @@
+import { publicArrangeItems } from '../services/public-question.js';
 import { conflict, forbidden, HttpError, notFound } from '../http/errors.js';
 import { persistLiveResultSnapshot } from '../repositories/live-result.repository.js';
 
@@ -11,13 +12,6 @@ const equalToken = (left, right) => {
 };
 const normalize = (value) => String(value ?? '').trim().toLocaleLowerCase('id-ID');
 
-function publicArrangeItems(q) {
-  const items = [...(q.items || [])];
-  if (items.length < 2) return items;
-  const correctOrder = Array.isArray(q.correctOrder) ? q.correctOrder : [];
-  const exposesCorrectOrder = correctOrder.length === items.length && items.every((item, index) => item.id === correctOrder[index]);
-  return exposesCorrectOrder ? [...items.slice(1), items[0]] : items;
-}
 const safeQuestion = (q) => ({ id: q.id, type: q.type, prompt: q.prompt, choices: q.choices, points: q.points,
   ...(q.type === 'arrange' ? { items: publicArrangeItems(q) } : {}), ...(q.imageUrl ? { imageUrl: q.imageUrl } : {}) });
 const revealedQuestion = (q) => ({ ...safeQuestion(q), correctAnswer: q.type === 'arrange' ? q.correctOrder : q.type === 'image_hotspot' ? 'Area yang ditandai' : q.correctAnswer, explanation: q.explanation || '' });
@@ -90,6 +84,16 @@ export class LiveQuizRoom {
   save(state) { this.sql('UPDATE room SET data_json=?1 WHERE id=?2', JSON.stringify(state), state.id); }
   people() { return this.sql('SELECT * FROM participants ORDER BY joined_at ASC').toArray(); }
 
+  participantState(state, person) {
+    const question = state.questions[state.questionIndex];
+    const answer = question ? this.one('SELECT answered_at,correct,earned_points FROM answers WHERE question_id=?1 AND participant_id=?2', question.id, person.id) : null;
+    return {
+      ...this.publicState(state),
+      receipt: answer ? { accepted: true, questionId: question.id, answeredAt: answer.answered_at,
+        ...(state.phase !== 'question' ? { correct: Boolean(answer.correct), earnedPoints: Number(answer.earned_points) } : {}) } : null,
+    };
+  }
+
   publicState(state) {
     const question = state.questionIndex >= 0 ? state.questions[state.questionIndex] : null;
     return {
@@ -119,7 +123,7 @@ export class LiveQuizRoom {
       participants: people.map(participantSummary),
       persistenceStatus: state.persistenceStatus || 'pending',
       persistedAt: state.persistedAt || null,
-      ...(state.phase === 'finished' ? { leaderboard: leaderboard(people) } : {}),
+      ...(['reveal', 'finished'].includes(state.phase) ? { leaderboard: leaderboard(people) } : {}),
     };
   }
 
@@ -166,13 +170,16 @@ export class LiveQuizRoom {
           hostPayload ||= JSON.stringify({ type: 'state', state: this.hostState(state) });
           ws.send(hostPayload);
         } else {
-          ws.send(publicPayload);
+          if (attachment.role === 'participant') {
+            const person = this.requireParticipant(attachment);
+            ws.send(JSON.stringify({ type: 'state', state: this.participantState(state, person) }));
+          } else ws.send(publicPayload);
           if (attachment.role === 'participant' && state.phase === 'finished') {
             const result = this.participantResult(state, attachment.participantId);
             if (result.participant) ws.send(JSON.stringify({ type: 'result', result }));
           }
         }
-      } catch { /* disconnected socket */ }
+      } catch { try { ws.close(1008, 'participant session changed'); } catch { /* disconnected */ } }
     }
   }
 
@@ -209,9 +216,9 @@ export class LiveQuizRoom {
 
   authenticateParticipantSocket(ws, input) {
     const participant = this.requireParticipant(input);
-    ws.serializeAttachment({ role: 'participant', participantId: participant.id });
+    ws.serializeAttachment({ role: 'participant', participantId: participant.id, participantToken: input.participantToken });
     const state = this.load();
-    this.sendSocket(ws, { type: 'state', state: this.publicState(state) });
+    this.sendSocket(ws, { type: 'state', state: this.participantState(state, participant) });
     if (state.phase === 'finished') this.sendSocket(ws, { type: 'result', result: this.participantResult(state, participant.id) });
   }
 
@@ -267,16 +274,19 @@ export class LiveQuizRoom {
 
   join({ name, ipHash, studentId = null }) {
     const state = this.load();
-    if (!['lobby', 'countdown'].includes(state.phase)) throw conflict('LIVE_JOIN_CLOSED', 'Sesi sudah dimulai atau telah berakhir.');
+    const existing = studentId ? this.one('SELECT * FROM participants WHERE student_id=?1 LIMIT 1', studentId) : null;
+    if (!existing && !['lobby', 'countdown'].includes(state.phase)) throw conflict('LIVE_JOIN_CLOSED', 'Sesi sudah dimulai atau telah berakhir.');
     const bucket = `${ipHash}:${Math.floor(Date.now() / 60_000)}`;
     const attempts = this.one('SELECT count FROM join_rates WHERE bucket=?1', bucket)?.count || 0;
     if (attempts >= 30) throw conflict('LIVE_JOIN_RATE_LIMITED', 'Terlalu banyak percobaan gabung. Coba lagi sebentar lagi.');
 
     const joinedAt = new Date().toISOString();
-    const existing = studentId ? this.one('SELECT * FROM participants WHERE student_id=?1 LIMIT 1', studentId) : null;
     const participantToken = token();
     if (existing) {
       this.sql('UPDATE participants SET name=?2,token=?3 WHERE id=?1', existing.id, name, participantToken);
+      this.sql('INSERT INTO join_rates(bucket,count) VALUES(?1,1) ON CONFLICT(bucket) DO UPDATE SET count=count+1', bucket);
+      state.stateVersion += 1;
+      this.save(state);
       this.broadcast(state);
       return { participant: { id: existing.id, participantId: existing.id, name, participantToken }, state: this.publicState(state) };
     }
@@ -286,6 +296,7 @@ export class LiveQuizRoom {
       this.sql('INSERT INTO join_rates(bucket,count) VALUES(?1,1) ON CONFLICT(bucket) DO UPDATE SET count=count+1', bucket);
       this.sql('INSERT INTO participants(id,name,token,joined_at,student_id) VALUES(?1,?2,?3,?4,?5)', id, name, participantToken, joinedAt, studentId);
       state.participantCount += 1;
+      state.stateVersion += 1;
       state.updatedAt = joinedAt;
       this.save(state);
     });
@@ -361,6 +372,9 @@ export class LiveQuizRoom {
     this.requireHost(state, input);
     const now = new Date().toISOString();
     if (state.phase === 'finished') throw conflict('LIVE_SESSION_FINISHED', 'Sesi ini sudah selesai.');
+    if (input.action === 'advance' && input.expectedPhase && (input.expectedPhase !== state.phase || input.expectedQuestionIndex !== state.questionIndex)) {
+      throw conflict('LIVE_STATE_CHANGED', 'Sesi sudah berubah. Tampilan akan diperbarui.');
+    }
 
     if (input.action === 'finish' || (state.phase === 'reveal' && state.questionIndex >= state.questions.length - 1)) {
       state.phase = 'finished';
@@ -383,7 +397,9 @@ export class LiveQuizRoom {
     state.stateVersion += 1;
     state.updatedAt = now;
     this.save(state);
+    await this.ctx.storage.setAlarm(state.phase === 'question' ? Date.parse(state.endsAt) : state.expiresAt);
     if (state.phase === 'finished') await this.persistFinalResults(state);
+    if (state.phase === 'finished' && state.persistenceStatus !== 'persisted') await this.ctx.storage.setAlarm(Date.now() + 60_000);
     this.broadcast(state);
     return this.hostState(state);
   }
@@ -391,7 +407,7 @@ export class LiveQuizRoom {
   answer(input) {
     const state = this.load();
     if (state.phase !== 'question' || state.questionIndex < 0) throw conflict('LIVE_QUESTION_NOT_OPEN', 'Belum ada soal yang dapat dijawab.');
-    if (Date.parse(state.endsAt) < Date.now()) throw conflict('LIVE_QUESTION_LOCKED', 'Waktu untuk menjawab sudah habis.');
+    if (Date.parse(state.endsAt) <= Date.now()) throw conflict('LIVE_QUESTION_LOCKED', 'Waktu untuk menjawab sudah habis.');
     const q = state.questions[state.questionIndex];
     if (q.id !== input.questionId) throw conflict('LIVE_QUESTION_CHANGED', 'Soal sudah berganti.');
     this.requireParticipant(input);
@@ -406,6 +422,7 @@ export class LiveQuizRoom {
       this.sql('INSERT INTO answers(question_id,participant_id,answer_json,choice_key,correct,earned_points,answered_at) VALUES(?1,?2,?3,?4,?5,?6,?7)', q.id, input.participantId, JSON.stringify(input.answer), key, isCorrect ? 1 : 0, earned, answeredAt);
       this.sql('UPDATE participants SET score=score+?2,correct_count=correct_count+?3,answered_question_id=?4 WHERE id=?1', input.participantId, earned, isCorrect ? 1 : 0, q.id);
       state.answeredCount += 1;
+      state.stateVersion += 1;
       if (isCorrect) state.correctCount += 1;
       state.optionCounts[key] = (state.optionCounts[key] || 0) + 1;
       state.updatedAt = answeredAt;
@@ -427,7 +444,24 @@ export class LiveQuizRoom {
     const row = this.one('SELECT data_json FROM room LIMIT 1');
     if (row) {
       const state = JSON.parse(row.data_json);
-      if (state.phase === 'finished' && state.persistenceStatus !== 'persisted') await this.persistFinalResults(state);
+      if (state.phase === 'question' && Date.parse(state.endsAt) <= Date.now()) {
+        state.phase = 'reveal';
+        state.stateVersion += 1;
+        state.updatedAt = new Date().toISOString();
+        this.save(state);
+        this.broadcast(state);
+      }
+      if (state.phase === 'finished' && state.persistenceStatus !== 'persisted') {
+        await this.persistFinalResults(state);
+        if (state.persistenceStatus !== 'persisted') {
+          // Preserve the authoritative snapshot until D1 recovers, including
+          // after the normal room TTL. Never delete the only copy of results.
+          state.expiresAt = Math.max(state.expiresAt, Date.now() + 60 * 60 * 1000);
+          this.save(state);
+          await this.ctx.storage.setAlarm(Date.now() + 60_000);
+          return;
+        }
+      }
       if (state.expiresAt > Date.now()) { await this.ctx.storage.setAlarm(state.expiresAt); return; }
     }
     await this.ctx.storage.deleteAll();
@@ -445,6 +479,7 @@ export class LiveQuizRoom {
         : path === '/public' ? this.publicState(this.load())
           : path === '/context' ? (() => { const state = this.load(); return { scope: state.scope, classId: state.classId || null }; })()
           : path === '/host' ? (() => { const state = this.load(); this.requireHost(state, input); return this.hostState(state); })()
+            : path === '/participant' ? this.participantState(this.load(), this.requireParticipant(input))
             : path === '/socket-ticket' ? this.socketTicket(input)
               : path === '/join' ? this.join(input)
                 : path === '/advance' ? await this.advance(input)

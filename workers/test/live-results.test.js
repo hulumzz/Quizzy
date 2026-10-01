@@ -3,6 +3,7 @@ import test from 'node:test';
 import { ClassRepository } from '../src/repositories/class.repository.js';
 import { LiveResultRepository, liveResultCsv, persistLiveResultSnapshot } from '../src/repositories/live-result.repository.js';
 import { createD1Fixture } from './d1-fixture.js';
+import { LearningAnalyticsRepository } from '../src/repositories/learning-analytics.repository.js';
 
 test('Live result snapshot persists idempotently and remains reportable', async (t) => {
   const fixture = createD1Fixture(); t.after(fixture.close);
@@ -40,6 +41,32 @@ test('Live result snapshot persists idempotently and remains reportable', async 
   assert.equal(detail.questions[0].correctCount, 1);
   assert.match(liveResultCsv(detail), /Siswa/);
   assert.match(liveResultCsv(detail), /student-1/);
+});
+
+test('partial Live snapshots stay hidden from reports and mastery until retry completes', async (t) => {
+  const fixture = createD1Fixture(); t.after(fixture.close);
+  const snapshot = {
+    id: 'FAIL23', code: 'FAIL23', scope: 'class', classId: 'class-1', quizId: 'q1', ownerId: 'teacher-1', title: 'Retry',
+    questions: [], totalPoints: 5, participantCount: 1, createdAt: '2026-10-02T00:00:00Z', finishedAt: '2026-10-02T00:01:00Z',
+    participants: [{ id: 'p1', studentId: 'student-1', name: 'Siswa', score: 5, rank: 1, joinedAt: '2026-10-02T00:00:00Z' }],
+    answers: [{ questionId: 'q1', participantId: 'p1', correct: true, earnedPoints: 5, answeredAt: '2026-10-02T00:00:30Z' }],
+  };
+  let batches = 0;
+  const failingDb = { ...fixture.db, async batch(statements) { if (++batches === 2) throw new Error('batch failed'); return fixture.db.batch(statements); } };
+  await assert.rejects(() => persistLiveResultSnapshot(failingDb, snapshot));
+  const classRepository = new ClassRepository(fixture.db);
+  const results = new LiveResultRepository({ db: fixture.db, classRepository });
+  assert.deepEqual(await results.listClass('class-1', 'teacher-1'), []);
+  const analytics = new LearningAnalyticsRepository({ db: fixture.db, classRepository });
+  assert.equal((await analytics.getStudent('class-1', 'student-1', 'student-1')).profile.mastery, null);
+  await persistLiveResultSnapshot(fixture.db, snapshot);
+  assert.equal((await results.listClass('class-1', 'teacher-1')).length, 1);
+  assert.equal((await analytics.getStudent('class-1', 'student-1', 'student-1')).profile.mastery, 100);
+});
+
+test('Live CSV escapes spreadsheet formulas and carriage returns', () => {
+  const csv = liveResultCsv({ participants: [{ name: '=1+1\rFake', rank: 1, score: 0, correctCount: 0 }] });
+  assert.ok(csv.includes('"\'=1+1\rFake"'));
 });
 
 test('class Live reports remain owner-only', async (t) => {

@@ -42,10 +42,13 @@ export async function resolveAccountRole({ db, identity, authorization, projectI
   const cached = await db.prepare('SELECT role, role_verified, role_verified_at FROM users WHERE id=?1').bind(identity.uid).first();
   const verifiedAt = Date.parse(cached?.role_verified_at || '');
   const nowMs = Date.parse(now);
-  if (cached?.role_verified === 1 && VALID_ROLES.has(cached.role) && Number.isFinite(verifiedAt) && Number.isFinite(nowMs) && nowMs - verifiedAt < ROLE_CACHE_TTL_MS) return cached.role;
+  if (cached?.role_verified === 1 && VALID_ROLES.has(cached.role) && Number.isFinite(verifiedAt) && Number.isFinite(nowMs) && nowMs >= verifiedAt && nowMs - verifiedAt < ROLE_CACHE_TTL_MS) return cached.role;
 
   const profile = await fetchTrustedProfile({ authorization, projectId, uid: identity.uid, fetchImpl });
-  await db.prepare(`INSERT INTO users(id,email,name,role,created_at,updated_at,role_verified,role_verified_at)
+  // A browser can delete/recreate its Firestore profile. A verified D1 role
+  // remains the account's authority; changing it requires an admin operation.
+  if (cached?.role_verified === 1 && cached.role !== profile.role) throw forbidden('Peran akun berubah. Hubungi pengelola untuk memulihkan profil.');
+  const saved = await db.prepare(`INSERT INTO users(id,email,name,role,created_at,updated_at,role_verified,role_verified_at)
     VALUES(?1,?2,?3,?4,?5,?5,1,?5)
     ON CONFLICT(id) DO UPDATE SET
       email=CASE WHEN excluded.email<>'' THEN excluded.email ELSE users.email END,
@@ -53,8 +56,10 @@ export async function resolveAccountRole({ db, identity, authorization, projectI
       role=excluded.role,
       role_verified=1,
       role_verified_at=excluded.role_verified_at,
-      updated_at=excluded.updated_at`)
+      updated_at=excluded.updated_at
+    WHERE users.role_verified=0 OR users.role=excluded.role`)
     .bind(identity.uid, profile.email || identity.email || '', profile.name || identity.name || '', profile.role, now)
     .run();
+  if (!saved.meta?.changes) throw forbidden('Peran akun tidak sesuai dengan identitas terverifikasi.');
   return profile.role;
 }

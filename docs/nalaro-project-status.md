@@ -1,6 +1,6 @@
 # Status dan riwayat pengerjaan Nalaro Class
 
-Terakhir diperiksa: 1 Oktober 2026. Dokumen ini adalah catatan kerja yang harus diperbarui setelah setiap tugas selesai. Status mengacu pada kode di repository `hulumzz/Quizzy` dan bukti pengujian yang disebutkan; keberadaan kode tidak otomatis berarti fitur sudah lolos uji produksi.
+Terakhir diperiksa: 2 Oktober 2026. Dokumen ini adalah catatan kerja yang harus diperbarui setelah setiap tugas selesai. Status mengacu pada kode di repository `hulumzz/Quizzy` dan bukti pengujian yang disebutkan; keberadaan kode tidak otomatis berarti fitur sudah lolos uji produksi.
 
 ## Aturan pembaruan oleh AI
 
@@ -78,6 +78,18 @@ Terakhir diperiksa: 1 Oktober 2026. Dokumen ini adalah catatan kerja yang harus 
 - HTTP/CORS dan tes otomatis tidak menggantikan uji UI browser, transfer Cloudinary nyata, perangkat kamera/lokasi, atau uji beban live.
 
 ## Riwayat perubahan
+
+### 2 Okt 2026 ? Integrasi release dan hardening sebelum deploy
+
+- PR #5, #6, #7 diintegrasikan berurutan pada `main` lokal dengan merge commit; konflik route/dokumen/Live diselesaikan sambil mempertahankan hardening kuis, Learning Insights, WebSocket, dan laporan permanen. Riwayat lama dipertahankan.
+- Role D1 yang sudah verified tidak dapat diganti lewat delete/recreate profil Firestore; verifikasi paralel memakai guard SQL. Draft kuis dan recovery host dipisahkan per akun.
+- Live memulihkan receipt pribadi setelah reconnect/reload, memakai heartbeat dan stateVersion untuk mencegah state mundur, menutup soal melalui alarm server, serta menolak advance dari fase lama. Hasil gagal tersimpan tidak dibuang saat TTL room berakhir.
+- Migration additive `0012_live_result_completion.sql` mencegah snapshot parsial terbaca sebagai laporan/mastery. Migrasi `0009`?`0012` telah diterapkan ke D1 remote setelah export backup lokal; tidak ada reset atau penghapusan data produksi.
+- Soal/kunci kuis dikunci setelah ada attempt; randomisasi arrange tidak memakai rotasi jawaban yang dapat dibalik. CSV dinetralkan terhadap formula spreadsheet. Canonical/sitemap menunjuk `nalaroclass.pages.dev` dan header keamanan Pages ditambahkan.
+- `npm.cmd install` root/Worker, `npm.cmd run validate` (10 frontend, 126 backend, 46 Worker), syntax check 47 source/script, `git diff --check`, dan Worker dry run `--keep-vars` lulus. Tes lokal tidak menggantikan browser/perangkat/produksi.
+- Remote `pages` ditambahkan untuk `khoirulzz/nalaroclass`; `pages/main` adalah ancestor `main`, sehingga sinkronisasi bisa fast-forward tanpa force push.
+- Status pada entri ini: merge commit lokal tersedia; perbaikan release belum di-push, Worker/Pages final dan smoke produksi masih dikerjakan. Bukti akhir akan ditambahkan setelah pemeriksaan lingkungan.
+
 
 Tambahkan entri terbaru di paling atas setelah setiap tugas. Sertakan perubahan, berkas penting, tes yang benar-benar dijalankan, status commit/push/deploy, dan hal yang masih terbuka.
 

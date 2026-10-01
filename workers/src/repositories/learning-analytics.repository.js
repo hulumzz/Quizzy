@@ -116,7 +116,7 @@ function summarizeScope({
   const eligibleTasks = scopedTasks.filter((item) => submissionByTask.has(item.id) || (Date.parse(item.due_at) <= nowMs && Date.parse(item.due_at) >= joinedAtMs));
   const submittedEligibleTasks = eligibleTasks.filter((item) => submissionByTask.has(item.id));
   const punctualityEligible = submittedEligibleTasks.filter((item) => Date.parse(item.due_at) >= joinedAtMs);
-  const onTimeSubmissions = punctualityEligible.filter((item) => !Boolean(submissionByTask.get(item.id)?.late));
+  const onTimeSubmissions = punctualityEligible.filter((item) => !submissionByTask.get(item.id)?.late);
   const taskCompletionRate = rate(submittedEligibleTasks.length, eligibleTasks.length);
   const onTimeRate = rate(onTimeSubmissions.length, punctualityEligible.length);
 
@@ -352,8 +352,8 @@ export class LearningAnalyticsRepository {
       all("SELECT id,title,session_id,due_at,status FROM tasks WHERE class_id=?1 AND status IN ('published','archived')", classId),
       all("SELECT s.task_id,s.student_id,s.status,s.late,s.submitted_at,s.score,s.graded_at,s.revision_count,t.title AS task_title,t.session_id FROM task_submissions s JOIN tasks t ON t.id=s.task_id WHERE s.class_id=?1 AND t.status<>'deleted'", classId),
       all("SELECT r.task_id,r.student_id,r.previous_json,r.created_at,t.title AS task_title,t.session_id FROM task_submission_revisions r JOIN tasks t ON t.id=r.task_id WHERE t.class_id=?1 AND t.status<>'deleted' ORDER BY r.created_at ASC", classId),
-      all("SELECT id,title,learning_session_id,total_points,finished_at FROM live_quiz_sessions WHERE class_id=?1 AND scope='class'", classId),
-      all("SELECT r.live_session_id,r.student_id,r.score,r.correct_count,r.joined_at FROM live_quiz_results r JOIN live_quiz_sessions s ON s.id=r.live_session_id WHERE s.class_id=?1 AND r.student_id IS NOT NULL", classId),
+      all("SELECT id,title,learning_session_id,total_points,finished_at FROM live_quiz_sessions WHERE class_id=?1 AND scope='class' AND persistence_status='complete'", classId),
+      all("SELECT r.live_session_id,r.student_id,r.score,r.correct_count,r.joined_at FROM live_quiz_results r JOIN live_quiz_sessions s ON s.id=r.live_session_id WHERE s.class_id=?1 AND s.persistence_status='complete' AND r.student_id IS NOT NULL", classId),
     ]);
     return { members, sessions, materials, progress, discussions, attendanceSessions, checkins, quizzes, quizAttempts, tasks, taskSubmissions, taskRevisions, liveSessions, liveResults };
   }

@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { closeSmokeSockets } from './smoke-live-sockets.mjs';
 
 const workerDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const rootDir = path.resolve(workerDir, '..');
@@ -14,7 +15,7 @@ const env = Object.fromEntries(envText.split(/\r?\n/).filter((line) => /^[A-Za-z
 }));
 const apiKey = env.VITE_FIREBASE_API_KEY;
 assert.ok(apiKey && env.VITE_FIREBASE_PROJECT_ID === 'quizzy-eb33b', 'Firebase project configuration is missing or does not match the Worker');
-const workerUrl = 'https://nalaro-api.uniquefactuhl.workers.dev';
+const workerUrl = process.env.NALARO_SMOKE_API_URL || 'https://nalaro-api.uniquefactuhl.workers.dev';
 const authUrl = `https://identitytoolkit.googleapis.com/v1/accounts`;
 const created = [];
 let teacher;
@@ -29,12 +30,16 @@ async function authRequest(action, payload) {
   return result;
 }
 async function signup() {
+  const password = `${randomUUID().replace(/-/g, '').slice(0, 12)}A1!`;
   const account = await authRequest('signUp', {
     email: `migration-smoke-${randomUUID()}@example.com`,
-    password: `${randomUUID().replace(/-/g, '').slice(0, 12)}A1!`,
+    password,
     returnSecureToken: true,
   });
+  account.smokePassword = password;
   created.push(account);
+  const login = await authRequest('signInWithPassword', { email: account.email, password, returnSecureToken: true });
+  account.idToken = login.idToken;
   return account;
 }
 async function createProfile(account, role) {
@@ -84,6 +89,7 @@ function cleanupDatabase() {
   assert.ok(ids.every((id) => /^[A-Za-z0-9_-]+$/.test(id)));
   const teacherId = teacher.localId;
   const statements = [
+    `DELETE FROM live_quiz_sessions WHERE owner_id='${teacherId}'`,
     `DELETE FROM quiz_bank_catalog WHERE author_id='${teacherId}'`,
     `DELETE FROM general_quizzes WHERE owner_id='${teacherId}'`,
     `DELETE FROM classes WHERE owner_id='${teacherId}'`,
@@ -99,6 +105,33 @@ function cleanupDatabase() {
   console.log('D1 cleanup: complete');
 }
 
+async function expectDenied(label, method, route, token, body, expected = 403) {
+  const response = await fetch(`${workerUrl}${route}`, { method,
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+  assert.equal(response.status, expected, `${label}: expected HTTP ${expected}, received ${response.status}`);
+  console.log(`${label}: denied HTTP ${expected}`);
+}
+
+async function securitySmoke({ classroom, quiz, task, teacherToken, studentToken }) {
+  const base = `/classes/${classroom.id}`;
+  await expectDenied('student create class', 'POST', '/classes', studentToken, { name: 'Forbidden' });
+  await expectDenied('student create quiz', 'POST', `${base}/quizzes`, studentToken, {});
+  await expectDenied('student edit quiz', 'PUT', `${base}/quizzes/${quiz.id}`, studentToken, {});
+  await expectDenied('student grade task', 'PUT', `${base}/tasks/${task.id}/submissions/${student.localId}`, studentToken, { status: 'graded', score: 100, feedback: '' });
+  await expectDenied('student host Live', 'POST', `${base}/quizzes/${quiz.id}/live-sessions`, studentToken, {});
+  await expectDenied('student class analytics', 'GET', `${base}/analytics`, studentToken);
+  await expectDenied('student other analytics', 'GET', `${base}/analytics/students/${teacher.localId}`, studentToken);
+  await expectDenied('teacher student-only submission', 'POST', `${base}/tasks/${task.id}/submission`, teacherToken, { textAnswer: 'Forbidden', attachments: [] });
+  await expectDenied('duplicate quiz attempt', 'POST', `${base}/quizzes/${quiz.id}/attempts`, studentToken, { answers: [{ questionId: 'q1', answer: 'Four' }] }, 409);
+}
+
+async function csvSmoke(route, token) {
+  const response = await fetch(`${workerUrl}${route}`, { headers: { authorization: `Bearer ${token}` } });
+  assert.equal(response.status, 200);
+  assert.ok((await response.text()).includes('Peringkat,Nama,Student ID'));
+  console.log('Persistent Live CSV export: PASS');
+}
+
 let failed = false;
 try {
   teacher = await signup();
@@ -112,10 +145,19 @@ try {
   assert.ok(classroom.id && classroom.code);
   await call('class join', 'POST', '/classes/join', studentToken, { code: classroom.code });
   assert.equal((await call('class member list', 'GET', `/classes/${classroom.id}/members`, teacherToken)).members.length, 1);
+  const learning = (await call('learning session create', 'POST', `/classes/${classroom.id}/sessions`, teacherToken, { title: 'Pertemuan smoke', meetingDate: new Date().toISOString().slice(0, 10), status: 'published' })).session;
+  const material = (await call('material create', 'POST', `/classes/${classroom.id}/materials`, teacherToken, { title: 'Materi smoke', status: 'published', sessionId: learning.id, blocks: [{ id: 'p1', type: 'paragraph', content: 'Materi pecahan untuk pengujian release.' }] })).material;
+  await call('material read', 'GET', `/classes/${classroom.id}/materials/${material.id}`, studentToken);
+  await call('material progress', 'PUT', `/classes/${classroom.id}/materials/${material.id}/progress`, studentToken, { percent: 100 });
+  await call('discussion create', 'POST', `/classes/${classroom.id}/materials/${material.id}/discussions`, studentToken, { content: 'Pertanyaan pengujian release.' });
+  const attendance = (await call('attendance create', 'POST', `/classes/${classroom.id}/attendance`, teacherToken, { title: 'Presensi smoke', locationMode: 'online', sessionId: learning.id })).attendance;
+  await call('attendance activate', 'PUT', `/classes/${classroom.id}/attendance/${attendance.id}/status`, teacherToken, { status: 'active' });
+  await call('attendance check-in', 'POST', `/classes/${classroom.id}/attendance/${attendance.id}/check-in`, studentToken, {});
+  await call('attendance end', 'PUT', `/classes/${classroom.id}/attendance/${attendance.id}/status`, teacherToken, { status: 'ended' });
   await call('material upload signature', 'POST', `/classes/${classroom.id}/uploads/signature`, teacherToken, { fileName: 'smoke.png', mimeType: 'image/png', size: 10 });
 
   const quiz = (await call('quiz create', 'POST', `/classes/${classroom.id}/quizzes`, teacherToken, {
-    title: 'Migration quiz', status: 'published', questions: [{ id: 'q1', type: 'multiple_choice', prompt: 'Two plus two?', choices: ['Four', 'Five'], correctAnswer: 'Four', points: 1 }],
+    title: 'Migration quiz', status: 'published', sessionId: learning.id, questions: [{ id: 'q1', type: 'multiple_choice', prompt: 'Two plus two?', choices: ['Four', 'Five'], correctAnswer: 'Four', points: 1 }],
   })).quiz;
   assert.ok(quiz.id);
   const quizResult = (await call('quiz submit', 'POST', `/classes/${classroom.id}/quizzes/${quiz.id}/attempts`, studentToken, { answers: [{ questionId: 'q1', answer: 'Four' }] })).result;
@@ -123,12 +165,12 @@ try {
   await call('quiz export', 'GET', `/classes/${classroom.id}/quizzes/${quiz.id}/export`, teacherToken);
 
   const task = (await call('task create', 'POST', `/classes/${classroom.id}/tasks`, teacherToken, {
-    title: 'Migration task', dueAt: '2026-10-10T00:00:00.000Z', responseMode: 'text', status: 'published',
+    title: 'Migration task', sessionId: learning.id, dueAt: new Date(Date.now() + 86400_000).toISOString(), responseMode: 'text', status: 'published',
   })).task;
   await call('task submit', 'POST', `/classes/${classroom.id}/tasks/${task.id}/submission`, studentToken, { textAnswer: 'Done', attachments: [] });
   await call('task grade', 'PUT', `/classes/${classroom.id}/tasks/${task.id}/submissions/${student.localId}`, teacherToken, { status: 'graded', score: 90, feedback: 'Good' });
   const uploadTask = (await call('attachment task create', 'POST', `/classes/${classroom.id}/tasks`, teacherToken, {
-    title: 'Migration attachment task', dueAt: '2026-10-10T00:00:00.000Z', responseMode: 'attachment', status: 'published',
+    title: 'Migration attachment task', dueAt: new Date(Date.now() + 86400_000).toISOString(), responseMode: 'attachment', status: 'published',
   })).task;
   await call('task upload signature', 'POST', `/classes/${classroom.id}/tasks/${uploadTask.id}/uploads/signature`, studentToken, { fileName: 'smoke.png', mimeType: 'image/png', size: 10 });
 
@@ -141,26 +183,47 @@ try {
   })).quiz;
   assert.equal((await call('general quiz read', 'GET', `/general-quizzes/${general.id}`, teacherToken)).quiz.id, general.id);
 
+  await securitySmoke({ classroom, quiz, task, teacherToken, studentToken });
   const live = (await call('live create', 'POST', `/classes/${classroom.id}/quizzes/${quiz.id}/live-sessions`, teacherToken, { questionDurationSeconds: 30 })).session;
   const joined = await call('live join', 'POST', `/live-quizzes/${live.code}/join`, studentToken, { name: 'Smoke Student' });
+  const publicParticipants = [];
+  for (let index = 0; index < 3; index += 1) publicParticipants.push((await call('public live join', 'POST', `/live-quizzes/${live.code}/join`, null, { name: `Pemain Uji ${index + 1}` })).participant);
+  const { testLiveSockets } = await import('./smoke-live-sockets.mjs');
+  const sockets = await testLiveSockets({ workerUrl, call, classroom, live, teacherToken, participants: [joined.participant, ...publicParticipants] });
   const current = (await call('live advance', 'POST', `/classes/${classroom.id}/live-sessions/${live.id}/action`, teacherToken, { action: 'advance' })).session;
   assert.equal(current.question.correctAnswer, undefined);
   await call('live answer', 'POST', `/live-quizzes/${live.code}/answer`, null, { participantId: joined.participant.id, participantToken: joined.participant.participantToken, questionId: 'q1', answer: 'Four' });
+  await sockets.expectPhase('question');
+  const privateState = await call('participant state recovery', 'POST', `/live-quizzes/${live.code}/state`, null, joined.participant);
+  assert.equal(privateState.session.receipt.accepted, true);
+  assert.equal(privateState.session.receipt.correct, undefined);
+  await sockets.reconnect();
   await call('live reveal', 'POST', `/classes/${classroom.id}/live-sessions/${live.id}/action`, teacherToken, { action: 'advance' });
+  await sockets.expectPhase('reveal');
   await call('live finish', 'POST', `/classes/${classroom.id}/live-sessions/${live.id}/action`, teacherToken, { action: 'finish' });
+  await sockets.expectPhase('finished');
+  sockets.close();
   const result = (await call('live result', 'POST', `/live-quizzes/${live.code}/result`, null, { participantId: joined.participant.id, participantToken: joined.participant.participantToken })).result;
   assert.equal(result.participant.score, 1);
   assert.equal(result.participant.studentId, student.localId);
   const persisted = await call('live persisted report', 'GET', `/classes/${classroom.id}/live-results/${live.id}`, teacherToken);
-  assert.equal(persisted.result.participants[0].studentId, student.localId);
+  assert.equal(persisted.result.participants.find(p => p.studentId === student.localId).score, 1);
+  assert.equal(persisted.result.participants.filter(p => p.studentId === null).length, 3);
+  await csvSmoke(`/classes/${classroom.id}/live-results/${live.id}/export`, teacherToken);
   const analytics = await call('Learning Insights with Live', 'GET', `/classes/${classroom.id}/analytics/students/${student.localId}`, teacherToken);
   assert.equal(analytics.analytics.profile.counts.liveQuizzesCompleted, 1);
+  await call('own Learning Insights', 'GET', `/classes/${classroom.id}/analytics/me`, studentToken);
+  if (process.env.NALARO_SMOKE_BROWSER === '1') {
+    const { runBrowserSmoke } = await import('./smoke-browser.mjs');
+    await runBrowserSmoke({ teacher, student, classroom, quiz, task, material, workerUrl, call, teacherToken });
+  }
   await call('AI draft', 'POST', '/api/ai/assist', teacherToken, { task: 'material_draft', context: 'Pecahan sederhana: satu per dua adalah setengah dari satu keseluruhan.', instruction: 'Buat ringkasan singkat.' });
   console.log('Authenticated Worker smoke test: passed');
 } catch (error) {
   failed = true;
   console.error(error.message);
 } finally {
+  closeSmokeSockets();
   try { cleanupDatabase(); } catch (error) { failed = true; console.error(error.message); }
   for (const account of created) {
     try { await deleteProfile(account); }

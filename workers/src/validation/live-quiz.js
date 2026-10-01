@@ -79,5 +79,9 @@ export function validateLiveParticipantSession(input) {
 export function validateLiveAction(input) {
   const action = clean(input?.action);
   if (!['advance', 'finish'].includes(action)) throw badRequest('INVALID_LIVE_ACTION', 'Aksi sesi tidak valid.');
+  if (input?.expectedPhase !== undefined) {
+    if (!['lobby', 'question', 'reveal', 'finished'].includes(input.expectedPhase) || !Number.isInteger(input.expectedQuestionIndex) || input.expectedQuestionIndex < -1 || input.expectedQuestionIndex > 29) throw badRequest('INVALID_LIVE_ACTION', 'Status sesi tidak valid.');
+    return { action, expectedPhase: input.expectedPhase, expectedQuestionIndex: input.expectedQuestionIndex };
+  }
   return { action };
 }

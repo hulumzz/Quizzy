@@ -67,3 +67,27 @@ test('profile role must belong to the authenticated Firebase uid', async (t) => 
     (error) => error?.status === 403,
   );
 });
+
+test('recreated Firestore profile cannot change a verified role after cache expires', async (t) => {
+  const fixture = createD1Fixture(); t.after(fixture.close);
+  fixture.sqlite.prepare("UPDATE users SET role_verified=1,role_verified_at='2026-09-01T00:00:00Z' WHERE id='student-1'").run();
+  await assert.rejects(() => resolveAccountRole({
+    db: fixture.db, identity: { uid: 'student-1', signInProvider: 'password' },
+    authorization: 'Bearer token', projectId: 'quizzy-test',
+    fetchImpl: async () => profileResponse('student-1', 'teacher'),
+    now: '2026-10-02T00:00:00Z',
+  }), { status: 403 });
+  assert.equal(fixture.sqlite.prepare("SELECT role FROM users WHERE id='student-1'").get().role, 'student');
+});
+
+test('concurrent initial profile verification cannot overwrite the winning verified role', async (t) => {
+  const fixture = createD1Fixture(); t.after(fixture.close);
+  await assert.rejects(() => resolveAccountRole({
+    db: fixture.db, identity: { uid: 'student-1', signInProvider: 'password' },
+    authorization: 'Bearer token', projectId: 'quizzy-test',
+    fetchImpl: async () => {
+      fixture.sqlite.prepare("UPDATE users SET role_verified=1 WHERE id='student-1'").run();
+      return profileResponse('student-1', 'teacher');
+    },
+  }), { status: 403 });
+});

@@ -37,8 +37,8 @@ export default function QuizJoin() {
     try {
       const normalized = code.trim().toUpperCase();
       const joined = await joinLiveSession(normalized, name);
-      sessionStorage.setItem(storageKey(normalized), JSON.stringify(joined.participant));
-      navigate(`/quiz/play/${normalized}`, { replace: true });
+      try { sessionStorage.setItem(storageKey(normalized), JSON.stringify(joined.participant)); } catch { /* Navigation state keeps the current play session usable. */ }
+      navigate(`/quiz/play/${normalized}`, { replace: true, state: { participant: joined.participant } });
     } catch (caught) { setError(liveQuizErrorMessage(caught)); }
     finally { setBusy(false); }
   };
