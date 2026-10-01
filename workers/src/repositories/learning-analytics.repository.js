@@ -113,7 +113,7 @@ function summarizeScope({
   const taskCompletionRate = rate(submittedEligibleTasks.length, eligibleTasks.length);
   const onTimeRate = rate(onTimeSubmissions.length, submittedEligibleTasks.length);
 
-  const gradedTaskSubmissions = ownTaskSubmissions.filter((item) => Number.isFinite(Number(item.score)));
+  const gradedTaskSubmissions = ownTaskSubmissions.filter((item) => item.score !== null && item.score !== undefined && Number.isFinite(Number(item.score)));
   const quizScores = ownQuizAttempts.map((item) => Number(item.score));
   const taskScores = gradedTaskSubmissions.map((item) => Number(item.score));
   const quizAverage = average(quizScores);
