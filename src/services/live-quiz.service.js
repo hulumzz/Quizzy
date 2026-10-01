@@ -41,6 +41,9 @@ export async function getGeneralLiveResult(sessionId, options = {}) {
   const data = await apiRequest(`/general-quizzes/live-results/${encodeURIComponent(sessionId)}`, options);
   return data.result;
 }
+export async function downloadGeneralLiveResult(sessionId) {
+  return apiDownload(`/general-quizzes/live-results/${encodeURIComponent(sessionId)}/export`);
+}
 
 function socketUrl(code) {
   const root = new URL(appEnv.apiUrl || '/', window.location.origin);
