@@ -14,6 +14,7 @@ test('learning analytics combines assessment, attendance, material, discussion a
   const fixture = createD1Fixture(); t.after(fixture.close);
   const { sqlite, db } = fixture;
   const now = '2026-10-01T00:00:00.000Z';
+  sqlite.prepare("UPDATE class_members SET joined_at='2026-08-01T00:00:00.000Z' WHERE class_id='class-1' AND user_id='student-1'").run();
 
   sqlite.prepare("INSERT INTO learning_sessions(id,class_id,owner_id,title,description,meeting_date,status,sort_order,published_at,created_at,updated_at) VALUES('s1','class-1','teacher-1','Aljabar','','2026-09-01','published',1,?1,?1,?1)").run(now);
   sqlite.prepare("INSERT INTO learning_sessions(id,class_id,owner_id,title,description,meeting_date,status,sort_order,published_at,created_at,updated_at) VALUES('s2','class-1','teacher-1','Statistika','','2026-09-15','published',2,?1,?1,?1)").run(now);
