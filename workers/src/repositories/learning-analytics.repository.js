@@ -82,7 +82,8 @@ function summarizeScope({
   taskRevisions,
 }) {
   const inScope = (itemSessionId) => sessionId === undefined || (itemSessionId || null) === sessionId;
-  const scopedMaterials = materials.filter((item) => inScope(item.session_id));
+  const ownProgressIds = new Set(progress.filter((item) => item.user_id === studentId).map((item) => item.material_id));
+  const scopedMaterials = materials.filter((item) => inScope(item.session_id) && (!item.published_at || Date.parse(item.published_at) >= joinedAtMs || ownProgressIds.has(item.id)));
   const materialIds = new Set(scopedMaterials.map((item) => item.id));
   const progressRows = progress.filter((item) => item.user_id === studentId && materialIds.has(item.material_id));
   const progressByMaterial = new Map(progressRows.map((item) => [item.material_id, item]));
