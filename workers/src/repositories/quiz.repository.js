@@ -1,8 +1,15 @@
 import { conflict, forbidden, notFound } from '../http/errors.js';
 const parse = (value, fallback = []) => { try { return JSON.parse(value); } catch { return fallback; } };
 const normalize = (value) => String(value ?? '').trim().toLocaleLowerCase('id-ID');
-function summary(row) { const questions = parse(row.questions_json); return { id: row.id, classId: row.class_id, sessionId: row.session_id || null, title: row.title, description: row.description || '', status: row.status, mode: row.mode, questionCount: questions.length, totalPoints: questions.reduce((sum, item) => sum + item.points, 0), settings: parse(row.settings_json, {}), createdAt: row.created_at, updatedAt: row.updated_at, publishedAt: row.published_at || null }; }
-function safe(question) { return { id: question.id, type: question.type, prompt: question.prompt, choices: question.choices, points: question.points, ...(question.type === 'arrange' ? { items: question.items } : {}), ...(question.imageUrl ? { imageUrl: question.imageUrl } : {}), ...(question.type === 'image_hotspot' ? { tolerancePercent: question.tolerancePercent, hotspots: question.hotspots.map(({ id, label, x, y, width, height }) => ({ id, label, x, y, width, height })) } : {}) }; }
+function summary(row, extra = {}) { const questions = parse(row.questions_json); return { id: row.id, classId: row.class_id, sessionId: row.session_id || null, title: row.title, description: row.description || '', status: row.status, mode: row.mode, questionCount: questions.length, totalPoints: questions.reduce((sum, item) => sum + item.points, 0), settings: parse(row.settings_json, {}), createdAt: row.created_at, updatedAt: row.updated_at, publishedAt: row.published_at || null, ...extra }; }
+function publicArrangeItems(question) {
+  const items = [...(question.items || [])];
+  if (items.length < 2) return items;
+  const correctOrder = Array.isArray(question.correctOrder) ? question.correctOrder : [];
+  const exposesCorrectOrder = correctOrder.length === items.length && items.every((item, index) => item.id === correctOrder[index]);
+  return exposesCorrectOrder ? [...items.slice(1), items[0]] : items;
+}
+function safe(question) { return { id: question.id, type: question.type, prompt: question.prompt, choices: question.choices, points: question.points, ...(question.type === 'arrange' ? { items: publicArrangeItems(question) } : {}), ...(question.imageUrl ? { imageUrl: question.imageUrl } : {}) }; }
 function correct(question, supplied) { if (question.type === 'true_false') return supplied === question.correctAnswer; if (question.type === 'arrange') return Array.isArray(supplied) && supplied.length === question.correctOrder.length && supplied.every((value, index) => value === question.correctOrder[index]); if (question.type === 'image_hotspot') { const target = question.hotspots.find((spot) => spot.correct); const margin = question.tolerancePercent || 0; return target && supplied && Number.isFinite(supplied.x) && Number.isFinite(supplied.y) && supplied.x >= target.x - margin && supplied.x <= target.x + target.width + margin && supplied.y >= target.y - margin && supplied.y <= target.y + target.height + margin; } return normalize(supplied) === normalize(question.correctAnswer); }
 function reviewAnswer(question, supplied) {
   if (question.type === 'arrange') {
@@ -26,7 +33,15 @@ export class QuizRepository {
   async access(classId, uid) { return this.classRepository.getForUser(classId, uid); }
   async owner(classId, uid) { const access = await this.access(classId, uid); if (access.accessRole !== 'owner') throw forbidden('Hanya pengelola kelas yang dapat mengubah kuis.'); return access; }
   async item(classId, id) { const row = await this.db.prepare("SELECT * FROM quizzes WHERE class_id = ?1 AND id = ?2 AND status <> 'deleted'").bind(classId, id).first(); if (!row) throw notFound('Kuis tidak ditemukan.'); return row; }
-  async list(classId, uid) { const access = await this.access(classId, uid); const rows = (await this.db.prepare(access.accessRole === 'owner' ? "SELECT * FROM quizzes WHERE class_id = ?1 AND status <> 'deleted' ORDER BY updated_at DESC LIMIT 100" : "SELECT * FROM quizzes WHERE class_id = ?1 AND status = 'published' ORDER BY updated_at DESC LIMIT 100").bind(classId).all()).results || []; return rows.map(summary); }
+  async list(classId, uid) {
+    const access = await this.access(classId, uid);
+    if (access.accessRole === 'owner') {
+      const rows = (await this.db.prepare("SELECT * FROM quizzes WHERE class_id = ?1 AND status <> 'deleted' ORDER BY updated_at DESC LIMIT 100").bind(classId).all()).results || [];
+      return rows.map((row) => summary(row));
+    }
+    const rows = (await this.db.prepare("SELECT q.*, a.score AS attempt_score, a.passed AS attempt_passed, a.submitted_at AS attempt_submitted_at FROM quizzes q LEFT JOIN quiz_attempts a ON a.quiz_id = q.id AND a.student_id = ?2 WHERE q.class_id = ?1 AND q.status = 'published' ORDER BY q.updated_at DESC LIMIT 100").bind(classId, uid).all()).results || [];
+    return rows.map((row) => summary(row, { attempt: row.attempt_submitted_at ? { score: Number(row.attempt_score || 0), passed: Boolean(row.attempt_passed), submittedAt: row.attempt_submitted_at } : null }));
+  }
   async get(classId, id, uid) { const access = await this.access(classId, uid); const row = await this.item(classId, id); if (access.accessRole !== 'owner' && row.status !== 'published') throw notFound('Kuis tidak ditemukan.'); const questions = parse(row.questions_json); return access.accessRole === 'owner' ? { ...summary(row), questions, accessRole: 'owner' } : { ...summary(row), questions: questions.map(safe), accessRole: 'member' }; }
   async exportForOwner(classId, id, ownerId, exportedAt = new Date().toISOString()) {
     await this.owner(classId, ownerId);

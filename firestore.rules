@@ -111,7 +111,7 @@ service cloud.firestore {
       allow delete: if ownsProfile(userId);
     }
 
-    // Saat ini seluruh data kelas berada di API AWS. Koleksi Firestore lain
+    // Saat ini seluruh data kelas berada di Cloudflare Worker + D1. Koleksi Firestore lain
     // sengaja ditutup sampai ada kebutuhan dan rules yang spesifik.
     match /{document=**} {
       allow read, write: if false;
