@@ -109,9 +109,10 @@ function summarizeScope({
   const submissionByTask = new Map(ownTaskSubmissions.map((item) => [item.task_id, item]));
   const eligibleTasks = scopedTasks.filter((item) => submissionByTask.has(item.id) || (Date.parse(item.due_at) <= nowMs && Date.parse(item.due_at) >= joinedAtMs));
   const submittedEligibleTasks = eligibleTasks.filter((item) => submissionByTask.has(item.id));
-  const onTimeSubmissions = submittedEligibleTasks.filter((item) => !Boolean(submissionByTask.get(item.id)?.late));
+  const punctualityEligible = submittedEligibleTasks.filter((item) => Date.parse(item.due_at) >= joinedAtMs);
+  const onTimeSubmissions = punctualityEligible.filter((item) => !Boolean(submissionByTask.get(item.id)?.late));
   const taskCompletionRate = rate(submittedEligibleTasks.length, eligibleTasks.length);
-  const onTimeRate = rate(onTimeSubmissions.length, submittedEligibleTasks.length);
+  const onTimeRate = rate(onTimeSubmissions.length, punctualityEligible.length);
 
   const gradedTaskSubmissions = ownTaskSubmissions.filter((item) => item.score !== null && item.score !== undefined && Number.isFinite(Number(item.score)));
   const quizScores = ownQuizAttempts.map((item) => Number(item.score));
