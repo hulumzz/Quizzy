@@ -122,6 +122,7 @@ export default function AppRoutes() {
           <Route path="student/classes/:classId/quizzes/:quizId" element={<RequireRole role="student"><QuizAttempt /></RequireRole>} />
           <Route path="student/classes/:classId/tasks" element={<RequireRole role="student"><ClassTasks role="student" /></RequireRole>} />
           <Route path="student/classes/:classId/tasks/:taskId" element={<RequireRole role="student"><TaskDetail role="student" /></RequireRole>} />
+          <Route path="student/classes/:classId/analytics" element={<RequireRole role="student"><ClassAnalytics role="student" /></RequireRole>} />
           <Route path="student/classes/:classId/*" element={<RequireRole role="student"><FeaturePlaceholder title="Ruang kelas" description="Materi, diskusi, dan presensi kelas tersedia dari navigasi ruang belajar." emptyTitle="Konten kelas belum tersedia" /></RequireRole>} />
           <Route path="student/progress" element={<RequireRole role="student"><StudentLearningLibrary mode="progress" /></RequireRole>} />
           <Route path="student/saved" element={<RequireRole role="student"><StudentLearningLibrary mode="saved" /></RequireRole>} />
