@@ -1,4 +1,4 @@
-import { CalendarDays } from 'lucide-react';
+import { BarChart3, CalendarDays } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { AttendanceIcon, ClassesIcon, DiscussionIcon, MaterialIcon, QuizIcon, TaskIcon } from '../icons';
 
