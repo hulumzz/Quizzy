@@ -33,7 +33,7 @@ export function registerLearningAnalyticsRoutes(app) {
   app.get(`${base}/students/:studentId`, requireAuth, async (c) => {
     const auth = identity(c);
     const studentId = String(c.req.param('studentId') || '').trim();
-    if (!studentId || studentId.length > 160) throw forbidden('Identitas siswa tidak valid.');
+    if (!studentId || studentId.length > 160) throw badRequest('INVALID_STUDENT_ID', 'Identitas siswa tidak valid.');
     return json(c, 200, { data: { analytics: await repository(c).getStudent(classId(c), auth.uid, studentId) } });
   });
 }
