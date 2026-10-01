@@ -62,7 +62,9 @@ export function openLiveSocket(code, { hostTicket, participant, onState, onResul
   socket.addEventListener('message', (event) => {
     let payload;
     try { payload = JSON.parse(event.data); } catch { return; }
-    if (payload.type === 'state' && payload.state) onState?.(payload.state);
+    if (payload.type === 'state' && payload.state) {
+      if (!hostTicket || Array.isArray(payload.state.participants)) onState?.(payload.state);
+    }
     if (payload.type === 'result' && payload.result) onResult?.(payload.result);
     if (payload.type === 'error') onError?.(payload.error);
   });
