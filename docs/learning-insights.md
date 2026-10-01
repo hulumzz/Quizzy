@@ -11,7 +11,8 @@ Analitik bersifat **deskriptif dan explainable**. Guru dapat melihat sumber seti
 ### Evidence kuat untuk pemahaman
 
 - hasil kuis mandiri;
-- nilai tugas yang sudah dinilai.
+- nilai tugas yang sudah dinilai;
+- hasil Nalaro Live yang dapat dipetakan ke akun siswa kelas terautentikasi.
 
 Keterlibatan, presensi, dan aktivitas membaca **tidak menaikkan skor pemahaman**.
 
@@ -30,8 +31,11 @@ Keterlibatan, presensi, dan aktivitas membaca **tidak menaikkan skor pemahaman**
 
 Mastery adalah weighted average dari:
 
-- rata-rata kuis: bobot 1.00;
-- rata-rata tugas bernilai: bobot 1.15.
+- rata-rata kuis mandiri: bobot 1.00;
+- rata-rata tugas bernilai: bobot 1.15;
+- rata-rata Nalaro Live: bobot 0.90.
+
+Nilai Nalaro Live dinormalisasi menjadi persentase dari poin peserta terhadap total poin sesi. Hanya peserta Live yang join dengan akun siswa terverifikasi dan benar-benar menjadi anggota kelas yang dihubungkan ke Learning Insights. Peserta publik/nama bebas tetap tersimpan di laporan Live tetapi tidak dipaksakan menjadi identitas siswa.
 
 Jika belum ada nilai, mastery tidak diisi, bukan dianggap 0.
 
@@ -103,7 +107,7 @@ Status bukan ranking dan tidak permanen.
 
 Nalaro memakai **Learning Session / Pertemuan** sebagai unit topik.
 
-Materi, kuis, tugas, dan presensi yang memiliki sessionId otomatis masuk analitik per pertemuan. Diskusi mewarisi pertemuan dari materi.
+Materi, kuis, tugas, presensi, dan Nalaro Live yang memiliki sessionId/learningSessionId otomatis masuk analitik per pertemuan. Diskusi mewarisi pertemuan dari materi.
 
 Konten tanpa sessionId tetap masuk analitik kelas, tetapi ditampilkan sebagai unmapped agar guru tahu coverage topik belum lengkap.
 
@@ -130,7 +134,7 @@ Nalaro tidak menghukum siswa karena aktivitas yang sudah lewat sebelum bergabung
 
 ## Batas versi saat ini
 
-Nalaro Live belum menjadi sumber Learning Insights karena hasil Live masih hidup sementara di Durable Object. Setelah hasil Live dipersistenkan ke D1, source tersebut dapat ditambahkan ke engine tanpa mengubah UI atau model analitik utama.
+Nalaro Live sudah dapat menjadi evidence setelah hasil akhir dipersistenkan ke D1. Hasil peserta publik tetap tidak masuk profil siswa karena tidak ada identitas terverifikasi yang aman untuk dipetakan.
 
 Tidak ada AI/LLM yang menghitung skor. Narrative insight saat ini dihasilkan secara deterministik dari evidence. Jika AI summary ditambahkan nanti, statistik tetap menjadi authority.
 
