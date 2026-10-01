@@ -98,6 +98,7 @@ export default function AppRoutes() {
           <Route path="teacher/classes/:classId/tasks/new" element={<RequireRole role="teacher"><TaskEditor /></RequireRole>} />
           <Route path="teacher/classes/:classId/tasks/:taskId/edit" element={<RequireRole role="teacher"><TaskEditor /></RequireRole>} />
           <Route path="teacher/classes/:classId/tasks/:taskId" element={<RequireRole role="teacher"><TaskDetail role="teacher" /></RequireRole>} />
+          <Route path="teacher/classes/:classId/analytics" element={<RequireRole role="teacher"><ClassAnalytics role="teacher" /></RequireRole>} />
           <Route path="teacher/classes/:classId/*" element={<RequireRole role="teacher"><FeaturePlaceholder title="Ruang kelas" description="Materi, diskusi, dan presensi sudah tersedia. Modul kuis serta pengaturan anggota lanjutan akan diteruskan pada tahap berikutnya." emptyTitle="Modul ini belum tersedia" /></RequireRole>} />
           <Route path="teacher/quizzes" element={<RequireRole role="teacher"><TeacherQuizzes /></RequireRole>} />
           <Route path="teacher/general-quizzes" element={<RequireRole role="teacher"><TeacherGeneralQuizzes /></RequireRole>} />
