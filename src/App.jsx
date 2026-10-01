@@ -24,7 +24,7 @@ function RouteMetadata() {
       ? 'Nalaro Class — Belajar, bermain, dan tumbuh'
       : pathname === '/login' ? 'Masuk atau daftar — Nalaro Class' : 'Nalaro Class — Ruang belajar';
     document.querySelector('meta[name="robots"]')?.setAttribute('content', publicLanding ? 'index, follow' : 'noindex, nofollow');
-    document.querySelector('link[rel="canonical"]')?.setAttribute('href', 'https://quizzy-f01.pages.dev/');
+    document.querySelector('link[rel="canonical"]')?.setAttribute('href', 'https://nalaroclass.pages.dev/');
   }, [pathname]);
   return null;
 }
