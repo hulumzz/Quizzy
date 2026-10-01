@@ -262,11 +262,16 @@ function compactStudent(profile) {
 function aggregateStudents(profiles) {
   const numberValues = (key) => profiles.map((profile) => profile[key]).filter(Number.isFinite);
   const trendValues = profiles.map((profile) => profile.trend?.delta).filter(Number.isFinite);
+  const masteryValues = numberValues('mastery');
+  const consistencyValues = numberValues('consistency');
+  const engagementValues = numberValues('engagement');
   return {
-    mastery: round(average(numberValues('mastery')) ?? 0),
-    masteryAvailable: numberValues('mastery').length,
-    consistency: round(average(numberValues('consistency')) ?? 0),
-    engagement: round(average(numberValues('engagement')) ?? 0),
+    mastery: masteryValues.length ? round(average(masteryValues)) : null,
+    masteryAvailable: masteryValues.length,
+    consistency: consistencyValues.length ? round(average(consistencyValues)) : null,
+    consistencyAvailable: consistencyValues.length,
+    engagement: engagementValues.length ? round(average(engagementValues)) : null,
+    engagementAvailable: engagementValues.length,
     trendDelta: trendValues.length ? round(average(trendValues)) : null,
   };
 }
