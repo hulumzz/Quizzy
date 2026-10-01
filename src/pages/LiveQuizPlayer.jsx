@@ -40,7 +40,10 @@ export default function LiveQuizPlayer() {
   const [now, setNow] = useState(Date.now());
   const [realtimeStatus, setRealtimeStatus] = useState('connecting');
   const participant = useMemo(() => {
-    try { return JSON.parse(sessionStorage.getItem(storageKey(code)) || 'null'); } catch { return null; }
+    try {
+      const stored = JSON.parse(sessionStorage.getItem(storageKey(code)) || 'null');
+      return stored?.id && !stored.participantId ? { ...stored, participantId: stored.id } : stored;
+    } catch { return null; }
   }, [code]);
 
   useEffect(() => {
