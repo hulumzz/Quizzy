@@ -34,6 +34,7 @@ test('trusted account role is read from immutable Firebase profile then cached i
     authorization: 'Bearer token',
     projectId: 'quizzy-test',
     fetchImpl: async () => { throw new Error('verified role should not re-read Firestore'); },
+    now: '2026-10-01T01:00:00.000Z',
   });
   assert.equal(cached, 'student');
   assert.equal(calls, 1);
