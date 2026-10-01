@@ -1,6 +1,6 @@
 import { HttpError, badRequest, forbidden } from '../http/errors.js';
 import { json } from '../http/response.js';
-import { getAuth, requireAuth } from '../middleware/auth.js';
+import { assertAccountRole, getAuth, requireAuth } from '../middleware/auth.js';
 import { ClassRepository } from '../repositories/class.repository.js';
 import { validateClassId, validateCreateClass, validateJoinClass } from '../validation/classes.js';
 
@@ -27,12 +27,14 @@ export function registerClassRoutes(app, { repositoryFactory = (env) => new Clas
     const identity = getAuth(c);
     const scope = c.req.query('scope') || 'owned';
     if (!['owned', 'joined'].includes(scope)) throw badRequest('INVALID_SCOPE', 'Pilihan daftar kelas tidak valid.');
+    await assertAccountRole(c, scope === 'owned' ? 'teacher' : 'student');
     const classes = scope === 'joined' ? await repository(c).listJoinedBy(identity.uid) : await repository(c).listOwnedBy(identity.uid);
     return json(c, 200, { data: { classes } });
   });
   app.post('/classes', requireAuth, async (c) => {
     const identity = getAuth(c);
     if (identity.signInProvider === 'anonymous') throw forbidden('Akun tamu tidak dapat membuat kelas.');
+    await assertAccountRole(c, 'teacher');
     const input = validateCreateClass(await parseBody(c, 'Data kelas wajib diisi.'));
     const classItem = await repository(c).create({ ownerId: identity.uid, teacherName: identity.name || identity.email || 'Guru Quizzy', ...input });
     return json(c, 201, { data: { class: classItem } });
@@ -40,10 +42,11 @@ export function registerClassRoutes(app, { repositoryFactory = (env) => new Clas
   app.post('/classes/join', requireAuth, async (c) => {
     const identity = getAuth(c);
     if (identity.signInProvider === 'anonymous') throw forbidden('Akun tamu tidak dapat bergabung ke kelas.');
+    await assertAccountRole(c, 'student');
     const input = validateJoinClass(await parseBody(c, 'Data kode kelas wajib diisi.'));
     const classItem = await repository(c).joinByCode({ uid: identity.uid, name: identity.name || identity.email || 'Siswa Quizzy', idempotencyKey: idempotencyKey(c), ...input });
     return json(c, 200, { data: { class: classItem } });
   });
-  app.get('/classes/:classId/members', requireAuth, async (c) => json(c, 200, { data: { members: await repository(c).listMembers(validateClassId(c.req.param('classId')), getAuth(c).uid) } }));
+  app.get('/classes/:classId/members', requireAuth, async (c) => { await assertAccountRole(c, 'teacher'); return json(c, 200, { data: { members: await repository(c).listMembers(validateClassId(c.req.param('classId')), getAuth(c).uid) } }); });
   app.get('/classes/:classId', requireAuth, async (c) => json(c, 200, { data: { class: await repository(c).getForUser(validateClassId(c.req.param('classId')), getAuth(c).uid) } }));
 }
