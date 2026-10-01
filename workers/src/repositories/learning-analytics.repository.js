@@ -61,6 +61,7 @@ function sourceLabel(source) {
   if (source === 'quiz') return 'Kuis';
   if (source === 'task') return 'Tugas';
   if (source === 'task_revision') return 'Nilai sebelum revisi';
+  if (source === 'live_quiz') return 'Nalaro Live';
   return source;
 }
 
@@ -80,6 +81,8 @@ function summarizeScope({
   tasks,
   taskSubmissions,
   taskRevisions,
+  liveSessions,
+  liveResults,
 }) {
   const inScope = (itemSessionId) => sessionId === undefined || (itemSessionId || null) === sessionId;
   const ownInteractionMaterialIds = new Set([
@@ -118,19 +121,35 @@ function summarizeScope({
   const onTimeRate = rate(onTimeSubmissions.length, punctualityEligible.length);
 
   const gradedTaskSubmissions = ownTaskSubmissions.filter((item) => item.score !== null && item.score !== undefined && Number.isFinite(Number(item.score)));
+  const scopedLiveSessions = liveSessions.filter((item) => inScope(item.learning_session_id));
+  const liveSessionIds = new Set(scopedLiveSessions.map((item) => item.id));
+  const ownLiveResults = liveResults.filter((item) => item.student_id === studentId && liveSessionIds.has(item.live_session_id));
+  const liveSessionById = new Map(scopedLiveSessions.map((item) => [item.id, item]));
+  const liveScores = ownLiveResults.flatMap((item) => {
+    const session = liveSessionById.get(item.live_session_id);
+    const total = Number(session?.total_points || 0);
+    return total > 0 ? [Math.round((Number(item.score || 0) / total) * 1000) / 10] : [];
+  });
   const quizScores = ownQuizAttempts.map((item) => Number(item.score));
   const taskScores = gradedTaskSubmissions.map((item) => Number(item.score));
   const quizAverage = average(quizScores);
   const taskAverage = average(taskScores);
+  const liveAverage = average(liveScores);
   const mastery = weightedAverage([
     { value: quizAverage, weight: 1 },
     { value: taskAverage, weight: 1.15 },
+    { value: liveAverage, weight: 0.9 },
   ]);
 
   const revisionRows = taskRevisions.filter((item) => item.student_id === studentId && taskIds.has(item.task_id));
   const scoredTimeline = [
     ...ownQuizAttempts.map((item) => ({ source: 'quiz', sourceId: item.quiz_id, label: item.quiz_title, score: Number(item.score), occurredAt: item.submitted_at, sessionId: item.session_id || null })),
     ...gradedTaskSubmissions.map((item) => ({ source: 'task', sourceId: item.task_id, label: item.task_title, score: Number(item.score), occurredAt: item.graded_at || item.submitted_at, sessionId: item.session_id || null })),
+    ...ownLiveResults.map((item) => {
+      const session = liveSessionById.get(item.live_session_id);
+      const total = Number(session?.total_points || 0);
+      return { source: 'live_quiz', sourceId: item.live_session_id, label: session?.title || 'Nalaro Live', score: total > 0 ? Math.round((Number(item.score || 0) / total) * 1000) / 10 : null, occurredAt: session?.finished_at || item.joined_at, sessionId: session?.learning_session_id || null };
+    }),
     ...revisionRows.flatMap((item) => {
       const previous = parseJson(item.previous_json, {});
       return previous.score !== null && previous.score !== undefined && Number.isFinite(Number(previous.score))
@@ -172,10 +191,11 @@ function summarizeScope({
     { value: taskCompletionRate, weight: 0.20 },
   ]);
 
-  const strongCount = ownQuizAttempts.length + gradedTaskSubmissions.length;
+  const strongCount = ownQuizAttempts.length + gradedTaskSubmissions.length + ownLiveResults.length;
   const supportCount = scopedMaterials.length + scopedAttendance.length + eligibleTasks.length + discussionMaterials.size;
   const sourceTypes = new Set();
   if (ownQuizAttempts.length) sourceTypes.add('quiz');
+  if (ownLiveResults.length) sourceTypes.add('live_quiz');
   if (eligibleTasks.length) sourceTypes.add('task');
   if (scopedMaterials.length) sourceTypes.add('material');
   if (scopedAttendance.length) sourceTypes.add('attendance');
@@ -202,6 +222,7 @@ function summarizeScope({
     rates: {
       quizAverage: Number.isFinite(quizAverage) ? round(quizAverage) : null,
       taskAverage: Number.isFinite(taskAverage) ? round(taskAverage) : null,
+      liveAverage: Number.isFinite(liveAverage) ? round(liveAverage) : null,
       attendance: attendanceRate,
       taskCompletion: taskCompletionRate,
       onTimeSubmission: onTimeRate,
@@ -211,6 +232,7 @@ function summarizeScope({
     },
     counts: {
       quizzesCompleted: ownQuizAttempts.length,
+      liveQuizzesCompleted: ownLiveResults.length,
       tasksEligible: eligibleTasks.length,
       tasksSubmitted: submittedEligibleTasks.length,
       tasksGraded: gradedTaskSubmissions.length,
@@ -316,7 +338,7 @@ export class LearningAnalyticsRepository {
     const all = async (query, ...values) => (await this.db.prepare(query).bind(...values).all()).results || [];
     const [
       members, sessions, materials, progress, discussions, attendanceSessions, checkins,
-      quizzes, quizAttempts, tasks, taskSubmissions, taskRevisions,
+      quizzes, quizAttempts, tasks, taskSubmissions, taskRevisions, liveSessions, liveResults,
     ] = await Promise.all([
       all('SELECT user_id,name,joined_at FROM class_members WHERE class_id=?1 ORDER BY joined_at ASC', classId),
       all("SELECT id,title,description,meeting_date,status,sort_order FROM learning_sessions WHERE class_id=?1 AND status IN ('published','archived') ORDER BY sort_order ASC,meeting_date ASC", classId),
@@ -330,8 +352,10 @@ export class LearningAnalyticsRepository {
       all("SELECT id,title,session_id,due_at,status FROM tasks WHERE class_id=?1 AND status IN ('published','archived')", classId),
       all("SELECT s.task_id,s.student_id,s.status,s.late,s.submitted_at,s.score,s.graded_at,s.revision_count,t.title AS task_title,t.session_id FROM task_submissions s JOIN tasks t ON t.id=s.task_id WHERE s.class_id=?1 AND t.status<>'deleted'", classId),
       all("SELECT r.task_id,r.student_id,r.previous_json,r.created_at,t.title AS task_title,t.session_id FROM task_submission_revisions r JOIN tasks t ON t.id=r.task_id WHERE t.class_id=?1 AND t.status<>'deleted' ORDER BY r.created_at ASC", classId),
+      all("SELECT id,title,learning_session_id,total_points,finished_at FROM live_quiz_sessions WHERE class_id=?1 AND scope='class'", classId),
+      all("SELECT r.live_session_id,r.student_id,r.score,r.correct_count,r.joined_at FROM live_quiz_results r JOIN live_quiz_sessions s ON s.id=r.live_session_id WHERE s.class_id=?1 AND r.student_id IS NOT NULL", classId),
     ]);
-    return { members, sessions, materials, progress, discussions, attendanceSessions, checkins, quizzes, quizAttempts, tasks, taskSubmissions, taskRevisions };
+    return { members, sessions, materials, progress, discussions, attendanceSessions, checkins, quizzes, quizAttempts, tasks, taskSubmissions, taskRevisions, liveSessions, liveResults };
   }
 
   buildStudent(dataset, member, now = new Date()) {
@@ -403,6 +427,7 @@ export class LearningAnalyticsRepository {
       quizzes: dataset.quizzes.filter((item) => !item.session_id).length,
       tasks: dataset.tasks.filter((item) => !item.session_id).length,
       attendance: dataset.attendanceSessions.filter((item) => !item.session_id).length,
+      live: dataset.liveSessions.filter((item) => !item.learning_session_id).length,
     };
 
     const evidenceCount = profiles.reduce((sum, item) => sum + item.evidenceCount, 0);
