@@ -3,7 +3,7 @@ import { Activity, BarChart3, BookOpenCheck, BrainCircuit, ChevronRight, Gauge, 
 import { motion } from 'framer-motion';
 import { useParams } from 'react-router-dom';
 import ClassWorkspaceNav from '../components/classroom/ClassWorkspaceNav';
-import { Badge, Button, Card, Dialog, EmptyState, PageHeader, Skeleton } from '../components/ui';
+import { Badge, Card, Dialog, EmptyState, PageHeader, Skeleton } from '../components/ui';
 import { getClassLearningAnalytics, getMyLearningAnalytics, getStudentLearningAnalytics, learningAnalyticsErrorMessage } from '../services/learning-analytics.service';
 
 const statusTone = { mastering: 'success', developing: 'neutral', support: 'warning', insufficient: 'neutral' };
