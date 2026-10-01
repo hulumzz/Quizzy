@@ -66,6 +66,7 @@ function sourceLabel(source) {
 
 function summarizeScope({
   studentId,
+  joinedAtMs = 0,
   sessionId = undefined,
   nowMs,
   sessionsById,
