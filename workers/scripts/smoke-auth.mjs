@@ -37,6 +37,36 @@ async function signup() {
   created.push(account);
   return account;
 }
+async function createProfile(account, role) {
+  const now = new Date().toISOString();
+  const response = await fetch(`https://firestore.googleapis.com/v1/projects/${encodeURIComponent(env.VITE_FIREBASE_PROJECT_ID)}/databases/(default)/documents/users/${encodeURIComponent(account.localId)}`, {
+    method: 'PATCH',
+    headers: { authorization: `Bearer ${account.idToken}`, 'content-type': 'application/json' },
+    body: JSON.stringify({ fields: {
+      uid: { stringValue: account.localId },
+      name: { stringValue: role === 'teacher' ? 'Guru Smoke' : 'Siswa Smoke' },
+      nickname: { stringValue: role === 'teacher' ? 'Guru' : 'Siswa' },
+      email: { stringValue: account.email || '' },
+      role: { stringValue: role },
+      subject: { stringValue: role === 'teacher' ? 'Matematika' : 'Kelas Uji' },
+      institution: { stringValue: 'Nalaro Smoke Test' },
+      gender: { stringValue: 'prefer_not_to_say' },
+      avatar: { nullValue: null },
+      isAnonymous: { booleanValue: false },
+      profileCompleted: { booleanValue: true },
+      createdAt: { stringValue: now },
+      updatedAt: { stringValue: now },
+    } }),
+  });
+  if (!response.ok) throw new Error(`Firestore profile ${role}: HTTP ${response.status}`);
+}
+async function deleteProfile(account) {
+  const response = await fetch(`https://firestore.googleapis.com/v1/projects/${encodeURIComponent(env.VITE_FIREBASE_PROJECT_ID)}/databases/(default)/documents/users/${encodeURIComponent(account.localId)}`, {
+    method: 'DELETE',
+    headers: { authorization: `Bearer ${account.idToken}` },
+  });
+  if (!response.ok && response.status !== 404) throw new Error(`Firestore profile cleanup: HTTP ${response.status}`);
+}
 async function call(label, method, route, token, body) {
   const response = await fetch(`${workerUrl}${route}`, {
     method,
@@ -73,7 +103,9 @@ let failed = false;
 try {
   teacher = await signup();
   student = await signup();
-  console.log('Firebase test accounts: created');
+  await createProfile(teacher, 'teacher');
+  await createProfile(student, 'student');
+  console.log('Firebase test accounts and immutable role profiles: created');
   const teacherToken = teacher.idToken;
   const studentToken = student.idToken;
   const classroom = (await call('class create', 'POST', '/classes', teacherToken, { name: 'Migration smoke test' })).class;
@@ -110,7 +142,7 @@ try {
   assert.equal((await call('general quiz read', 'GET', `/general-quizzes/${general.id}`, teacherToken)).quiz.id, general.id);
 
   const live = (await call('live create', 'POST', `/classes/${classroom.id}/quizzes/${quiz.id}/live-sessions`, teacherToken, { questionDurationSeconds: 30 })).session;
-  const joined = await call('live join', 'POST', `/live-quizzes/${live.code}/join`, null, { name: 'Smoke Student' });
+  const joined = await call('live join', 'POST', `/live-quizzes/${live.code}/join`, studentToken, { name: 'Smoke Student' });
   const current = (await call('live advance', 'POST', `/classes/${classroom.id}/live-sessions/${live.id}/action`, teacherToken, { action: 'advance' })).session;
   assert.equal(current.question.correctAnswer, undefined);
   await call('live answer', 'POST', `/live-quizzes/${live.code}/answer`, null, { participantId: joined.participant.id, participantToken: joined.participant.participantToken, questionId: 'q1', answer: 'Four' });
@@ -118,6 +150,11 @@ try {
   await call('live finish', 'POST', `/classes/${classroom.id}/live-sessions/${live.id}/action`, teacherToken, { action: 'finish' });
   const result = (await call('live result', 'POST', `/live-quizzes/${live.code}/result`, null, { participantId: joined.participant.id, participantToken: joined.participant.participantToken })).result;
   assert.equal(result.participant.score, 1);
+  assert.equal(result.participant.studentId, student.localId);
+  const persisted = await call('live persisted report', 'GET', `/classes/${classroom.id}/live-results/${live.id}`, teacherToken);
+  assert.equal(persisted.result.participants[0].studentId, student.localId);
+  const analytics = await call('Learning Insights with Live', 'GET', `/classes/${classroom.id}/analytics/students/${student.localId}`, teacherToken);
+  assert.equal(analytics.analytics.profile.counts.liveQuizzesCompleted, 1);
   await call('AI draft', 'POST', '/api/ai/assist', teacherToken, { task: 'material_draft', context: 'Pecahan sederhana: satu per dua adalah setengah dari satu keseluruhan.', instruction: 'Buat ringkasan singkat.' });
   console.log('Authenticated Worker smoke test: passed');
 } catch (error) {
@@ -126,6 +163,8 @@ try {
 } finally {
   try { cleanupDatabase(); } catch (error) { failed = true; console.error(error.message); }
   for (const account of created) {
+    try { await deleteProfile(account); }
+    catch (error) { failed = true; console.error(`Firestore cleanup: ${error.message}`); }
     try { await authRequest('delete', { idToken: account.idToken }); }
     catch (error) { failed = true; console.error(`Firebase cleanup: ${error.message}`); }
   }
