@@ -40,7 +40,7 @@ function HotspotAnswer({ question, value, onChange }) {
 }
 
 function AnswerInput({ question, value, onChange }) {
-  if (question.type === 'multiple_choice') return <div className="qz-choice-list qz-choice-list--interactive">{question.choices.map((choice, index) => <motion.button whileTap={{ scale: 0.98 }} type="button" key={choice} className={value === choice ? 'is-selected' : ''} onClick={() => onChange(choice)}><i>{String.fromCharCode(65 + index)}</i><span>{choice}</span><kbd>{index + 1}</kbd></motion.button>)}</div>;
+  if (question.type === 'multiple_choice') return <div className="qz-choice-list qz-choice-list--interactive">{question.choices.map((choice, index) => <motion.button whileTap={{ scale: 0.98 }} type="button" key={choice} className={value === choice ? 'is-selected' : ''} aria-pressed={value === choice} onClick={() => onChange(choice)}><i>{String.fromCharCode(65 + index)}</i><span>{choice}</span><kbd>{index + 1}</kbd></motion.button>)}</div>;
   if (question.type === 'true_false') {
     const choices = [{ label: 'Benar', value: true }, { label: 'Salah', value: false }];
     return <div className="qz-choice-list qz-choice-list--interactive">{choices.map((choice, index) => <motion.button whileTap={{ scale: 0.98 }} type="button" key={choice.label} className={value === choice.value ? 'is-selected' : ''} onClick={() => onChange(choice.value)}><i>{index + 1}</i><span>{choice.label}</span><kbd>{index + 1}</kbd></motion.button>)}</div>;
