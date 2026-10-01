@@ -81,8 +81,18 @@ export default function LiveQuizHost({ scope = 'class' }) {
     if (!liveSessionId) return;
     setBusy(true); setError('');
     try { setSession(await advanceHostState(liveSessionId, name)); }
-    catch (caught) { setError(liveQuizErrorMessage(caught)); }
-    finally { setBusy(false); }
+    catch (caught) {
+      if (name === 'advance' && session?.phase === 'question') autoAdvancedQuestionRef.current = '';
+      setError(liveQuizErrorMessage(caught));
+    } finally { setBusy(false); }
+  };
+
+  const resetHostSession = () => {
+    sessionStorage.removeItem(storageKey);
+    autoAdvancedQuestionRef.current = '';
+    setSession(null);
+    setError('');
+    setCopied(false);
   };
 
   const joinUrl = `${window.location.origin}/quiz/join/${session?.code || ''}`;
