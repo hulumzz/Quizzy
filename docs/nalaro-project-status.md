@@ -83,6 +83,15 @@ Terakhir diperiksa: 30 September 2026. Dokumen ini adalah catatan kerja yang har
 
 Tambahkan entri terbaru di paling atas setelah setiap tugas. Sertakan perubahan, berkas penting, tes yang benar-benar dijalankan, status commit/push/deploy, dan hal yang masih terbuka.
 
+### 1 Okt 2026 — Nalaro Learning Insights
+
+- Branch `feat/learning-insights` menambahkan engine analitik kelas/siswa yang membaca data authoritative D1 tanpa cache analitik terpisah.
+- Mastery hanya memakai hasil kuis dan tugas bernilai; presensi, progres materi, diskusi, task completion, dan ketepatan waktu membentuk konsistensi/keterlibatan tetapi tidak menaikkan mastery.
+- Learning Session menjadi unit analitik per topik. Editor materi, kuis, tugas, dan presensi diberi guidance agar aktivitas dipetakan ke pertemuan.
+- Ditambahkan fairness siswa baru, analisis respons revisi, confidence/keyakinan data, status perkembangan non-ranking, insight deterministik, dashboard guru, analitik pribadi siswa, dan detail evidence.
+- Migration `0009_learning_analytics_indexes.sql` menambah index baca saja; tidak membuat source of truth baru.
+- Test source untuk formula, akses, siswa baru, data engagement-only, tugas belum dinilai, dan revisi sudah ditambahkan, tetapi **belum diklaim lulus** pada sesi ini karena workflow GitHub sebelumnya gagal sebelum runner menjalankan step. Deploy Worker/D1/Pages belum dilakukan.
+
 ### 30 Sep 2026 — Dokumen status hidup
 
 - Menyatukan riwayat, fitur, target migrasi, keputusan meninggalkan data DynamoDB, dan gate beta berdasarkan source saat ini.
