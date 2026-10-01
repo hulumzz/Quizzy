@@ -37,6 +37,7 @@ const QuizBank = lazy(() => import('../pages/teacher/QuizBank'));
 const LiveQuizHost = lazy(() => import('../pages/LiveQuizHost'));
 const LiveQuizPlayer = lazy(() => import('../pages/LiveQuizPlayer'));
 const ClassTasks = lazy(() => import('../pages/ClassTasks'));
+const ClassAnalytics = lazy(() => import('../pages/ClassAnalytics'));
 const TaskDetail = lazy(() => import('../pages/TaskDetail'));
 const TaskEditor = lazy(() => import('../pages/teacher/TaskEditor'));
 
