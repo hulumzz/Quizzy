@@ -67,6 +67,7 @@ test('learning analytics combines assessment, attendance, material, discussion a
 test('analytics keeps mastery empty when only engagement evidence exists', async (t) => {
   const fixture = createD1Fixture(); t.after(fixture.close);
   const { sqlite, db } = fixture;
+  sqlite.prepare("UPDATE class_members SET joined_at='2026-08-01T00:00:00.000Z' WHERE class_id='class-1' AND user_id='student-1'").run();
   sqlite.prepare("INSERT INTO materials(id,class_id,owner_id,title,summary,status,blocks_json,published_at,created_at,updated_at) VALUES('m1','class-1','teacher-1','Materi','','published','[]','2026-09-01','2026-09-01','2026-09-01')").run();
   sqlite.prepare("INSERT INTO material_progress(class_id,material_id,user_id,percent,status,last_read_at,completed_at,created_at,updated_at) VALUES('class-1','m1','student-1',100,'completed','2026-09-02','2026-09-02','2026-09-02','2026-09-02')").run();
   const repository = new LearningAnalyticsRepository({ db, classRepository: new ClassRepository(db) });
