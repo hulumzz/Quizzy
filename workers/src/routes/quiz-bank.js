@@ -25,7 +25,7 @@ function repository(c) {
 export function registerQuizBankRoutes(app) {
   app.get('/quiz-bank/taxonomy', requireAuth, async (c) => { await owner(c); return json(c, 200, { data: { levels: QUIZ_LEVELS, subjects: QUIZ_SUBJECTS } }); });
   app.get('/quiz-bank/mine', requireAuth, async (c) => json(c, 200, { data: { quizzes: await repository(c).listMine(await owner(c)) } }));
-  app.get('/quiz-bank', requireAuth, async (c) => json(c, 200, { data: { quizzes: await repository(c).list(validateQuizBankQuery({ level: c.req.query('level'), subject: c.req.query('subject') })) } }));
+  app.get('/quiz-bank', requireAuth, async (c) => { await assertAccountRole(c, 'teacher'); return json(c, 200, { data: { quizzes: await repository(c).list(validateQuizBankQuery({ level: c.req.query('level'), subject: c.req.query('subject') })) } }); });
   app.post('/quiz-bank/publish', requireAuth, async (c) => json(c, 201, { data: { quiz: await repository(c).publish({ ownerId: await owner(c), ...validateQuizBankPublish(await body(c)) }) } }));
   app.post('/quiz-bank/:catalogId/copy', requireAuth, async (c) => json(c, 201, { data: { quiz: await repository(c).copyToClass({ catalogId: validateQuizBankCatalogId(c.req.param('catalogId')), ownerId: await owner(c), ...validateQuizBankCopy(await body(c)) }) } }));
   app.delete('/quiz-bank/:catalogId', requireAuth, async (c) => { await repository(c).unpublish({ catalogId: validateQuizBankCatalogId(c.req.param('catalogId')), ownerId: await owner(c) }); return c.body(null, 204); });
