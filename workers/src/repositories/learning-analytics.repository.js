@@ -153,12 +153,12 @@ function summarizeScope({
   ]);
 
   const strongCount = ownQuizAttempts.length + gradedTaskSubmissions.length;
-  const supportCount = materialsStarted + ownCheckins.length + submittedEligibleTasks.length + discussionMaterials.size;
+  const supportCount = scopedMaterials.length + scopedAttendance.length + eligibleTasks.length + discussionMaterials.size;
   const sourceTypes = new Set();
   if (ownQuizAttempts.length) sourceTypes.add('quiz');
-  if (gradedTaskSubmissions.length) sourceTypes.add('task');
-  if (materialsStarted) sourceTypes.add('material');
-  if (ownCheckins.length) sourceTypes.add('attendance');
+  if (eligibleTasks.length) sourceTypes.add('task');
+  if (scopedMaterials.length) sourceTypes.add('material');
+  if (scopedAttendance.length) sourceTypes.add('attendance');
   if (discussionRows.length) sourceTypes.add('discussion');
   const confidence = confidenceScore({ strongCount, supportCount, sourceCount: sourceTypes.size });
   const status = learningStatus({ mastery, strongCount, trend });
