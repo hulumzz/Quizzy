@@ -42,3 +42,24 @@ test('live room keeps answer secret until reveal and scores one answer per parti
   assert.equal(result.data.participant.score, 5);
   assert.equal(result.data.participant.rank, 1);
 });
+
+
+test('live room never exposes hotspot geometry or arrange answer order', async (t) => {
+  const room = roomFixture(); t.after(room.close);
+  await room.call('initialize', {
+    code: 'BCD345', scope: 'class', classId: 'class-1', quizId: 'quiz-2', ownerId: 'teacher-1', title: 'Private answers', questionDurationSeconds: 30,
+    questions: [
+      { id: 'hot', type: 'image_hotspot', prompt: 'Klik target', imageUrl: 'https://example.com/a.png', points: 1, tolerancePercent: 2, hotspots: [{ id: 'h1', label: 'Target', x: 10, y: 10, width: 20, height: 20, correct: true }] },
+      { id: 'arr', type: 'arrange', prompt: 'Urutkan', points: 1, items: [{ id: 'a', text: 'A' }, { id: 'b', text: 'B' }, { id: 'c', text: 'C' }], correctOrder: ['a', 'b', 'c'] },
+    ],
+  });
+  await room.call('advance', { ownerId: 'teacher-1', scope: 'class', classId: 'class-1', action: 'advance' });
+  const hotspot = (await room.call('public')).data.question;
+  assert.equal(hotspot.hotspots, undefined);
+  assert.equal(hotspot.tolerancePercent, undefined);
+
+  await room.call('advance', { ownerId: 'teacher-1', scope: 'class', classId: 'class-1', action: 'advance' });
+  await room.call('advance', { ownerId: 'teacher-1', scope: 'class', classId: 'class-1', action: 'advance' });
+  const arrange = (await room.call('public')).data.question;
+  assert.deepEqual(arrange.items.map((item) => item.id), ['b', 'c', 'a']);
+});
