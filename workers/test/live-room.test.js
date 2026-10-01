@@ -24,6 +24,7 @@ test('live room keeps answer secret until reveal and scores one answer per parti
   const room = roomFixture(); t.after(room.close);
   const initialized = await room.call('initialize', { code: 'ABC234', scope: 'class', classId: 'class-1', quizId: 'quiz-1', ownerId: 'teacher-1', title: 'Live', questionDurationSeconds: 30, questions: [{ id: 'q1', type: 'multiple_choice', prompt: 'Dua?', choices: ['1', '2'], correctAnswer: '2', points: 5, explanation: 'Dua.' }] });
   assert.equal(initialized.data.id, 'ABC234');
+  assert.equal(initialized.data.questionDurationSeconds, 30);
   assert.equal((await room.call('initialize', { code: 'ABC234' })).error.code, 'LIVE_CODE_CONFLICT');
   const joined = await room.call('join', { name: 'Ayu', ipHash: 'ip-hash' });
   assert.equal(joined.data.participant.name, 'Ayu');
