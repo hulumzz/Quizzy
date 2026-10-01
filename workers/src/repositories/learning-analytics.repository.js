@@ -385,7 +385,7 @@ export class LearningAnalyticsRepository {
         title: session.title,
         meetingDate: session.meeting_date,
         mastery: masteryValues.length ? round(average(masteryValues)) : null,
-        engagement: round(average(values.map((item) => item.engagement).filter(Number.isFinite)) ?? 0),
+        engagement: values.map((item) => item.engagement).filter(Number.isFinite).length ? round(average(values.map((item) => item.engagement).filter(Number.isFinite))) : null,
         coverage: dataset.members.length ? round((withEvidence.length / dataset.members.length) * 100) : 0,
         evidenceCount: values.reduce((sum, item) => sum + item.evidenceCount, 0),
       };
