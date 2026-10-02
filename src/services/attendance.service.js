@@ -22,8 +22,11 @@ export async function setAttendanceStatus(classId, attendanceId, status) {
   return data.attendance;
 }
 
-export async function checkInAttendance(classId, attendanceId, location) {
-  const data = await apiRequest(`${base(classId)}/${encodeURIComponent(attendanceId)}/check-in`, { method: 'POST', body: location });
+export async function checkInAttendance(classId, attendanceId, { latitude, longitude, accuracyMeters, verificationMethod = 'standard' } = {}) {
+  const data = await apiRequest(`${base(classId)}/${encodeURIComponent(attendanceId)}/check-in`, {
+    method: 'POST',
+    body: { latitude, longitude, accuracyMeters, verificationMethod },
+  });
   return data.checkIn;
 }
 
@@ -32,6 +35,8 @@ export function attendanceErrorMessage(error) {
   if (error?.status === 401 || error?.code === 'AUTH_REQUIRED') return 'Sesi masuk berakhir. Silakan masuk kembali.';
   if (error?.status === 403) return error.message || 'Akun ini tidak memiliki akses ke presensi tersebut.';
   if (error?.status === 404) return error.message || 'Sesi presensi tidak ditemukan.';
+  if (error?.code === 'FACE_VERIFICATION_REQUIRED') return 'Sesi ini mewajibkan presensi wajah.';
+  if (error?.code === 'VERIFICATION_METHOD_NOT_ALLOWED') return 'Metode presensi ini tidak tersedia untuk sesi tersebut.';
   if (error?.code === 'OUTSIDE_RADIUS') {
     const distance = Number(error.details?.distanceMeters);
     const radius = Number(error.details?.radiusMeters);

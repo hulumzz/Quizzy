@@ -8,6 +8,7 @@ Dokumen ini menjelaskan batas kemampuan presensi wajah Nalaro Class saat ini.
 - Data utama yang disimpan adalah embedding numerik dan metadata versi model, bukan foto atau rekaman video.
 - Kamera, ekstraksi embedding, dan pencocokan 1:1 berjalan di browser menggunakan `@vladmandic/human`.
 - API presensi tetap memeriksa autentikasi, keanggotaan kelas, status sesi, duplikasi check-in, dan lokasi jika sesi memakai mode tatap muka.
+- Patch lokal 3 Oktober 2026 menambah mode sesi `standard`, `face_optional`, dan `face_required`, serta metode check-in `standard`/`face`. Jenis lokasi tetap terpisah; check-in wajah pada sesi tatap muka tetap memerlukan GPS/radius. Patch ini belum dideploy.
 
 ## Verifikasi saat ini
 
@@ -15,7 +16,8 @@ MVP memakai pencocokan wajah ditambah tantangan gerakan kepala acak ke kiri atau
 
 Karena itu:
 
-- presensi biasa tetap harus tersedia sebagai fallback;
+- presensi biasa tersedia pada mode `standard` atau `face_optional`; `face_required` hanya menerima metode wajah sesuai pilihan guru;
+- `verificationMethod=face` masih merupakan sinyal dari client, bukan bukti pencocokan yang diverifikasi server. Jangan memberlakukan wajah wajib secara luas sebelum gate perangkat dan evaluasi batas MVP dipenuhi;
 - hasil face match tidak boleh dianggap bukti identitas absolut;
 - threshold perlu diuji di perangkat dan pencahayaan nyata;
 - jangan menyimpan screenshot/video kamera sebagai default;

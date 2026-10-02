@@ -1,6 +1,6 @@
 # Status dan riwayat pengerjaan Nalaro Class
 
-Terakhir diperiksa: 2 Oktober 2026. Dokumen ini adalah catatan kerja yang harus diperbarui setelah setiap tugas selesai. Status mengacu pada kode di repository `hulumzz/Quizzy` dan `khoirulzz/nalaroclass` dan bukti pengujian yang disebutkan; keberadaan kode tidak otomatis berarti fitur sudah lolos uji produksi.
+Terakhir diperiksa: 3 Oktober 2026. Dokumen ini adalah catatan kerja yang harus diperbarui setelah setiap tugas selesai. Status mengacu pada kode di repository `hulumzz/Quizzy` dan `khoirulzz/nalaroclass` dan bukti pengujian yang disebutkan; keberadaan kode tidak otomatis berarti fitur sudah lolos uji produksi.
 
 ## Aturan pembaruan oleh AI
 
@@ -20,6 +20,8 @@ Terakhir diperiksa: 2 Oktober 2026. Dokumen ini adalah catatan kerja yang harus 
 ## Posisi saat ini
 
 **Tahap: RELEASE CANDIDATE yang sudah live dan teruji API/browser produksi.** Gate akhir yang belum terpenuhi adalah uji Live pada perangkat fisik berbeda; kamera/GPS presensi opsional juga belum diuji. Rincian dan rollback ada di [laporan release Oktober](production-release-2026-10.md).
+
+Patch 3 Oktober 2026 untuk unit rotation wajah, mode verifikasi presensi, dan snapshot nama kuis selesai serta lulus validasi lokal pada working tree. D1 lokal sampai `0014`; patch belum commit, push, migrasi remote, atau deploy. Bukti browser/API produksi dari release 2 Oktober tidak memverifikasi patch ini. Status cloud di bawah mengacu pada bukti release tersebut dan tidak diperiksa ulang pada tugas lokal ini.
 
 - PR #5/#6/#7 sudah diintegrasikan ke main. Source runtime final `d91d115` sudah di-push ke remote `url` dan `pages`; Pages membangun repo `khoirulzz/nalaroclass` branch main. Sepuluh variabel build API/AI/Firebase produksi dibandingkan dengan lokal dan cocok tanpa mencetak nilainya.
 - Worker `nalaro-api` versi `247b0f1c-4018-428c-bf5b-ba3f294c67a6` terdeploy dengan keep-vars. D1 remote sudah sampai `0012`, tidak ada pending migration, FK check bersih, backup sebelum migrasi disimpan lokal/ignored.
@@ -50,8 +52,8 @@ Terakhir diperiksa: 2 Oktober 2026. Dokumen ini adalah catatan kerja yang harus 
 | Kelas dan anggota | Buat, gabung, daftar, detail, dan daftar anggota ada; pengaturan anggota lanjutan belum ada | `workers/src/routes/classes.js`, `src/app/routes.jsx` |
 | Materi, progres, bookmark, diskusi | Ada di frontend dan Worker; upload memakai signature Cloudinary | `workers/src/routes/materials.js`, `workers/src/routes/discussions.js` |
 | Pertemuan pembelajaran | Ada, termasuk pengaitan materi/kuis/presensi/tugas | `workers/src/routes/learning-sessions.js` |
-| Presensi lokasi dan wajah MVP | Presensi server ada; wajah opsional memakai Firestore/browser dan perlu uji perangkat nyata | `workers/src/routes/attendance.js`, `src/services/face.service.js` |
-| Kuis kelas dan kuis umum | Editor, publikasi, percobaan, penilaian, hasil, impor/ekspor ada | `workers/src/routes/quizzes.js`, `workers/src/routes/general-quizzes.js` |
+| Presensi lokasi dan wajah MVP | Patch lokal mengonversi yaw/pitch ke degree, menambah mode biasa/wajah opsional/wajib, menyimpan metode dan menampilkan badge rekap; matrix mode, GPS, duplikasi, serializer dan data lama lulus tes lokal. Matching tetap di browser; patch belum deploy/uji perangkat | `src/features/face/face-engine.js`, `src/pages/ClassAttendance.jsx`, `workers/src/repositories/attendance.repository.js`, `workers/migrations/0013_attendance_verification.sql` |
+| Kuis kelas dan kuis umum | Editor, publikasi, percobaan, penilaian, hasil, impor/ekspor ada. Snapshot nama self-paced kelas dan fallback attempt lama lulus regresi lokal setelah membership diubah/dihapus; patch belum deploy | `workers/src/repositories/quiz.repository.js`, `workers/migrations/0014_quiz_attempt_student_name.sql`, `workers/src/routes/general-quizzes.js` |
 | Tugas | Pengumpulan, lampiran, nilai, feedback, revisi, dan riwayat revisi ada | `workers/src/routes/tasks.js` |
 | Bank Kuis | Publikasi katalog, salin sebagai draf, penarikan, impor/ekspor ada; moderasi/rating/analytics belum ada | `workers/src/routes/quiz-bank.js` |
 | Nalaro Live | Terdeploy dan teruji produksi dengan socket 1 host + 4 pemain, receipt/reconnect, alarm deadline, hasil complete D1/CSV/Insights. Browser context dan viewport diuji; perangkat fisik dan kapasitas lebih besar belum | `workers/src/durable/LiveQuizRoom.js`, `workers/src/repositories/live-result.repository.js`, `src/pages/LiveQuizHost.jsx`, `src/pages/LiveQuizPlayer.jsx` |
@@ -70,6 +72,14 @@ Terakhir diperiksa: 2 Oktober 2026. Dokumen ini adalah catatan kerja yang harus 
 - [ ] Uji kamera/GPS nyata jika presensi opsional itu digunakan; ukur kapasitas Live sebelum trafik lebih besar.
 - [ ] Tentukan jadwal/prosedur penonaktifan AWS terpisah setelah cutover diterima; tidak ada penghapusan AWS pada pekerjaan ini.
 
+### Patch Face Attendance dan histori nama 3 Oktober
+
+- [x] Checkpoint A–D: konversi rotation, kontrak mode/metode presensi, UI guru/siswa/rekap, migrasi additive dan snapshot nama dari membership D1 selesai lokal.
+- [x] Checkpoint E: lint/build/frontend/backend legacy/59 tes Worker/syntax check dan `git diff --check` lulus; D1 lokal berhasil dimigrasikan sampai `0014`.
+- [ ] Commit/push/deploy patch serta migrasi D1 remote `0013`/`0014` belum dilakukan; penerapan produksi menunggu instruksi eksplisit pengguna sesuai `update.md` dan brief.
+- [ ] Setelah patch diterapkan, uji UI/browser/API ketiga mode, kamera allow/deny/retry, daftar/hapus/daftar ulang profil, wajah benar/salah, challenge, cahaya normal/redup, Chrome desktop/Android, serta GPS di dalam/luar radius pada perangkat nyata. Kalibrasi threshold dan gerakan lintas frame masih pekerjaan lanjutan; threshold tidak diubah.
+- [ ] Cleanup kecil di `update.md` (questionOrder draft, Arrange touched, busy grading, benchmark Insights/CSP/model delivery) berada di luar patch ini.
+
 ### Fitur dan pengembangan lanjutan
 
 - [ ] Hubungkan agenda/jadwal nyata; widget dashboard masih menyatakan “Agenda belum tersedia”.
@@ -83,6 +93,17 @@ Terakhir diperiksa: 2 Oktober 2026. Dokumen ini adalah catatan kerja yang harus 
 - HTTP/CORS dan tes otomatis tidak menggantikan uji UI browser, transfer Cloudinary nyata, perangkat kamera/lokasi, atau uji beban live.
 
 ## Riwayat perubahan
+
+### 3 Okt 2026 - Audit dan penyelesaian patch Face Attendance serta histori nama
+
+- Membaca `update.md` dan brief `ai-agent-face-attendance-and-history-fixes.md` yang berada di root proyek, lalu memeriksa perubahan pengguna pada checkpoint A–D. Perubahan pengguna dipertahankan. Tautan brief di `update.md` diperbaiki; status aktif dan batas MVP diperbarui tanpa menghapus riwayat release.
+- Tujuh tes presensi baru awalnya gagal karena create fixture mengirim field nullable sebagai `undefined` langsung ke SQLite. Tes kini menormalisasi input melalui validator seperti route API; fixture tidak diubah untuk menyembunyikan binding invalid. Matrix enam kombinasi mode/metode lulus; cakupan tambahan memastikan face tidak melewati GPS wajib/radius, retry duplikat mempertahankan metode pertama, dan list/detail/rekap mengembalikan metode tersimpan.
+- Regression test menggunakan boundary `readFace()` dengan yaw/pitch Human dalam radian sehingga penghapusan konversi pada salah satu axis terdeteksi; challenge/guidance tetap degree dan threshold tidak berubah. Helper boundary diekspor untuk pengujian numerik tanpa menjalankan kamera/model.
+- Regression kuis membuktikan nama berasal dari membership D1 walaupun parameter nama palsu disertakan, tetap tersimpan saat membership berubah/dihapus, serta fallback snapshot null/kosong ke membership atau “Siswa tidak diketahui”. Kontrak hasil siswa tetap sama. Fixture dapat berhenti pada migration `0012`; tes upgrade berisi data historis membuktikan default `standard`, backfill nama tersedia, snapshot null untuk anggota yang sudah tidak ada, record tetap utuh, dan foreign-key check bersih.
+- Wrapper badge rekap yang baru ditambahkan disesuaikan dengan grid mobile; selector teks dibatasi agar tidak menimpa warna badge. Ini telah melewati lint/build, belum verifikasi visual browser.
+- Berkas penting: `src/features/face/face-engine.js`, `face-engine.test.js`, `src/pages/ClassAttendance.jsx`, `src/services/attendance.service.js`, `src/styles/attendance.css`, Worker attendance validation/repository, `quiz.repository.js`, migration `0013`/`0014`, `workers/test/attendance-d1.test.js`, `quiz-d1.test.js`, `attendance-history-migrations.test.js`, `d1-fixture.js`, `update.md`, dan `docs/face-attendance-mvp.md`.
+- Validasi aktual: tes terarah awal 2 PASS/7 FAIL (binding fixture), lalu 17/17 face/attendance/quiz PASS; `npm.cmd --prefix workers run migrate:local` PASS (lokal sebelumnya `0006`, delapan migration `0007`–`0014` diterapkan); `npm.cmd run validate` PASS, mencakup `lint`, `build`, `test:frontend`, `test:backend`, `test:workers` (59/59), `check:backend`, dan Worker check (48 source/script). `git diff --check` PASS setelah membersihkan baris kosong di EOF.
+- Status akhir tugas: seluruh checkpoint kode/validasi lokal A–E selesai; belum commit/push/deploy, migrasi remote, API/browser produksi, atau kamera/GPS/perangkat nyata pada patch ini. Face masih trust signal client dalam MVP; embedding/foto/video/similarity tidak ditambahkan ke attendance D1. AWS tidak diubah.
 
 ### 2 Okt 2026 - Release candidate live dan verifikasi akhir
 

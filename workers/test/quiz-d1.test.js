@@ -60,3 +60,38 @@ test('D1 quiz keeps hotspot geometry private and rejects duplicate choices', asy
   assert.equal(submitted.score, 100);
   assert.equal(submitted.review[0].correctAnswer, 'Target');
 });
+
+test('D1 quiz snapshots the trusted member name across membership rename and removal', async (t) => {
+  const fixture = createD1Fixture(); t.after(fixture.close);
+  const repository = new QuizRepository({ db: fixture.db, classRepository: new ClassRepository(fixture.db) });
+  const quiz = await repository.create({ classId: 'class-1', ownerId: 'teacher-1', ...validateQuizInput({
+    title: 'Histori nama', status: 'published',
+    questions: [{ id: 'q1', type: 'true_false', prompt: 'Benar?', points: 1, correctAnswer: true }],
+  }) });
+  const submitted = await repository.submit({ classId: 'class-1', quizId: quiz.id, uid: 'student-1', studentName: 'Nama dari browser', answers: [{ questionId: 'q1', answer: true }] });
+  const stored = fixture.sqlite.prepare('SELECT student_name FROM quiz_attempts WHERE id = ?1').get(submitted.id);
+  assert.equal(stored.student_name, 'Siswa');
+  const before = (await repository.getResult('class-1', quiz.id, 'teacher-1'))[0];
+  assert.equal(before.studentName, 'Siswa');
+  await fixture.db.prepare('UPDATE class_members SET name = ?3 WHERE class_id = ?1 AND user_id = ?2').bind('class-1', 'student-1', 'Nama baru').run();
+  assert.deepEqual((await repository.getResult('class-1', quiz.id, 'teacher-1'))[0], before);
+  await fixture.db.prepare('DELETE FROM class_members WHERE class_id = ?1 AND user_id = ?2').bind('class-1', 'student-1').run();
+  assert.deepEqual((await repository.getResult('class-1', quiz.id, 'teacher-1'))[0], before);
+});
+
+test('D1 quiz reads legacy attempts with empty snapshots using member and unknown fallbacks', async (t) => {
+  const fixture = createD1Fixture(); t.after(fixture.close);
+  const repository = new QuizRepository({ db: fixture.db, classRepository: new ClassRepository(fixture.db) });
+  const quiz = await repository.create({ classId: 'class-1', ownerId: 'teacher-1', ...validateQuizInput({
+    title: 'Histori lama', status: 'published',
+    questions: [{ id: 'q1', type: 'true_false', prompt: 'Benar?', points: 1, correctAnswer: true }],
+  }) });
+  const submitted = await repository.submit({ classId: 'class-1', quizId: quiz.id, uid: 'student-1', answers: [{ questionId: 'q1', answer: true }] });
+  for (const snapshot of [null, '']) {
+    await fixture.db.prepare('UPDATE quiz_attempts SET student_name = ?2 WHERE id = ?1').bind(submitted.id, snapshot).run();
+    assert.equal((await repository.getResult('class-1', quiz.id, 'teacher-1'))[0].studentName, 'Siswa');
+    assert.deepEqual(await repository.getResult('class-1', quiz.id, 'student-1'), submitted);
+  }
+  await fixture.db.prepare('DELETE FROM class_members WHERE class_id = ?1 AND user_id = ?2').bind('class-1', 'student-1').run();
+  assert.equal((await repository.getResult('class-1', quiz.id, 'teacher-1'))[0].studentName, 'Siswa tidak diketahui');
+});

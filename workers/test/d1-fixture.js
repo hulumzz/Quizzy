@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 const migrations = fileURLToPath(new URL('../migrations/', import.meta.url));
 
-export function createD1Fixture() {
+export function createD1Fixture({ throughMigration = null } = {}) {
   const sqlite = new DatabaseSync(':memory:');
-  for (const filename of readdirSync(migrations).filter((name) => name.endsWith('.sql')).sort()) {
+  for (const filename of readdirSync(migrations).filter((name) => name.endsWith('.sql') && (!throughMigration || name <= throughMigration)).sort()) {
     sqlite.exec(readFileSync(new URL(`../migrations/${filename}`, import.meta.url), 'utf8'));
   }
   const wrap = (query, values = []) => ({

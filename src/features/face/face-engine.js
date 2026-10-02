@@ -1,6 +1,10 @@
 import { createFaceChallenge, isChallengeComplete } from './face-challenge.js';
 
 export const FACE_MODEL_VERSION = 'human-v1';
+
+export function radiansToDegrees(value) {
+  return Number.isFinite(Number(value)) ? Number(value) * 180 / Math.PI : 0;
+}
 export const FACE_MATCH_THRESHOLD = 0.72;
 const MODEL_BASE_PATH = 'https://cdn.jsdelivr.net/npm/@vladmandic/human@3.3.6/models/';
 let enginePromise;
@@ -51,7 +55,7 @@ async function getEngine() {
   return enginePromise;
 }
 
-function readFace(result) {
+export function readFace(result) {
   const faces = result?.face || [];
   if (!faces.length) throw new FaceEngineError('FACE_NOT_FOUND', 'Wajah belum terlihat. Hadapkan wajah ke kamera.');
   if (faces.length !== 1) throw new FaceEngineError('MULTIPLE_FACES', 'Pastikan hanya satu wajah berada di depan kamera.');
@@ -59,8 +63,8 @@ function readFace(result) {
   if (!Array.isArray(face.embedding) || face.embedding.length < 64) throw new FaceEngineError('FACE_EMBEDDING_MISSING', 'Wajah belum dapat dibaca. Pastikan pencahayaan cukup lalu coba lagi.');
   return {
     embedding: face.embedding,
-    yaw: face.rotation?.angle?.yaw ?? 0,
-    pitch: face.rotation?.angle?.pitch ?? 0,
+    yaw: radiansToDegrees(face.rotation?.angle?.yaw),
+    pitch: radiansToDegrees(face.rotation?.angle?.pitch),
     confidence: face.score,
     box: face.boxRaw || face.box || null,
     livenessScore: face.live ?? null,

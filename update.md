@@ -1,190 +1,457 @@
-# UPDATE / AI AGENT ENTRYPOINT — Nalaro Class
+UPDATE.md — Nalaro Class / Quizzy
 
-## Pembaruan release 2 Oktober 2026
+Terakhir diperbarui: 3 Oktober 2026
 
-Main sudah mengintegrasikan PR #5/#6/#7 dengan otorisasi pengguna pada `readthis.md`; instruksi lama di bawah tentang menunggu merge tidak berlaku untuk release ini. Remote `pages` sudah menunjuk `khoirulzz/nalaroclass`, dan kedua repository disinkronkan. Frontend Pages memakai Worker produksi, Firebase Auth/Firestore, Cloudinary, serta Durable Object WebSocket + D1 hasil Live.
+Repository utama: hulumzz/Quizzy
+Repository deployment Pages: khoirulzz/nalaroclass
+Baseline HEAD yang diaudit: ba42d8f71f3c88acea569b93949872d5ec1d28b9
 
-Worker `247b0f1c-4018-428c-bf5b-ba3f294c67a6`, D1 hingga `0012`, dan Pages aplikasi `f8b81d3a-7790-48a4-8d85-682aa597b577` / source `d91d115` sudah terdeploy. Validasi lokal dan API/browser Chrome desktop/mobile viewport lulus, termasuk unggahan file nyata dan Live 1 host + 4 pemain, recovery, deadline tanpa host, persistence/CSV/Insights.
+Patch Face Attendance dan histori nama, 3 Oktober 2026: checkpoint A–E selesai pada working tree lokal. Audit lanjutan memperbaiki fixture tes presensi agar memakai validator API, menambah regression test boundary Human yaw/pitch, snapshot nama setelah membership berubah/dihapus, fallback data lama, migrasi berisi data historis, duplikasi, GPS wajib, serta serializer list/detail/rekap. Badge rekap disesuaikan untuk layar kecil. Migrasi D1 lokal sudah sampai 0014. Lint/build/test/full validate lulus (59 tes Worker); belum commit, push, deploy, atau verifikasi browser/perangkat/produksi untuk patch ini. Detail dan gate berikutnya ada di docs/nalaro-project-status.md.
 
-Status **RELEASE CANDIDATE**: perangkat fisik/jaringan nyata dan kamera/GPS opsional belum diuji; kapasitas di atas 4 pemain belum diukur. Mulai dari [status aktif](docs/nalaro-project-status.md) dan [laporan release/rollback](docs/production-release-2026-10.md). Bagian lama di bawah dipertahankan sebagai histori, bukan bukti deployment terkini.
+Baca file ini terlebih dahulu sebelum mengubah kode. File ini hanya memuat kondisi aktif, bug aktif, prioritas berikutnya, dan aturan kerja. Histori release lama tetap berada di docs/ dan tidak perlu dimuat ke konteks AI kecuali relevan.
 
-CI pada repo Pages lulus; CI repo asal `hulumzz/Quizzy` belum dapat mulai karena account lock terkait billing GitHub. Tidak ada perubahan paket berbayar.
+1. Status saat ini
 
-## Snapshot handoff 1 Oktober (histori)
+Nalaro Class sudah live sebagai Release Candidate.
 
+Arsitektur produksi saat ini:
 
-Terakhir diperbarui: 1 Oktober 2026
+Frontend: React + Vite di Cloudflare Pages.
 
-Baca file ini terlebih dahulu sebelum melanjutkan pekerjaan pada repository ini.
+API LMS: Cloudflare Worker + Hono.
 
-## Posisi pekerjaan terbaru
+Database LMS: Cloudflare D1.
 
-Pekerjaan aktif saat ini berada pada stacked PR:
+Nalaro Live: Durable Object SQLite + WebSocket Hibernation.
 
-1. **PR #5 — Quiz hardening & UX**
-   - branch: `fix/quiz-hardening-ux`
-2. **PR #6 — Nalaro Learning Insights**
-   - branch: `feat/learning-insights`
-3. **PR #7 — Live security + realtime + persistent results**
-   - branch: `feat/live-security-realtime`
-   - base saat ini: `feat/learning-insights`
+Firebase: Authentication + profil/peran + Face Profile.
 
-User akan melakukan merge sendiri. Jangan auto-merge tanpa instruksi.
+Cloudinary: media/file.
 
-Urutan yang disarankan:
+Groq: AI Assist melalui Worker.
 
-1. merge PR #5;
-2. merge PR #6;
-3. retarget PR #7 ke `main`;
-4. pertahankan versi Live realtime PR #7 saat menyelesaikan overlap dengan PR #5;
-5. baru merge PR #7 setelah validation.
+backend/ AWS adalah legacy dan bukan jalur frontend produksi.
 
-## Tiga pekerjaan terakhir yang sudah diimplementasikan
+Repo hulumzz/Quizzy dan khoirulzz/nalaroclass sudah sinkron pada commit yang diaudit.
 
-### 1. Server-side role enforcement
+Migrasi D1 produksi sudah sampai 0012_live_result_completion.sql.
 
-Frontend route guard bukan lagi satu-satunya pembatas.
+Validasi/release sebelumnya sudah mencakup:
 
-Worker sekarang:
-- memverifikasi Firebase ID token;
-- membaca role dari profil Firestore milik UID yang sama;
-- mempercayai role hanya setelah verifikasi;
-- mencache role verified di D1 maksimal 24 jam;
-- menolak legacy D1 role yang belum verified;
-- menerapkan teacher/student boundary pada route sensitif.
+lint/build/test lokal;
 
-Migration:
-- `workers/migrations/0010_verified_account_roles.sql`
+API produksi;
 
-File utama:
-- `workers/src/services/account-role.js`
-- `workers/src/middleware/auth.js`
+browser desktop/mobile viewport;
 
-### 2. Nalaro Live WebSocket realtime
+kelas, materi, diskusi, kuis, tugas, presensi online;
 
-Transport state utama Live dipindah dari polling REST menjadi Durable Object WebSocket.
+Bank Kuis;
 
-Prinsip:
-- scoring tetap server-authoritative;
-- submit answer tetap REST;
-- advance/finish host tetap REST;
-- WebSocket hanya mengirim state realtime;
-- host memakai one-time socket ticket;
-- player reconnect memakai participant token;
-- initial REST fetch tetap dipakai untuk bootstrap/recovery.
+Learning Insights;
 
-File utama:
-- `workers/src/durable/LiveQuizRoom.js`
-- `workers/src/routes/live-quizzes.js`
-- `src/services/live-quiz.service.js`
-- `src/pages/LiveQuizHost.jsx`
-- `src/pages/LiveQuizPlayer.jsx`
+Nalaro Live 1 host + 4 browser context;
 
-### 3. Persistent Live result + reporting
+reconnect, deadline server, hasil D1, CSV, dan Insights.
 
-Room Durable Object tetap sementara, tetapi hasil akhir kini disalin idempotent ke D1.
+Yang belum menjadi bukti release final:
 
-Migration:
-- `workers/migrations/0011_live_quiz_results.sql`
+Live pada 3–5 perangkat fisik berbeda/jaringan nyata;
 
-Tabel:
-- `live_quiz_sessions`
-- `live_quiz_results`
-- `live_quiz_answer_results`
+kamera/GPS pada perangkat fisik;
 
-Guru kini mendapat:
-- riwayat Nalaro Live kelas;
-- ranking final;
-- akurasi per soal;
-- CSV export;
-- riwayat/report untuk kuis umum;
-- retry persist jika penyimpanan final gagal.
+load test Live di atas 4 pemain;
 
-File utama:
-- `workers/src/repositories/live-result.repository.js`
-- `src/pages/ClassQuizzes.jsx`
-- `src/pages/teacher/TeacherGeneralQuizzes.jsx`
+kalibrasi Face Recognition pada variasi perangkat/pencahayaan.
 
-## Live → Learning Insights
+2. Kondisi fitur utama
 
-Jika peserta Live:
-- login sebagai student;
-- role verified;
-- merupakan member kelas;
-
-maka result Live dapat dipetakan ke `student_id` dan menjadi strong evidence Learning Insights.
-
-Jika peserta masuk tanpa login:
-- result tetap tersimpan di report;
-- `student_id=NULL`;
-- result **tidak** ditebak sebagai siswa hanya berdasarkan nama.
-
-Mastery weights saat ini:
-- self-paced quiz: 1.00;
-- graded task: 1.15;
-- verified Nalaro Live: 0.90.
-
-File:
-- `workers/src/repositories/learning-analytics.repository.js`
-- `docs/learning-insights.md`
-
-## Migration order
-
-Produksi remote terakhir yang tercatat baru sampai `0008`.
-
-Sebelum Worker terbaru dipakai penuh, migration berikut harus diterapkan berurutan:
-
-- `0009_learning_analytics_indexes.sql`
-- `0010_verified_account_roles.sql`
-- `0011_live_quiz_results.sql`
-
-Jangan menjalankan remote migration atau deploy tanpa instruksi user.
-
-## Validation status
+Quiz
 
 Sudah:
-- source/diff review;
-- regression test source ditambahkan;
-- Worker/test JS yang berubah sudah melalui syntax parse tanpa syntax error;
-- Cloudflare Pages branch preview berhasil deploy untuk PR #7.
+
+self-paced satu soal per layar;
+
+navigator/progress;
+
+autosave per tab;
+
+restore setelah refresh;
+
+Arrange stabil;
+
+review Arrange/Hotspot type-specific;
+
+result guru memakai snapshot nama siswa, dengan fallback membership untuk attempt lama;
+
+editor add/duplicate/delete/reorder/preview;
+
+pilihan ganda 2–6 opsi unik;
+
+soal/kunci dikunci setelah sudah ada attempt;
+
+hasil siswa tersimpan satu kali.
+
+Masih perlu perbaikan kecil:
+
+urutan shuffleQuestions belum dipersistenkan dalam draft sehingga dapat berubah setelah reload;
+
+soal Arrange yang baru diinisialisasi langsung dianggap “terjawab” walaupun siswa belum menyentuhnya;
+
+Snapshot quiz_attempts.student_name sudah diimplementasikan dan diuji lokal; migrasi remote dan deploy patch belum dilakukan.
+
+Task
+
+Sudah:
+
+timezone datetime-local benar;
+
+Learning Session selector;
+
+submission/revision;
+
+snapshot jawaban teks dan lampiran lama;
+
+grading/feedback.
+
+Technical debt kecil:
+
+grading memakai satu state busy, sehingga aksi satu siswa dapat mengunci kontrol siswa lain.
+
+Nalaro Live
+
+Sudah:
+
+Durable Object;
+
+WebSocket;
+
+server-authoritative scoring;
+
+server deadline/alarm;
+
+reconnect;
+
+host socket ticket;
+
+participant token;
+
+duplicate/rejoin protection;
+
+persistent D1 result;
+
+CSV;
+
+Learning Insights integration.
 
 Belum:
-- full `npm run validate` berhasil di GitHub Actions;
-- Actions job terbaru gagal sebelum step berjalan (`steps=[]`, log tidak terbentuk);
-- D1 remote migration 0009–0011;
-- Worker terbaru production deploy;
-- authenticated production smoke;
-- multi-device WebSocket E2E;
-- load/capacity test Live.
 
-Jangan menyebut pekerjaan ini production-ready sebelum gate tersebut selesai.
+uji 3–5 HP fisik;
 
-## Test files terbaru
+pengukuran kapasitas kelas nyata.
 
-- `workers/test/account-role.test.js`
-- `workers/test/live-results.test.js`
-- `workers/test/live-room.test.js`
-- `workers/test/learning-analytics.test.js`
-- `workers/test/ai-worker.test.js`
-- `workers/scripts/smoke-auth.mjs`
+Learning Insights
 
-## Source of truth lanjutan
+Sudah menjadi fitur aktif dan production-connected.
 
-Baca detail lengkap:
+Mastery hanya memakai:
 
-- `docs/ai-agent-handoff-2026-10-01.md`
-- `docs/nalaro-project-status.md`
-- `docs/learning-insights.md`
-- `docs/cloudflare-backend-migration-status.md`
+self-paced quiz;
 
-## Prinsip yang jangan dirombak
+graded task;
 
-- server authoritative;
-- frontend role guard hanya UX, bukan security;
-- jangan mapping participant ke siswa berdasarkan nama;
-- engagement/presensi tidak boleh menaikkan mastery;
-- jangan buat leaderboard kemampuan siswa pada Learning Insights;
-- jangan persist raw biometric image;
-- jangan simpan secret di frontend/Git;
-- Cloudflare/free-first;
-- jangan menambah AWS/resource berbayar tanpa izin user.
+authenticated Nalaro Live.
+
+Presensi/progres materi/diskusi tidak menaikkan mastery.
+
+Belum ada kebutuhan redesign saat ini. Lakukan load test lebih dulu sebelum membuat cache/arsitektur baru.
+
+3. Face Attendance — perbaikan selesai dan tervalidasi lokal
+
+3.1 Rotation unit Human.js salah diperlakukan sebagai degree
+
+File utama:
+
+src/features/face/face-engine.js
+
+src/features/face/face-challenge.js
+
+src/features/face/face-engine.test.js
+
+Bug baseline: face.rotation.angle.yaw/pitch langsung digunakan terhadap threshold seperti:
+
+12
+
+15
+
+16
+
+Padahal nilai rotation Human.js perlu dinormalisasi ke degree sebelum dipakai oleh threshold internal Nalaro.
+
+Akibatnya challenge kiri/kanan dapat gagal walaupun pengguna sudah menoleh. Patch kini mengonversi yaw/pitch di readFace(); regression test memakai output Human dalam radian dan menguji challenge serta guidance dalam degree. Threshold tetap sama; perangkat nyata masih perlu diuji.
+
+Target perbaikan:
+
+const radiansToDegrees = (value) =>
+  Number.isFinite(value) ? value * 180 / Math.PI : 0;
+
+Normalisasi dilakukan di boundary readFace() sehingga seluruh domain internal Face Nalaro memakai degree.
+
+Unit test harus memakai input radian/konversi nyata, bukan hanya angka -13/13 seolah berasal langsung dari model.
+
+3.2 Presensi wajah belum tercatat sebagai metode verifikasi backend
+
+Flow baseline sebelum patch:
+
+Face match di browser
+→ onVerified()
+→ checkInAttendance() biasa
+→ D1
+
+Backend patch lokal kini membedakan:
+
+presensi biasa;
+
+presensi wajah.
+
+UI guru pada patch lokal dapat membuat sesi yang:
+
+standar;
+
+wajah opsional;
+
+wajah wajib.
+
+Kontrak yang sudah diimplementasikan dan diuji lokal:
+
+attendance_sessions.verification_mode
+  standard
+  face_optional
+  face_required
+
+attendance_checkins.verification_method
+  standard
+  face
+
+Lokasi tetap orthogonal:
+
+online + standard
+online + face
+on_site + standard
+on_site + face
+
+Untuk MVP saat ini, face matching tetap berjalan full browser sesuai keputusan produk. Jangan memindahkan recognition ke AWS/Rekognition/CompreFace.
+
+Detail implementasi ada di:
+
+ai-agent-face-attendance-and-history-fixes.md
+
+4. Histori nama siswa pada hasil kuis
+
+Masalah baseline yang sudah diperbaiki lokal:
+
+quiz_attempts sebelumnya hanya menyimpan student_id.
+
+Teacher result sebelumnya menyelesaikan nama dari class_members ketika halaman dibuka. Jika membership berubah/dihapus, attempt lama dapat tampil sebagai:
+
+Siswa tidak diketahui
+
+Target:
+
+quiz_attempts.student_name
+
+Nama disnapshot saat submit dari data server-side class_members, bukan dari request browser.
+
+Data lama tetap kompatibel:
+
+backfill nama jika membership masih ada;
+
+jika snapshot kosong, fallback ke nama membership terkini;
+
+jika keduanya tidak ada, baru gunakan Siswa tidak diketahui.
+
+5. Checklist patch dan prioritas berikutnya
+
+STEP 1–3 selesai di kode dan validasi lokal. Berikutnya deploy/migrasi remote hanya atas instruksi eksplisit pengguna, lalu STEP 4 sebagai gate perangkat. STEP 5 tetap di luar patch ini.
+
+STEP 1 — Fix Face rotation (selesai lokal)
+
+normalisasi radian → degree;
+
+perbaiki regression test;
+
+jangan ubah threshold sebelum tes device.
+
+STEP 2 — Attendance verification contract (selesai lokal)
+
+Tambahkan migration baru setelah 0012:
+
+0013_attendance_verification.sql
+
+Implementasikan:
+
+verificationMode pada session;
+
+verificationMethod pada check-in;
+
+validasi Worker;
+
+UI guru memilih metode;
+
+UI siswa mengikuti metode;
+
+teacher recap menampilkan metode;
+
+GPS tetap diproses bila locationMode=on_site.
+
+STEP 3 — Permanent student name snapshot (selesai lokal)
+
+Tambahkan:
+
+0014_quiz_attempt_student_name.sql
+
+Implementasikan snapshot nama saat submit dan fallback untuk data lama.
+
+STEP 4 — Device gate
+
+Uji minimal:
+
+Android Chrome;
+
+desktop Chrome;
+
+kamera allow/deny;
+
+cahaya normal/redup;
+
+daftar wajah;
+
+match wajah;
+
+salah wajah;
+
+face optional;
+
+face required;
+
+GPS on-site;
+
+Live 1 host + 3–5 perangkat nyata;
+
+putus/sambung Wi-Fi.
+
+STEP 5 — Cleanup kecil
+
+Setelah P1 selesai:
+
+persist questionOrder pada draft self-paced;
+
+pisahkan status Arrange touched dari nilai initial order;
+
+scoped busy state grading;
+
+benchmark Learning Insights;
+
+pertimbangkan CSP;
+
+rapikan dependency/model delivery Face bila diperlukan.
+
+6. Aturan Face MVP yang jangan diubah
+
+Recognition tetap full browser untuk fase sekarang.
+
+Tidak memakai AWS Rekognition.
+
+Tidak memakai CompreFace server.
+
+Tidak menyimpan foto/video mentah.
+
+Face Profile tetap hanya dapat diakses UID pemilik.
+
+Embedding tetap dianggap data biometrik sensitif.
+
+Jangan kirim roster embedding kelas ke browser.
+
+Matching tetap 1:1 terhadap profil user login.
+
+Backend tetap authoritative untuk:
+
+auth;
+
+role;
+
+membership;
+
+status attendance;
+
+duplicate;
+
+lokasi/radius.
+
+verificationMethod=face pada MVP adalah trust layer client sesuai threat model saat ini.
+
+Struktur harus tetap mudah dimigrasikan ke server verification nanti.
+
+7. Validation setelah perubahan
+
+Minimal:
+
+npm run lint
+npm run build
+npm run test:frontend
+npm run test:workers
+npm run validate
+git diff --check
+
+Untuk migration lokal:
+
+npm --prefix workers run migrate:local
+npm --prefix workers test
+
+Jangan deploy Worker, migration remote, Pages, atau menghapus AWS tanpa instruksi eksplisit user.
+
+8. Source of truth
+
+Gunakan:
+
+update.md — konteks aktif;
+
+ai-agent-face-attendance-and-history-fixes.md — brief implementasi patch;
+
+docs/nalaro-project-status.md — status/release history;
+
+docs/production-release-2026-10.md — bukti release dan rollback;
+
+docs/face-attendance-mvp.md — batas keamanan Face MVP;
+
+docs/learning-insights.md — metodologi analitik.
+
+Jangan menjadikan snapshot handoff lama sebagai status aktif bila bertentangan dengan file ini atau source terbaru.
+
+9. Definisi selesai untuk patch berikutnya
+
+Patch dianggap selesai bila:
+
+challenge Face menggunakan unit degree yang benar;
+
+test mencegah regression radian/degree;
+
+sesi attendance memiliki verificationMode;
+
+check-in menyimpan verificationMethod;
+
+face_required tidak menerima check-in standard;
+
+face_optional menerima standard maupun face;
+
+on-site tetap memvalidasi GPS/radius;
+
+teacher recap menampilkan metode verifikasi;
+
+quiz attempt baru menyimpan snapshot nama siswa;
+
+attempt lama tetap dapat dibaca;
+
+lint/build/test lulus;
+
+tidak ada raw biometric image atau secret baru di repository.
