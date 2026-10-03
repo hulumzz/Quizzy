@@ -8,7 +8,7 @@
     "dev:network": "vite --mode network",
     "build": "vite build",
     "lint": "oxlint",
-    "test:frontend": "node --test src/features/quiz/runtime.test.js src/features/quiz/live-connection.test.js src/features/tasks/date-time.test.js src/features/face/face-engine.test.js src/features/face/face-profile-record.test.js",
+    "test:frontend": "node --test src/features/quiz/runtime.test.js src/features/quiz/live-connection.test.js src/features/tasks/date-time.test.js src/features/face/face-engine.test.js src/features/face/face-profile-record.test.js src/features/face/guided-face-scan.test.js",
     "preview": "vite preview",
     "test:backend": "npm --prefix backend test",
     "check:backend": "npm --prefix backend run check",

@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import ClassWorkspaceNav from '../components/classroom/ClassWorkspaceNav';
+import ClassSummary from '../components/classroom/ClassSummary';
 import { ClassesIcon, MaterialIcon, MembersIcon } from '../components/icons';
-import { Badge, Button, Card, EmptyState, PageHeader, SectionHeader, Skeleton, buttonClassName } from '../components/ui';
+import { Card, EmptyState, PageHeader, SectionHeader, Skeleton, buttonClassName } from '../components/ui';
 import { classErrorMessage, getClass, listClassMembers } from '../services/class.service';
 
 function OverviewLoading() {
@@ -56,12 +57,7 @@ export default function ClassOverview({ role }) {
       <PageHeader eyebrow={role === 'teacher' ? 'Ruang guru · Kelas' : 'Ruang siswa · Kelas'} title={classItem.name} description={classItem.description || 'Belum ada deskripsi kelas.'} actions={<Link to={`/${role}/classes`} className={buttonClassName({ variant: 'secondary' })}>Semua kelas</Link>} />
       <ClassWorkspaceNav role={role} classId={classId} />
 
-      <div className="qz-class-summary">
-        <div><span className="qz-class-summary__label">Pengajar</span><strong>{classItem.teacherName || 'Guru Nalaro'}</strong></div>
-        <div><span className="qz-class-summary__label">Anggota</span><strong>{classItem.studentsCount || 0} siswa</strong></div>
-        <div><span className="qz-class-summary__label">Status</span><Badge tone={classItem.status === 'active' ? 'success' : 'neutral'}>{classItem.status === 'active' ? 'Aktif' : 'Tidak aktif'}</Badge></div>
-        {role === 'teacher' ? <div><span className="qz-class-summary__label">Undang siswa</span><div className="qz-code-copy"><strong className="qz-class-summary__code">{classItem.code}</strong><Button variant="ghost" size="sm" onClick={copyCode}>Salin</Button></div></div> : null}
-      </div>
+      <ClassSummary classItem={classItem} role={role} onCopyCode={copyCode} />
       {copyNotice ? <div className="qz-inline-state" role="status">{copyNotice}</div> : null}
 
       <div className="qz-overview-grid">

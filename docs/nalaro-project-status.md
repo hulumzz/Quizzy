@@ -21,7 +21,7 @@ Terakhir diperiksa: 3 Oktober 2026. Dokumen ini adalah catatan kerja yang harus 
 
 **Tahap: RELEASE CANDIDATE yang sudah live dan teruji API/browser produksi.** Gate akhir yang belum terpenuhi adalah uji Live pada perangkat fisik berbeda; kamera/GPS presensi opsional juga belum diuji. Rincian dan rollback ada di [laporan release Oktober](production-release-2026-10.md).
 
-Patch 3 Oktober 2026 untuk unit rotation wajah, mode verifikasi presensi, dan snapshot nama kuis selesai serta lulus validasi lokal pada working tree. D1 lokal sampai `0014`; patch belum commit, push, migrasi remote, atau deploy. Bukti browser/API produksi dari release 2 Oktober tidak memverifikasi patch ini. Status cloud di bawah mengacu pada bukti release tersebut dan tidak diperiksa ulang pada tugas lokal ini.
+Patch unit rotation wajah, mode verifikasi presensi, dan snapshot nama kuis terlihat pada commit lokal `f4d95d4`. Pembaruan UX 3 Oktober 2026 menambahkan rekam/presensi wajah otomatis dengan panduan dan pola card responsif; pembaruan ini berada di working tree, belum commit/push/deploy. Lint, build, 19 tes frontend, dan browser lokal dengan data/detektor/kamera sintetis lulus. D1 lokal sampai `0014` berdasarkan catatan tugas sebelumnya; remote, Firebase, Worker/Pages, model Human pada kamera nyata, serta perangkat fisik tidak diverifikasi ulang dalam tugas UX ini. Bukti produksi release 2 Oktober tidak memverifikasi patch terbaru.
 
 - PR #5/#6/#7 sudah diintegrasikan ke main. Source runtime final `d91d115` sudah di-push ke remote `url` dan `pages`; Pages membangun repo `khoirulzz/nalaroclass` branch main. Sepuluh variabel build API/AI/Firebase produksi dibandingkan dengan lokal dan cocok tanpa mencetak nilainya.
 - Worker `nalaro-api` versi `247b0f1c-4018-428c-bf5b-ba3f294c67a6` terdeploy dengan keep-vars. D1 remote sudah sampai `0012`, tidak ada pending migration, FK check bersih, backup sebelum migrasi disimpan lokal/ignored.
@@ -49,10 +49,10 @@ Patch 3 Oktober 2026 untuk unit rotation wajah, mode verifikasi presensi, dan sn
 | Area | Status saat ini | Acuan utama |
 | --- | --- | --- |
 | Login, profil, peran guru/siswa | Firebase Auth + role Firestore/D1. Anchor role, race guard, negative API smoke dan login guru/siswa browser produksi lulus | `workers/src/services/account-role.js`, `workers/src/middleware/auth.js`, `firestore.rules` |
-| Kelas dan anggota | Buat, gabung, daftar, detail, dan daftar anggota ada; pengaturan anggota lanjutan belum ada | `workers/src/routes/classes.js`, `src/app/routes.jsx` |
+| Kelas dan anggota | Buat, gabung, daftar, detail, dan daftar anggota ada. Informasi pengajar/anggota/status digabung dalam satu card; pola card konten dan tab aktif responsif lulus browser lokal sintetis 320?1440 px. Pengaturan anggota lanjutan belum ada | `workers/src/routes/classes.js`, `src/app/routes.jsx` |
 | Materi, progres, bookmark, diskusi | Ada di frontend dan Worker; upload memakai signature Cloudinary | `workers/src/routes/materials.js`, `workers/src/routes/discussions.js` |
 | Pertemuan pembelajaran | Ada, termasuk pengaitan materi/kuis/presensi/tugas | `workers/src/routes/learning-sessions.js` |
-| Presensi lokasi dan wajah MVP | Patch lokal mengonversi yaw/pitch ke degree, menambah mode biasa/wajah opsional/wajib, menyimpan metode dan menampilkan badge rekap; matrix mode, GPS, duplikasi, serializer dan data lama lulus tes lokal. Matching tetap di browser; patch belum deploy/uji perangkat | `src/features/face/face-engine.js`, `src/pages/ClassAttendance.jsx`, `workers/src/repositories/attendance.repository.js`, `workers/migrations/0013_attendance_verification.sql` |
+| Presensi lokasi dan wajah MVP | Rotation/mode/metode dan rekap tersedia. UX lokal baru: persetujuan sebelum kamera, rekam otomatis depan/kanan/kiri/depan, presensi dengan challenge acak dan pencatatan otomatis, batal/retry/cleanup kamera. Tes frontend dan browser sintetis lulus; matching/model/kamera/GPS nyata serta deployment patch belum diverifikasi | `src/features/face/face-engine.js`, `src/pages/ClassAttendance.jsx`, `workers/src/repositories/attendance.repository.js`, `workers/migrations/0013_attendance_verification.sql` |
 | Kuis kelas dan kuis umum | Editor, publikasi, percobaan, penilaian, hasil, impor/ekspor ada. Snapshot nama self-paced kelas dan fallback attempt lama lulus regresi lokal setelah membership diubah/dihapus; patch belum deploy | `workers/src/repositories/quiz.repository.js`, `workers/migrations/0014_quiz_attempt_student_name.sql`, `workers/src/routes/general-quizzes.js` |
 | Tugas | Pengumpulan, lampiran, nilai, feedback, revisi, dan riwayat revisi ada | `workers/src/routes/tasks.js` |
 | Bank Kuis | Publikasi katalog, salin sebagai draf, penarikan, impor/ekspor ada; moderasi/rating/analytics belum ada | `workers/src/routes/quiz-bank.js` |
@@ -76,9 +76,17 @@ Patch 3 Oktober 2026 untuk unit rotation wajah, mode verifikasi presensi, dan sn
 
 - [x] Checkpoint A–D: konversi rotation, kontrak mode/metode presensi, UI guru/siswa/rekap, migrasi additive dan snapshot nama dari membership D1 selesai lokal.
 - [x] Checkpoint E: lint/build/frontend/backend legacy/59 tes Worker/syntax check dan `git diff --check` lulus; D1 lokal berhasil dimigrasikan sampai `0014`.
-- [ ] Commit/push/deploy patch serta migrasi D1 remote `0013`/`0014` belum dilakukan; penerapan produksi menunggu instruksi eksplisit pengguna sesuai `update.md` dan brief.
+- [ ] Commit patch terdahulu terlihat lokal pada `f4d95d4`; status push/deploy/migrasi remote tidak diperiksa ulang dalam tugas UX. Pembaruan UX baru belum commit/push/deploy. Penerapan produksi tetap terpisah dari validasi lokal.
 - [ ] Setelah patch diterapkan, uji UI/browser/API ketiga mode, kamera allow/deny/retry, daftar/hapus/daftar ulang profil, wajah benar/salah, challenge, cahaya normal/redup, Chrome desktop/Android, serta GPS di dalam/luar radius pada perangkat nyata. Kalibrasi threshold dan gerakan lintas frame masih pekerjaan lanjutan; threshold tidak diubah.
 - [ ] Cleanup kecil di `update.md` (questionOrder draft, Arrange touched, busy grading, benchmark Insights/CSP/model delivery) berada di luar patch ini.
+
+### UX rekam wajah dan card 3 Oktober
+
+- [x] Persetujuan sebelum kamera, satu tombol Rekam wajah, panduan otomatis depan/kanan/kiri/kembali depan, progres langkah, pose stabil lintas frame, timeout, pembatalan, retry, serta cleanup stream selesai di kode.
+- [x] Presensi menjalankan depan/challenge arah acak/depan dan mencatat hadir otomatis setelah cocok; kegagalan pencatatan membutuhkan retry eksplisit. Pengaturan wajah wajib serta GPS server tetap berlaku.
+- [x] Card kuis umum/kelas, Bank Kuis, tugas, diskusi memakai `ContentCard`; perbaikan tipografi/caption/ikon/aksi dan card materi/filter/riwayat diterapkan. Pengajar/anggota/status memakai satu `ClassSummary`; tab aktif otomatis terlihat pada nav yang dapat digeser.
+- [x] Lint, build, 19 tes frontend, syntax smoke script, dan browser lokal sintetis: 10 halaman ? 4 viewport, tambahan enam halaman mode guru pada 320/1440 px, serta alur rekam/presensi/camera-deny/cancel/retry lulus.
+- [ ] Commit/push/deploy pembaruan UX, browser terautentikasi terhadap API/Firestore nyata, dan uji kamera/model/GPS Android/iOS/desktop nyata belum dilakukan pada tugas ini. Kalibrasi arah/threshold/gerak dan batas anti-spoof MVP tetap memerlukan perangkat nyata.
 
 ### Fitur dan pengembangan lanjutan
 
@@ -93,6 +101,17 @@ Patch 3 Oktober 2026 untuk unit rotation wajah, mode verifikasi presensi, dan sn
 - HTTP/CORS dan tes otomatis tidak menggantikan uji UI browser, transfer Cloudinary nyata, perangkat kamera/lokasi, atau uji beban live.
 
 ## Riwayat perubahan
+
+### 3 Okt 2026 - Rekam/presensi wajah otomatis dan konsistensi card
+
+- Persetujuan dipindahkan ke halaman profil sebelum akses kamera. Satu tombol `Rekam wajah` menjalankan kamera, warm-up model, pose depan ? kanan ? kiri ? depan, lalu menyimpan otomatis. Sampel numerik yang disimpan berasal dari pose depan; pose putar hanya menjadi langkah panduan. Setiap pose memerlukan sedikitnya tiga frame selama 700 ms dengan pemeriksaan kualitas dan konsistensi wajah; setiap langkah dibatasi 35 detik. Threshold matching tetap 0,72 dan Human liveness/antispoof tidak diaktifkan.
+- Presensi kini memakai satu tombol mulai: pose depan, challenge kiri/kanan acak, kembali depan, lalu submit. Error save/submit menyediakan retry eksplisit; mode wajib memakai label Batal. Pembatalan/unmount menghentikan loop dan stream, termasuk izin kamera yang baru selesai setelah dialog ditutup. Run lama tidak menghentikan stream run baru; panggilan detector diserialkan. Validasi lokasi/mode/metode server tidak diubah.
+- `ContentCard` menyamakan wadah ikon, badge, hierarki judul, cuplikan deskripsi tiga baris, metadata yang dapat membungkus, dan aksi di bagian bawah. Dipakai pada hub kuis, kuis umum/kelas, Bank Kuis, tugas, dan diskusi. Caption, card materi, filter/publikasi Bank Kuis, serta riwayat Live diperbaiki; CSS grid/flex yang sebelumnya menargetkan wrapper kini menargetkan body Card. `ClassSummary` menyatukan pengajar/anggota/status untuk siswa dan guru; kode undangan guru tetap tersedia. Nav kelas menggeser tab aktif agar terlihat tanpa menggulir halaman.
+- Berkas penting: `src/features/face/guided-face-scan.js`, `guided-face-scan.test.js`, `useGuidedFaceScan.js`, `FaceScanner.jsx`, `face-engine.js`, `FaceCheckInDialog.jsx`, `src/pages/student/FaceProfile.jsx`, `ClassAttendance.jsx`, `src/components/ui/ContentCard.jsx`, `src/components/classroom/ClassSummary.jsx`, `ClassWorkspaceNav.jsx`, halaman daftar terkait, `src/styles/content-cards.css`, `face-scanner.css`, `src/index.css`, `package.json`, dan `workers/scripts/smoke-ux-local.mjs`.
+- Validasi aktual: `npm.cmd run lint` tanpa warning, `npm.cmd run build`, `npm.cmd run test:frontend` (19 PASS), `node --check workers/scripts/smoke-ux-local.mjs`, dan `git diff --check` lulus. Browser Chrome headless lokal memeriksa 10 halaman pada 320/390/768/1440 px (40 kombinasi) dan enam halaman mode guru pada 320/1440 px (12 kombinasi tambahan), tidak ada overflow horizontal, bagian card bertumpuk, isi keluar card, atau tab aktif terpotong; screenshot diperiksa untuk ringkasan, diskusi, tugas, hub kuis, dan pemindai. Alur persetujuan ? rekam ? simpan tepat sekali, izin ditolak, error scan/save, retry, batal saat scan/izin tertunda, cleanup track, wajah wajib ? presensi tepat sekali, serta error submit ? retry lulus dengan 0 runtime error.
+- Dua rerun smoke sempat gagal di harness: pemeriksaan menunggu teks loading yang terlalu singkat, lalu penulisan ulang fixture dari run lain memicu refresh halaman. Harness kini menunggu tahap scan yang stabil dan hanya menulis fixture bila isi berubah; rerun alur wajah secara terisolasi lulus.
+- Batas bukti: browser memakai komponen/CSS asli dengan API/Firestore/detektor diganti data sintetis dan video kamera sintetis. Ini bukan bukti autentikasi/backend/Firestore produksi, pencocokan Human pada wajah asli, atau perangkat fisik. Artefak berada di `workers/.wrangler/ux-artifacts/` (ignored); tidak berisi data pengguna/biometrik nyata.
+- Status delivery: perubahan UX belum commit, push, atau deploy; tidak ada migrasi atau perubahan cloud pada tugas ini. Commit `f4d95d4` adalah baseline sebelum tugas. Riwayat release dan perubahan terdahulu dipertahankan.
 
 ### 3 Okt 2026 - Audit dan penyelesaian patch Face Attendance serta histori nama
 

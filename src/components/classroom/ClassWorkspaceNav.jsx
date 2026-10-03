@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { BarChart3, CalendarDays } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { AttendanceIcon, ClassesIcon, DiscussionIcon, MaterialIcon, QuizIcon, TaskIcon } from '../icons';
@@ -5,8 +6,19 @@ import { AttendanceIcon, ClassesIcon, DiscussionIcon, MaterialIcon, QuizIcon, Ta
 export default function ClassWorkspaceNav({ role, classId }) {
   const base = `/${role}/classes/${classId}`;
   const { pathname } = useLocation();
+  const navRef = useRef(null);
+  useEffect(() => {
+    const nav = navRef.current;
+    const active = nav?.querySelector('a.active');
+    if (!active) return;
+    const frame = nav.getBoundingClientRect();
+    const tab = active.getBoundingClientRect();
+    if (tab.left < frame.left || tab.right > frame.right) {
+      nav.scrollTo({ left: nav.scrollLeft + tab.left - frame.left - (frame.width - tab.width) / 2, behavior: 'auto' });
+    }
+  }, [pathname]);
   return (
-    <nav className="qz-class-nav" aria-label="Navigasi ruang kelas">
+    <nav ref={navRef} className="qz-class-nav" aria-label="Navigasi ruang kelas">
       <NavLink to={`${base}/overview`}><ClassesIcon size={18} /> Ringkasan</NavLink>
       <NavLink to={`${base}/sessions`}><CalendarDays size={18} /> Pertemuan</NavLink>
       <NavLink to={`${base}/materials`} className={pathname.includes('/materials') && !pathname.includes('/discussions') ? 'active' : undefined}><MaterialIcon size={18} /> Materi</NavLink>

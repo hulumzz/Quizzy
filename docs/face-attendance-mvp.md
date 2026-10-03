@@ -10,6 +10,14 @@ Dokumen ini menjelaskan batas kemampuan presensi wajah Nalaro Class saat ini.
 - API presensi tetap memeriksa autentikasi, keanggotaan kelas, status sesi, duplikasi check-in, dan lokasi jika sesi memakai mode tatap muka.
 - Patch lokal 3 Oktober 2026 menambah mode sesi `standard`, `face_optional`, dan `face_required`, serta metode check-in `standard`/`face`. Jenis lokasi tetap terpisah; check-in wajah pada sesi tatap muka tetap memerlukan GPS/radius. Patch ini belum dideploy.
 
+## Alur UX lokal 3 Oktober 2026
+
+- Pengguna menyetujui penyimpanan data numerik sebelum menekan Rekam wajah dan sebelum kamera diakses.
+- Rekam berjalan otomatis dengan panduan depan, kanan, kiri, dan kembali depan, lalu menyimpan profil. Hanya embedding saat hadap depan yang masuk profil.
+- Presensi memakai depan, challenge kiri/kanan acak, kembali depan, lalu pencatatan otomatis. Pose perlu stabil pada sedikitnya tiga frame selama 700 ms; kualitas wajah tetap diperiksa saat menoleh. Setiap langkah dibatasi 35 detik.
+- Batal dan unmount menghentikan pemindaian/kamera; kegagalan kamera, pemindaian, simpan profil, atau submit presensi menyediakan retry eksplisit.
+- Lint/build/19 tes frontend serta Chrome lokal dengan detektor, data, dan video sintetis lulus. Model Human pada wajah nyata, kalibrasi arah/threshold/false accept/reject, Firestore/API produksi, serta Android/iOS nyata belum diuji pada tugas UX ini. Perubahan UX belum dideploy.
+
 ## Verifikasi saat ini
 
 MVP memakai pencocokan wajah ditambah tantangan gerakan kepala acak ke kiri atau kanan. Ini membantu mencegah check-in pasif sederhana, tetapi **bukan liveness atau anti-spoofing tingkat tinggi**. Konfigurasi Human saat ini tidak mengaktifkan model liveness/antispoof.

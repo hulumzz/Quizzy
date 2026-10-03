@@ -8,6 +8,7 @@ export function radiansToDegrees(value) {
 export const FACE_MATCH_THRESHOLD = 0.72;
 const MODEL_BASE_PATH = 'https://cdn.jsdelivr.net/npm/@vladmandic/human@3.3.6/models/';
 let enginePromise;
+let inspectionQueue = Promise.resolve();
 
 export class FaceEngineError extends Error {
   constructor(code, message) {
@@ -73,7 +74,9 @@ export function readFace(result) {
 
 export async function inspectFace(video) {
   if (!video?.srcObject || video.readyState < 2) throw new FaceEngineError('CAMERA_NOT_READY', 'Kamera belum siap. Tunggu sebentar lalu coba lagi.');
-  return readFace(await (await getEngine()).detect(video));
+  const inspection = inspectionQueue.then(async () => readFace(await (await getEngine()).detect(video)));
+  inspectionQueue = inspection.catch(() => {});
+  return inspection;
 }
 
 export async function warmFaceEngine() {
@@ -93,7 +96,7 @@ function frameBrightness(video) {
   return total / (pixels.length / 4);
 }
 
-export function enrollmentGuidance(face, brightness = null) {
+export function enrollmentGuidance(face, brightness = null, { allowTurn = false } = {}) {
   const [x, y, width, height] = Array.isArray(face?.box) ? face.box : [];
   const size = Math.max(width || 0, height || 0);
   const centerX = (x || 0) + ((width || 0) / 2);
@@ -106,13 +109,13 @@ export function enrollmentGuidance(face, brightness = null) {
   if (centerX < 0.38) return { ready: false, tone: 'warning', instruction: 'Geser wajah sedikit ke kanan.', detail: 'Pusatkan wajah di dalam bingkai.' };
   if (centerX > 0.62) return { ready: false, tone: 'warning', instruction: 'Geser wajah sedikit ke kiri.', detail: 'Pusatkan wajah di dalam bingkai.' };
   if (centerY < 0.36 || centerY > 0.65) return { ready: false, tone: 'warning', instruction: 'Atur tinggi kamera agar wajah berada di tengah.', detail: 'Pusatkan wajah di dalam bingkai.' };
-  if (Math.abs(face?.yaw || 0) > 16 || Math.abs(face?.pitch || 0) > 15) return { ready: false, tone: 'warning', instruction: 'Hadapkan wajah lurus ke kamera.', detail: 'Tahan kepala tetap tegak sejenak.' };
+  if ((!allowTurn && Math.abs(face?.yaw || 0) > 16) || Math.abs(face?.pitch || 0) > 15) return { ready: false, tone: 'warning', instruction: 'Hadapkan wajah lurus ke kamera.', detail: 'Tahan kepala tetap tegak sejenak.' };
   return { ready: true, tone: 'success', instruction: 'Posisi sudah baik. Tahan tetap di dalam bingkai.', detail: 'Siap mengambil tiga sampel wajah.' };
 }
 
-export async function inspectEnrollmentFace(video) {
+export async function inspectEnrollmentFace(video, options) {
   const face = await inspectFace(video);
-  return { face, ...enrollmentGuidance(face, frameBrightness(video)) };
+  return { face, ...enrollmentGuidance(face, frameBrightness(video), options) };
 }
 
 export async function enrollFace(video, sampleCount = 3, onProgress = () => {}) {
@@ -143,12 +146,17 @@ export async function verifyFace(video, profile, challenge = createFaceChallenge
   };
 }
 
-export async function startFaceCamera(video) {
+export async function startFaceCamera(video, { signal } = {}) {
   if (!window.isSecureContext) throw new FaceEngineError('CAMERA_INSECURE_CONTEXT', 'Akses kamera di perangkat ini memerlukan alamat HTTPS. Buka melalui URL tunnel HTTPS, bukan IP jaringan dengan HTTP.');
   if (!navigator.mediaDevices?.getUserMedia) throw new FaceEngineError('CAMERA_UNSUPPORTED', 'Browser ini belum mendukung akses kamera.');
   const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+  if (signal?.aborted || !video?.isConnected) {
+    stream.getTracks().forEach((track) => track.stop());
+    throw new DOMException('Pemindaian dibatalkan.', 'AbortError');
+  }
   video.srcObject = stream;
-  await video.play();
+  try { await video.play(); } catch (error) { stopFaceCamera(video); throw error; }
+  if (signal?.aborted) { stopFaceCamera(video); throw new DOMException('Pemindaian dibatalkan.', 'AbortError'); }
   return stream;
 }
 

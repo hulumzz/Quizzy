@@ -1,0 +1,98 @@
+/* Shared card hierarchy: icon/status, title/preview, metadata, then actions. */
+.qz-card, .qz-card__body { min-width: 0; }
+.qz-card__body > :is(h2, h3) { margin: 0; font-size: 1.08rem; font-weight: 780; line-height: 1.35; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.qz-card__body > p { margin: 8px 0 0; color: var(--qz-text-secondary); font-size: .9rem; line-height: 1.65; overflow-wrap: anywhere; }
+.qz-button { max-width: 100%; line-height: 1.25; }
+.qz-button svg, .qz-badge svg, .qz-icon-button svg { flex: 0 0 auto; }
+.qz-class-nav svg { flex: 0 0 auto; }
+.qz-badge { flex: 0 0 auto; max-width: 100%; line-height: 1.25; }
+.qz-card-icon { width: 46px; height: 46px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid #e4dcfa; border-radius: 14px; color: var(--qz-primary-hover); background: linear-gradient(145deg, #f6f2ff, var(--qz-primary-soft)); }
+.qz-card-icon svg { width: 23px; height: 23px; }
+
+.qz-content-card { display: flex; border-color: #d8d3e4; box-shadow: 0 2px 4px #211d2c04, 0 8px 20px #211d2c06; }
+.qz-content-card > .qz-card__body { width: 100%; display: flex; flex-direction: column; align-items: stretch; gap: 16px; padding: 24px; }
+.qz-content-card--featured { border-color: #d9cdfb; background: linear-gradient(135deg, #fff, #f7f3ff); }
+.qz-content-card__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.qz-content-card__badges { min-width: 0; display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
+.qz-content-card__content { min-width: 0; }
+.qz-content-card__content :is(h2, h3) { margin: 0; color: var(--qz-text); font-size: 1.1rem; font-weight: 800; line-height: 1.4; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.qz-content-card .qz-content-card__description { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 8px 0 0; color: var(--qz-text-secondary); font-size: .9rem; line-height: 1.65; overflow-wrap: anywhere; white-space: pre-line; }
+.qz-content-card__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; color: var(--qz-text-muted); font-size: .78rem; line-height: 1.5; overflow-wrap: anywhere; }
+.qz-content-card__meta > span { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.qz-content-card__meta strong { color: var(--qz-text-secondary); font-weight: 720; }
+.qz-content-card__meta em { padding: 3px 7px; border-radius: 6px; background: var(--qz-primary-soft); color: var(--qz-primary-hover); font-style: normal; }
+.qz-content-card__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: auto; padding-top: 16px; border-top: 1px solid var(--qz-border); }
+.qz-content-card__actions .qz-button { min-height: 40px; }
+.qz-discussion-materials, .qz-task-list { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+.qz-quiz-grid--hub { margin-bottom: 0; }
+.qz-bank-section { margin-top: 0; gap: 16px; }
+.qz-bank-section > h2 { font-size: 1.05rem; font-weight: 780; }
+
+.qz-class-summary-card > .qz-card__body { padding: 20px 24px; }
+.qz-class-summary-card__head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.qz-class-summary-card__details { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 16px; margin: 0; }
+.qz-class-summary-card__details > div { min-width: 0; }
+.qz-class-summary-card__details > div + div { border-left: 1px solid var(--qz-border); padding-left: 20px; }
+.qz-class-summary-card dt { display: flex; align-items: center; gap: 7px; margin: 0 0 6px; color: var(--qz-text-muted); font-size: .78rem; }
+.qz-class-summary-card dt svg { flex: 0 0 auto; color: var(--qz-primary); }
+.qz-class-summary-card dd { margin: 0; color: var(--qz-text); font-size: .98rem; font-weight: 780; line-height: 1.45; overflow-wrap: anywhere; }
+.qz-class-summary-card dd span { font-weight: 600; }
+.qz-class-summary-card__invite { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--qz-border); }
+.qz-class-summary-card__invite > div { display: grid; gap: 4px; min-width: 0; }
+.qz-class-summary-card__invite span { color: var(--qz-text-muted); font-size: .75rem; }
+.qz-class-summary-card__invite strong { color: var(--qz-primary-hover); letter-spacing: .12em; overflow-wrap: anywhere; }
+
+/* Legacy card layouts must target Card's inner body, which owns the content. */
+.qz-quiz-card, .qz-bank-card, .qz-face-card, .qz-bank-filter, .qz-bank-publish { display: block; padding: 0; }
+.qz-quiz-card > .qz-card__body, .qz-bank-card > .qz-card__body { height: 100%; display: flex; flex-direction: column; gap: 14px; }
+.qz-quiz-card > .qz-card__body > :is(.qz-quiz-actions, .qz-quiz-card__actions, .qz-button), .qz-bank-card__copy { margin-top: auto; }
+.qz-bank-card { min-height: 0; }
+.qz-content-card.qz-bank-card > .qz-card__body { gap: 16px; }
+.qz-bank-filter > .qz-card__body, .qz-bank-publish > .qz-card__body { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; padding: 20px; }
+.qz-bank-publish > .qz-card__body > div:first-child { flex: 1 1 100%; }
+.qz-bank-publish > .qz-card__body > label { flex: 1; min-width: min(100%, 190px); }
+.qz-bank-card__copy { width: 100%; }
+.qz-content-card.qz-bank-card { overflow: visible; }
+.qz-content-card.qz-bank-card .qz-content-card__actions { display: block; }
+.qz-face-card > .qz-card__body { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 16px; align-items: center; }
+.qz-face-card--notice > .qz-card__body { display: block; }
+.qz-face-card--face > .qz-card__body { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.qz-live-history__item { display: block; }
+.qz-live-history__item > .qz-card__body { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; }
+.qz-live-history__item > .qz-card__body > div:first-child { min-width: 0; flex: 1 1 240px; }
+.qz-material-card__mark { width: 46px; height: 46px; border-radius: 14px; transform: none; }
+.qz-material-card p { font-size: .9rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.qz-material-card h2 { font-size: 1.08rem; line-height: 1.4; }
+.qz-material-card__meta { font-size: .76rem; }
+.qz-material-card__actions { flex-wrap: wrap; }
+.qz-session-card__body p { overflow-wrap: anywhere; }
+.qz-attendance-session__top > svg { width: 24px; height: 24px; }
+
+@media (max-width: 760px) {
+  .qz-content-card > .qz-card__body { padding: 18px; gap: 14px; }
+  .qz-content-card__content :is(h2, h3) { font-size: 1.02rem; }
+  .qz-content-card .qz-content-card__description { font-size: .87rem; }
+  .qz-content-card__meta { font-size: .75rem; gap: 6px 12px; }
+  .qz-content-card__actions { padding-top: 14px; }
+  .qz-content-card__actions .qz-button:first-child { flex: 1 1 auto; }
+  .qz-discussion-materials, .qz-task-list { grid-template-columns: minmax(0, 1fr); }
+  .qz-card-icon { width: 42px; height: 42px; border-radius: 13px; }
+  .qz-card-icon svg { width: 21px; height: 21px; }
+  .qz-class-summary-card > .qz-card__body { padding: 18px; }
+  .qz-class-summary-card__head { margin-bottom: 16px; }
+  .qz-class-summary-card__details { gap: 12px; }
+  .qz-class-summary-card__details > div + div { padding-left: 14px; }
+  .qz-class-summary-card dd { font-size: .9rem; }
+  .qz-class-summary-card dt { font-size: .73rem; }
+  .qz-class-summary-card__head .qz-eyebrow { font-size: .65rem; letter-spacing: .05em; }
+  .qz-class-summary-card__head .qz-badge { font-size: .7rem; }
+  .qz-section-header { align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+  .qz-section-header > div { min-width: min(100%, 170px); flex: 1; }
+  .qz-section-header > .qz-button { flex: 0 0 auto; }
+  .qz-bank-filter > .qz-card__body, .qz-bank-publish > .qz-card__body { display: grid; grid-template-columns: minmax(0, 1fr); padding: 18px; }
+  .qz-face-card > .qz-card__body { grid-template-columns: auto minmax(0, 1fr); }
+  .qz-face-card--face > .qz-card__body { grid-template-columns: 1fr; }
+  .qz-material-card { gap: 14px; padding: 18px; }
+  .qz-material-card__actions { padding-top: 14px; border-top: 1px solid var(--qz-border); }
+  .qz-material-card__actions > .qz-button:first-child { flex: 1; }
+}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ClipboardList, Plus } from 'lucide-react';
 import ClassWorkspaceNav from '../components/classroom/ClassWorkspaceNav';
-import { Badge, Button, Card, EmptyState, PageHeader, Skeleton, buttonClassName } from '../components/ui';
+import { Badge, Button, Card, ContentCard, EmptyState, PageHeader, Skeleton, buttonClassName } from '../components/ui';
 import { getClass } from '../services/class.service';
 import { listTasks, taskErrorMessage } from '../services/task.service';
 import { appEnv } from '../config/env';
@@ -24,7 +24,7 @@ export default function ClassTasks({ role }) {
     {!configured ? <div className="qz-status-strip">Layanan tugas belum tersedia di lingkungan ini.</div> : null}
     {state.status === 'loading' ? <div className="qz-task-list"><Skeleton height={150} /><Skeleton height={150} /></div> : null}
     {state.status === 'error' ? <div className="qz-inline-state qz-inline-state--error" role="alert">{taskErrorMessage(state.error)} <Button variant="ghost" size="sm" onClick={() => load()}>Coba lagi</Button></div> : null}
-    {state.status === 'success' && state.tasks.length ? <div className="qz-task-list">{state.tasks.map((task) => <Card key={task.id} className="qz-task-card"><div><div className="qz-task-card__meta"><Badge tone={task.status === 'published' ? 'success' : 'warning'}>{task.status === 'published' ? 'Terbit' : task.status === 'draft' ? 'Draf' : 'Diarsipkan'}</Badge>{role === 'student' ? submissionLabel(task.submission) : null}</div><h2>{task.title}</h2><p>{task.instructions || 'Tidak ada petunjuk tambahan.'}</p><small>Tenggat: <strong>{formatDate(task.dueAt)}</strong> · Jawaban {task.responseMode === 'both' ? 'teks dan lampiran' : task.responseMode === 'text' ? 'teks' : 'lampiran'}</small></div><Link className={buttonClassName({ variant: 'secondary', size: 'sm' })} to={`/${role}/classes/${classId}/tasks/${task.id}`}>Buka tugas</Link></Card>)}</div> : null}
+    {state.status === 'success' && state.tasks.length ? <div className="qz-task-list">{state.tasks.map((task) => <ContentCard key={task.id} icon={ClipboardList} title={task.title} description={task.instructions || 'Tidak ada petunjuk tambahan.'} badge={<><Badge tone={task.status === 'published' ? 'success' : task.status === 'draft' ? 'warning' : 'neutral'}>{task.status === 'published' ? 'Terbit' : task.status === 'draft' ? 'Draf' : 'Diarsipkan'}</Badge>{role === 'student' ? submissionLabel(task.submission) : null}</>} meta={<><span>Tenggat <strong>{formatDate(task.dueAt)}</strong></span><span>Jawaban {task.responseMode === 'both' ? 'teks dan lampiran' : task.responseMode === 'text' ? 'teks' : 'lampiran'}</span></>} actions={<Link className={buttonClassName({ variant: 'secondary', size: 'sm' })} to={`/${role}/classes/${classId}/tasks/${task.id}`}>Buka tugas</Link>} />)}</div> : null}
     {state.status === 'success' && !state.tasks.length ? <Card><EmptyState icon={ClipboardList} title={role === 'teacher' ? 'Belum ada tugas' : 'Belum ada tugas terbit'} description={role === 'teacher' ? 'Buat tugas pertama untuk menerima jawaban teks atau lampiran siswa.' : 'Tugas yang diterbitkan guru akan muncul di sini.'} action={role === 'teacher' ? <Link className={buttonClassName()} to={`/teacher/classes/${classId}/tasks/new`}><Plus size={18} /> Buat tugas</Link> : null} /></Card> : null}
   </div>;
 }
